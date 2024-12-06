@@ -1,0 +1,17 @@
+Metadata-Version: 2.1
+Name: snow
+Version: 0.0.0
+Summary: Integrated tool for structural characterization at atomistic level
+Author-email: Giacomo Becatti <giacomo.becatti@unimi.it>, Sofia Zinzani <sofia.zinzani@unimi.it>, Davide Alimonti <davide.alimonti@unimi.it>
+Classifier: Development Status :: 1 - Planning
+Classifier: Programming Language :: Python :: 3.12
+Requires-Python: >=3.12
+Description-Content-Type: text/markdown
+Requires-Dist: numpy
+Requires-Dist: scipy
+Provides-Extra: tests
+Requires-Dist: pytest; extra == "tests"
+
+# SNOW
+
+Snow is a mostly standalone (only a few required dependencies: numpy and scipy) characterization tool for trajectories generated during MD simulations
