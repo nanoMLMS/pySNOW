@@ -1,0 +1,32 @@
+[project]
+name = "snow"
+description = "Integrated tool for structural characterization at atomistic level"
+readme = "README.md"
+
+authors = [
+    { name = "Giacomo Becatti", email = "giacomo.becatti@unimi.it" },
+    { name = "Sofia Zinzani", email = "sofia.zinzani@unimi.it" },
+    { name = "Davide Alimonti", email = "davide.alimonti@unimi.it" }
+]
+
+classifiers = [
+    "Development Status :: 1 - Planning",
+    "Programming Language :: Python :: 3.12"
+]
+
+requires-python = ">=3.12"
+dynamic = ["version"]
+
+dependencies = [
+    "numpy",
+    "scipy"
+]
+
+[project.optional-dependencies]
+tests = [
+    "pytest"
+]
+
+[build-system]
+requires = ["setuptools>=62", "wheel"]
+build-backend = "setuptools.build_meta"
