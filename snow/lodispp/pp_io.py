@@ -1,5 +1,6 @@
 import numpy as np
 import numpy as np
+import os
 
 def read_rgl(filepot: str):
     with open(filepot, 'r') as file:
@@ -125,15 +126,16 @@ def read_rgl(filepot: str):
     }
        
     
-    
-    
+import os
+import inspect
+import numpy as np
 
 def read_xyz(filename):
     """
     Reads an XYZ file and returns the atomic elements and their coordinates.
 
     Parameters:
-        filename (str): Path to the XYZ file.
+        filename (str): Path to the XYZ file, relative to the script location.
 
     Returns:
         tuple: (elements, coordinates)
@@ -141,31 +143,44 @@ def read_xyz(filename):
             - coordinates (numpy.ndarray): Array of shape (n_atoms, 3) with atomic coordinates.
     """
     try:
-        with open(filename, "r") as xyz_file:
+        # Get the path of the calling script
+        caller_frame = inspect.stack()[1]  # Get the caller's frame
+        caller_script = caller_frame.filename  # Get the caller's script path
+        
+        # Get the directory where the calling script is located
+        script_dir = os.path.dirname(os.path.realpath(caller_script))
+        
+        # Construct the full path to the file
+        filepath = os.path.join(script_dir, filename)
+
+        # Open the file
+        with open(filepath, "r") as xyz_file:
             # Number of atoms
             n_atoms = int(xyz_file.readline().strip())
-            
+
             # Skip the comment line
             _ = xyz_file.readline().strip()
-            
+
             # Initialize containers
             elements = []
             coordinates = np.zeros((n_atoms, 3))
-            
+
             # Read the data
             for i in range(n_atoms):
                 line = xyz_file.readline().split()
                 elements.append(line[0])  # Append element symbol
                 coordinates[i, :] = list(map(float, line[1:4]))  # Convert coordinates to float
-            
+
         return elements, coordinates
-    
+
     except FileNotFoundError:
         raise FileNotFoundError(f"The file '{filename}' does not exist.")
     except ValueError as e:
         raise ValueError(f"Error reading '{filename}': {e}")
     except Exception as e:
         raise Exception(f"An unexpected error occurred: {e}")
+
+
 
 
 

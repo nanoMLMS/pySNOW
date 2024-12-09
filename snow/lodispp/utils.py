@@ -222,10 +222,10 @@ def coordination_number(index_frame, coords, cut_off, neigh_list = False):
     else:
         return coord_numb
 
-def agcn_calculator(index_frame, coords, cutoff, gcn_max = 12.0):
+def agcn_calculator(index_frame, coords, cut_off, gcn_max = 12.0):
     """
     """
-    neigh_list, coord_numbers = coordination_number(index_frame, coords, cutoff, neigh_list=True)
+    neigh_list, coord_numbers = coordination_number(index_frame, coords, cut_off, neigh_list=True)
     n_atoms = len(coord_numbers)
     agcn = np.zeros(n_atoms)
     
