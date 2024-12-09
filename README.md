@@ -61,9 +61,29 @@ neigh_list, cn = coordination_number(index_frame = 1, coords = sys_coords, cut_o
 
 Introduce by [Federico Calle-Vallejo](https://doi.org/10.1002/advs.202207644) the generalized coordination number (GCN) is a more refined descriptors for the environment of atoms, taking into account, for each atom, the neighbours of the neighbouring atoms. It is defined as a weighted average (weighted by a maximum coordination number associated to the refernece bulk structure, so, if the system is composed of gold atoms the crystal reference is FCC and CN<sub>max</sub>=12) of the coordination numbers of the neighbours of each atom.
 
-What has been described is referred to **atop** GCN, to differentiate with the **bridge** GCN (implemented) which computes the same weighted average for bridge sites (identified by a pair of nieghbouring atoms and counting the CN of neihgbours for each atom counted only once) and the **hollow** GCN (for triplets and fourplets, still to implement).
+What has been described is referred to **atop** GCN (a-GCN), to differentiate with the **bridge** GCN (b-gcn) which computes the same weighted average for bridge sites (identified by a pair of nieghbouring atoms and counting the CN of neihgbours for each atom counted only once) and the **hollow** GCN (for triplets and fourplets, still to implement).
 
+Note that while the a-GCN function returns a list of values for each atom, the b-gcn returns values for each pair, for output and representation purposes is possible to obtain also the coordinates of the midpoints of each pair so that a "phantom" atom can be written to an xyz file to represent the GCN for those bridge sites.
 
+```python
+from snow.lodispp.utils import coordination_number
+agcn = agcn_calculator(index_frame = 1, coords= sys_coords, cut_off = 2.89, gcn_max = 12.0)
+phant_xyz, pairs, bgcn = bridge_gcn(index_frame = 1, coords = sys_coords, cut_off = 2.89, gcn_max=18.0, phantom=True)
+
+for p in pairs:
+    elements.append("H")
+
+# Combine AGCN and phantom GCN
+a_b_gcn = np.concatenate((agcn, b_gcn))
+a_b_gcn = a_b_gcn.reshape(-1, 1)  # Shape will be (843, 1)
+
+# Concatenate coordinates with phantom coordinates
+out_xyz = np.concatenate((sys_coords, phant_xyz))    
+
+# Write updated XYZ file with phantom data
+write_xyz("phantom.xyz", elements, out_xyz, additional_data=a_b_gcn)
+```
+in this example we compute both the atop and bridge gcn, generate coordinates for each pair midpoint, assign an H atom at those coordinates, concatenate it to the original coordinates and output everything (agcn for each atom and bgcn for the "phantom" hydrogen atoms at the midpoints to and xyz file).
 ### Strain
 
 The strain, as computed by SNOW, is a measure of the deformation of interatomic separations compared with typical equilibrium separations in the bulk. It provides a percentage for each atom which will be positive (negative) if the interatomic distances with negihbours is larger (smaller) than what is typically observed in the bulk and thus the atom is on average in a expanded (compressed) state.
