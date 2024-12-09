@@ -29,6 +29,35 @@ now el would be the same as before, coords, on the other hand, would be a higher
 coord_5 = sys_coords[5]
 ```
 
+Structures can also be written to an xyz file, with any additional data, using the write_xyz function. It is necessary to provide a path to the file where the structure will be stored, the array with the elements and the array with the coordinates, as an example (some of the calculated features will be explained below):
+```python
+from snow.lodispp.pp_io import read_xyz, write_xyz
+elements, coords = read_xyz("Au561_Ih.xyz")
+
+# Define parameters
+cutoff_radius = 4.079 * 0.95  # Cutoff radius for neighbor detection
+dist_0 = 1.66 * 2       # Reference distance for strain calculation
+
+# Compute coordination number, strain, and other properties
+cn = coordination_number(1, coords=coords, cut_off=cutoff_radius)
+strain_syst = strain_mono(index_frame=1, coords=coords, dist_0=dist_0, cut_off=cutoff_radius)
+fnn = nearest_neighbours(1, coords, cutoff_radius)
+snn = second_neighbours(1, coords, cutoff_radius)
+agcn = agcn_calculator(index_frame=1, coords=coords, cutoff=cutoff_radius, gcn_max=12)
+
+# Determine surface atoms
+is_surface = agcn < 10.0
+
+# Compute Steinhardt parameters
+stein = peratom_steinhardt(1, coords, [4, 6, 8, 12], cutoff_radius)
+
+# Prepare additional data
+additional_data = np.column_stack((cn, agcn, strain_syst, is_surface, *stein))
+print("q12_avg = {:.3f} +/- {:.3f}".format(np.mean(stein[3]), np.std(stein[3])))
+
+# Write updated XYZ file
+write_xyz("output_test.xyz", elements=elements, coords=coords, additional_data=additional_data)
+```
 
 ### Neighbours Lists
 
@@ -89,3 +118,5 @@ in this example we compute both the atop and bridge gcn, generate coordinates fo
 The strain, as computed by SNOW, is a measure of the deformation of interatomic separations compared with typical equilibrium separations in the bulk. It provides a percentage for each atom which will be positive (negative) if the interatomic distances with negihbours is larger (smaller) than what is typically observed in the bulk and thus the atom is on average in a expanded (compressed) state.
 
 ### Steinhardt Parameters
+
+Steinhardt parameters are order parameters for atomistic structures 
