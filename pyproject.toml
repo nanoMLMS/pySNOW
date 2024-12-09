@@ -2,6 +2,8 @@
 name = "snow"
 description = "Integrated tool for structural characterization at atomistic level"
 readme = "README.md"
+version = "0.0.0a1"
+keywords = ["snow", "molecular dynamics", "analysis", "atomistic", "nanoparticles"]
 
 authors = [
     { name = "Giacomo Becatti", email = "giacomo.becatti@unimi.it" },
@@ -10,7 +12,7 @@ authors = [
 ]
 
 classifiers = [
-    "Development Status :: 1 - Planning",
+    "Development Status :: 2 - Pre-Alpha",
     "Programming Language :: Python :: 3.12"
 ]
 
