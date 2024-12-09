@@ -59,6 +59,7 @@ print("q12_avg = {:.3f} +/- {:.3f}".format(np.mean(stein[3]), np.std(stein[3])))
 write_xyz("output_test.xyz", elements=elements, coords=coords, additional_data=additional_data)
 ```
 
+will write the coordinates, elements and all other computed parameters and descriptors to an xyz file *output_test.xyz* which can be then opened, for instance, with [ovito](https://www.ovito.org/) for a visual representation using some form of [color coding](https://www.ovito.org/manual/reference/pipelines/modifiers/color_coding.html)
 ### Neighbours Lists
 
 SNOW includes the determination of neighbours lists, it does so efficiently exploiting [KDTrees](https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.cKDTree.html) as implemented in the popular scipy python package, this neighbours lists can be extracted by the user for further analysis and are used for the computation of most descriptors such as the coordination and the generalized coordination numbers, the identification of bridge sites etc.
