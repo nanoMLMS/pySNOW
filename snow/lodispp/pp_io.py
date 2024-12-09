@@ -27,31 +27,38 @@ def read_eam(filepot: str) -> dict:
         lat_param = float(lat_param)
         
         n_rho, d_rho, n_r, d_r, r_cut = map(float, pot_file.readline().split())
-        
+        print(d_r)
         F_rho = []
         Z_r = []
         rho_r = []
         
+        r = np.arange(0, (n_rho - 1) * d_r, d_r)
+        print(r)
         for rho in range(int(n_rho) // 5):
             line = pot_file.readline().split()
             for i in range(5):
                 
                 F_rho.append(float(line[i]))
         
-        for r in range(int(n_r) // 5):
+        for _ in range(int(n_r) // 5):
             line = pot_file.readline().split()
             for i in range(5):
                 
                 Z_r.append(float(line[i]))
         
-        for r in range(int(n_r) // 5):
+        for _ in range(int(n_r) // 5):
             line = pot_file.readline().split()
             for i in range(5):
                 
                 rho_r.append(float(line[i]))
         
     
-    return F_rho, Z_r, rho_r
+    return {
+        "F_rho": F_rho,
+        "Z_r": Z_r,
+        "rho_r": rho_r,
+        "r": r
+    }
 
 
     
