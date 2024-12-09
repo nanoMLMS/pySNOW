@@ -1,10 +1,22 @@
 import numpy as np
-from snow.lodispp.pp_io import read_xyz
-from snow.lodispp.utils import center_of_mass
 
-def rotate_translate_system(index_frame: int, coords: np.ndarray, symmetry_axis: np.ndarray):
-    """
-    
+
+def rotate_translate_system(index_frame: int, coords: np.ndarray, symmetry_axis: np.ndarray) -> np.ndarray:
+    """ ROtates the system around the origin along a given axis
+
+    Parameters
+    ----------
+    index_frame : int
+        Index of the frame if going through a trajectory, mostly for reference
+    coords : np.ndarray
+        Array of the atomic coordinates
+    symmetry_axis : np.ndarray
+        Symmetry axis along which structure will be aligned
+
+    Returns
+    -------
+    np.ndarray
+        The transformed system of coordinates
     """
     
     rotation_axis = np.cross(symmetry_axis, np.array([0, 0, 1]))

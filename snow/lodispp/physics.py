@@ -1,23 +1,32 @@
 import numpy as np
 
-from snow.lodispp.pp_io import *
+from snow.lodispp.pp_io import read_rgl
 from tqdm import tqdm
 
 
-def properties(coords, elements, pot_file, dist_mat, l_pressure: bool):
-    """
-    Calculate pressure-related properties for a given atomic configuration.
+def properties(coords: np.ndarray, elements: np.ndarray, pot_file: str, dist_mat: np.ndarray, l_pressure: bool):
+    """Calculate energy, density and pressure for a given atomic configuration given an interatomic potential parameter file.
 
-    Parameters:
-        coords (np.ndarray): Atomic coordinates (n_atoms x 3).
-        elements (list): List of element symbols for each atom.
-        pot_file (str): Path to the potential parameter file.
-        dist_mat (np.ndarray): Distance matrix (n_atoms x n_atoms).
-        l_pressure (bool): Flag to calculate pressures.
 
-    Returns:
-        tuple: (density, potential energy, atomic pressures)
+    Parameters
+    ----------
+    coords : np.ndarray
+        Atomic coordinates (n_atoms x 3).
+    elements : np.ndarray
+        List of element symbols for each atom.
+    pot_file : str
+        Path to the Rosato Gupta potential parameter file.
+    dist_mat : np.ndarray
+        Distance matrix (n_atoms x n_atoms).
+    l_pressure : bool
+        Flag to calculate pressures.
+
+    Returns
+    -------
+    tuple
+        (density, potential energy, atomic pressures)
     """
+
     n_atoms = np.shape(coords)[0]
     density = np.zeros(n_atoms)
     pot_energy = np.zeros(n_atoms)
@@ -27,7 +36,6 @@ def properties(coords, elements, pot_file, dist_mat, l_pressure: bool):
     pot_params = read_rgl(filepot=pot_file)  # Assumes this function is implemented elsewhere
     
     at_vol = np.zeros(3)
-    en = 0  # Total energy
     
     # Precompute constants
     four_thirds_pi = 4.0 / 3.0 * np.pi

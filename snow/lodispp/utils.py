@@ -2,7 +2,7 @@ import numpy as np
 from scipy.spatial.distance import pdist, squareform
 from scipy.spatial import cKDTree
 from snow.misc.constants import mass
-from typing import Union
+from scipy.sparse import coo_matrix
 
 def distance_matrix(index_frame, coords):
     """
@@ -32,7 +32,6 @@ def adjacency_matrix(index_frame, coords, cutoff):
     adj_matrix = dist_mat <= cutoff
     return adj_matrix
 
-from scipy.sparse import coo_matrix
 
 def sparse_adjacency_matrix(index_frame, coords, cutoff):
     """
@@ -110,8 +109,7 @@ def pddf_calculator(index_frame, coords, bin_precision = None, bin_count = None)
     
     return dist, dist_count
 
-from scipy.spatial import cKDTree
-import numpy as np
+
 
 def nearest_neighbours(index_frame: int, coords: np.ndarray, cut_off: float) -> list:
     """
@@ -145,8 +143,21 @@ def nearest_neighbours(index_frame: int, coords: np.ndarray, cut_off: float) -> 
     return neigh
 
 def pair_list(index_frame: int, coords: np.ndarray, cut_off: float) -> list:
-    """
-    A
+    """Generates list of all pairs of atoms within a certain cut off distance of each other
+
+    Parameters
+    ----------
+    index_frame : int
+        _description_
+    coords : np.ndarray
+        _description_
+    cut_off : float
+        _description_
+
+    Returns
+    -------
+    list
+        _description_
     """
     tree = cKDTree(coords)
     pairs = tree.query_pairs(cut_off)
@@ -243,15 +254,15 @@ def bridge_gcn(index_frame: int, coords: np.ndarray, cut_off: float, gcn_max=18.
 
     Parameters
     ----------
-    index_frame : int
+    - index_frame : int
         Index of the frame relative to the snapshot, primarily for reference.
-    coords : ndarray
+    - coords : ndarray
         Array of the coordinates of the atoms forming the system.
-    cut_off : float
+    - cut_off : float
         The cutoff distance for determining nearest neighbors.
-    gcn_max : float, optional
+    - gcn_max : float, optional
         Maximum typical coordination number in the specific system (default is 18.0).
-    phantom : bool, optional
+    - phantom : bool, optional
         If True, also returns the coordinates of the midpoints between pairs for 
         representation and testing (default is False).
 
@@ -276,7 +287,7 @@ def bridge_gcn(index_frame: int, coords: np.ndarray, cut_off: float, gcn_max=18.
         neigh_unique_12 = np.unique(np.concatenate((neigh_1, neigh_2)))
         b_gcn_i = sum(coord_numb[neigh] for neigh in neigh_unique_12) - (coord_numb[p[0]] + coord_numb[p[1]])
         b_gcn[i] = b_gcn_i / gcn_max
-    if phantom == True:
+    if phantom:
         phant_xyz = np.zeros((len(pairs), 3))
         for i, p in enumerate(pairs):
             pos_1 = coords[p[0]]

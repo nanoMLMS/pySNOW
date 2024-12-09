@@ -1,6 +1,7 @@
-import numpy as np
+from typing import Tuple
 import numpy as np
 import os
+import inspect
 
 def read_rgl(filepot: str):
     with open(filepot, 'r') as file:
@@ -125,22 +126,27 @@ def read_rgl(filepot: str):
         
     }
        
-    
-import os
-import inspect
-import numpy as np
+def read_xyz(file_path: str) -> Tuple[np.ndarray, np.ndarray]:
+    """Reads the elements and coordinates of atoms from an xyz file at a given location
 
-def read_xyz(filename):
-    """
-    Reads an XYZ file and returns the atomic elements and their coordinates.
+    Parameters
+    ----------
+    file_path : str
+        Path to the xyz file with the structure
 
-    Parameters:
-        filename (str): Path to the XYZ file, relative to the script location.
+    Returns
+    -------
+    Tuple[np.ndarray, np.ndarray]
+        Elements and coordinates array of the system
 
-    Returns:
-        tuple: (elements, coordinates)
-            - elements (list of str): List of atomic element symbols.
-            - coordinates (numpy.ndarray): Array of shape (n_atoms, 3) with atomic coordinates.
+    Raises
+    ------
+    FileNotFoundError
+        No file was found at the given location
+    ValueError
+        Some error while reading the file
+    Exception
+        Unexpected errors along the way
     """
     try:
         # Get the path of the calling script
@@ -151,7 +157,7 @@ def read_xyz(filename):
         script_dir = os.path.dirname(os.path.realpath(caller_script))
         
         # Construct the full path to the file
-        filepath = os.path.join(script_dir, filename)
+        filepath = os.path.join(script_dir, file_path)
 
         # Open the file
         with open(filepath, "r") as xyz_file:
@@ -174,9 +180,9 @@ def read_xyz(filename):
         return elements, coordinates
 
     except FileNotFoundError:
-        raise FileNotFoundError(f"The file '{filename}' does not exist.")
+        raise FileNotFoundError(f"The file '{file_path}' does not exist.")
     except ValueError as e:
-        raise ValueError(f"Error reading '{filename}': {e}")
+        raise ValueError(f"Error reading '{file_path}': {e}")
     except Exception as e:
         raise Exception(f"An unexpected error occurred: {e}")
 
@@ -184,18 +190,23 @@ def read_xyz(filename):
 
 
 
-def read_xyz_movie(file_path):
-    """
-    Parse an XYZ movie file to extract atomic elements and coordinates.
+def read_xyz_movie(file_path: str) -> Tuple[np.ndarray, np.ndarray]:
+    """Obtains the coordinates and elements for each frame of an xyz trajectory (for now it only supports trajectories
+    where the number of atoms and chemical composition is fixed through the whole trajectory).
 
-    Args:
-        file_path (str): Path to the XYZ movie file.
+    Parameters
+    ----------
+    file_path : str
+        Path to the xyz file with the structure
 
-    Returns:
-        tuple: (elements, coords)
-            - elements (list): List of element types for each atom.
-            - coords (numpy.ndarray): Shape (n_frames, n_atoms, 3) with atomic coordinates.
+
+    Returns
+    -------
+    Tuple[np.ndarray, np.ndarray]
+        Elements array and a (n_frames x 3 x n_atoms) array for the coordinates
     """
+    
+    
     with open(file_path, "r") as xyz_file:
         # Read the total number of atoms from the first line
         n_atoms = int(xyz_file.readline().strip())
@@ -228,17 +239,7 @@ def read_xyz_movie(file_path):
 
 
 def read_lammps(file_path):
-    """
-    Parse a LAMMPS data file to extract atomic coordinates and element types.
 
-    Args:
-        file_path (str): Path to the LAMMPS data file.
-
-    Returns:
-        tuple: (coordinates, elements)
-            - coordinates (numpy.ndarray): Nx3 array of atomic coordinates (x, y, z).
-            - elements (list): List of element types (as strings or integers) for each atom.
-    """
     coordinates = []
     elements = []
     atoms_section = False
@@ -285,11 +286,16 @@ def write_xyz(filename, elements, coords, additional_data=None):
     """
     Writes atomic data to an XYZ file in OVITO-compatible format.
 
-    Parameters:
-        filename (str): Name of the output .xyz file.
-        elements (list): List of atomic symbols (e.g., ['Au', 'Au', ...]).
-        coords (np.ndarray): Nx3 array of atomic coordinates.
-        additional_data (list or np.ndarray, optional): Additional per-atom data, such as coordination numbers.
+    Parameters
+    ----------
+    filename: str
+        Name of the output .xyz file.
+    elements: ndarray
+        List of atomic symbols (e.g., ['Au', 'Au', ...]).
+    coords: ndarray)
+        Nx3 array of atomic coordinates.
+    additional_data: list or np.ndarray, optional
+        Additional per-atom data, such as coordination numbers.
 
     Returns:
         An xyz file containing the elements and coordinates of each atom and any additional per atom data (e.g. coordination number, agcn, strain...) 
