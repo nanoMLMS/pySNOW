@@ -48,7 +48,7 @@ The coordination number is one of the simplest descriptors of the environment of
 
 ### Generalized Coordination Number
 
-Introduce by [Federico Calle-Vallejo](https://doi.org/10.1002/advs.202207644) is a more refined descriptors for the environment of atoms, taking into account, for each atom, the neighbours of the neighbouring atoms. It is defined as a weighted average (weighted by a maximum coordination number associated to the refernece bulk structure, so, if the system is composed of gold atoms the crystal reference is FCC and CN<sub>max<\sub>=12) of the coordination numbers of the neighbours of each atom.
+Introduce by [Federico Calle-Vallejo](https://doi.org/10.1002/advs.202207644) is a more refined descriptors for the environment of atoms, taking into account, for each atom, the neighbours of the neighbouring atoms. It is defined as a weighted average (weighted by a maximum coordination number associated to the refernece bulk structure, so, if the system is composed of gold atoms the crystal reference is FCC and CN<sub>max</sub>=12) of the coordination numbers of the neighbours of each atom.
 
 ### Strain
 
