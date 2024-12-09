@@ -3,9 +3,9 @@ Contains functions to ocmpute physical properties for the system, such as pressu
 """
 
 import numpy as np
-from snow.lodispp.pp_io import read_rgl
+from snow.lodispp.pp_io import read_rgl, read_eam
 from tqdm import tqdm
-
+from scipy.spatial.distance import pdist
 def properties_rgl(coords: np.ndarray, elements: np.ndarray, pot_file: str, dist_mat: np.ndarray, l_pressure: bool):
     """Calculate energy, density and pressure for a given atomic configuration given an interatomic potential parameter file.
 
@@ -131,3 +131,36 @@ def properties_rgl(coords: np.ndarray, elements: np.ndarray, pot_file: str, dist
              
                     
 
+def pair_energy_eam(pot_file: str, coords: np.ndarray) -> float:
+    """Computes the energy associated with a pair of atoms
+
+    Parameters
+    ----------
+    pot_file : str
+        Path to the EAM potential file
+    coords : np.ndarray
+        Coordinates of two atoms of a pair
+
+    Returns
+    -------
+    float
+        Potential energy of a pair
+    """
+    
+    r_ij = pdist(coords)[0]
+    
+    potential = read_eam(pot_file)
+    
+    idx_closer_r = min(range(len(potential["r"])), key=lambda i: abs(potential["r"][i] - r_ij))
+    
+    rho_r = potential["rho_r"][idx_closer_r]
+    phi_r = potential["Z_r"][idx_closer_r]
+
+    idx_closer_rho = min(range(len(potential["rho_r"])), key=lambda i: abs(potential["rho_r"][i] - rho_r))
+    
+    F_rho = potential["F_rho"][idx_closer_rho]
+    
+    return F_rho, phi_r
+    
+    
+    
