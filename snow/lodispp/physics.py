@@ -1,10 +1,12 @@
-import numpy as np
+"""
+Contains functions to ocmpute physical properties for the system, such as pressure, potential energy etc.
+"""
 
+import numpy as np
 from snow.lodispp.pp_io import read_rgl
 from tqdm import tqdm
 
-
-def properties(coords: np.ndarray, elements: np.ndarray, pot_file: str, dist_mat: np.ndarray, l_pressure: bool):
+def properties_rgl(coords: np.ndarray, elements: np.ndarray, pot_file: str, dist_mat: np.ndarray, l_pressure: bool):
     """Calculate energy, density and pressure for a given atomic configuration given an interatomic potential parameter file.
 
 

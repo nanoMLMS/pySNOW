@@ -1,9 +1,76 @@
+""" Contains input output functions related to reading structures, potential files etc. """
 from typing import Tuple
 import numpy as np
 import os
 import inspect
 
-def read_rgl(filepot: str):
+
+def read_eam(filepot: str) -> dict:
+    """Reads an EAM (Embedded Atom Model) potential and returns a dictionary with all factors and parameters
+
+    Parameters
+    ----------
+    filepot : str
+        _description_
+
+    Returns
+    -------
+    dict
+        _description_
+    """
+    
+    with open(filepot, "r") as pot_file:
+        comment = pot_file.readline()
+        atomic_number, mass, lat_param, lat_type = pot_file.readline().split()
+        atomic_number = int(atomic_number)
+        mass = float(mass)
+        lat_param = float(lat_param)
+        
+        n_rho, d_rho, n_r, d_r, r_cut = map(float, pot_file.readline().split())
+        
+        F_rho = []
+        Z_r = []
+        rho_r = []
+        
+        for rho in range(int(n_rho) // 5):
+            line = pot_file.readline().split()
+            for i in range(5):
+                
+                F_rho.append(float(line[i]))
+        
+        for r in range(int(n_r) // 5):
+            line = pot_file.readline().split()
+            for i in range(5):
+                
+                Z_r.append(float(line[i]))
+        
+        for r in range(int(n_r) // 5):
+            line = pot_file.readline().split()
+            for i in range(5):
+                
+                rho_r.append(float(line[i]))
+        
+    
+    return F_rho, Z_r, rho_r
+
+
+    
+    
+
+def read_rgl(filepot: str) -> dict:
+    """Reads the parameters from a RGL potential file, computes the necessary factors and outputs a dictionary with the necessary 
+    factors and parameters
+
+    Parameters
+    ----------
+    filepot : str
+        Path to the potential parameter file
+
+    Returns
+    -------
+    dict
+        Dictionary with all the parameters and factors for the RGL potential
+    """
     with open(filepot, 'r') as file:
         lines = file.readlines()
     
