@@ -12,7 +12,7 @@ def read_eam(filepot: str) -> dict:
     ----------
     filepot : str
         _description_
-
+    
     Returns
     -------
     dict
@@ -20,7 +20,7 @@ def read_eam(filepot: str) -> dict:
     """
     
     with open(filepot, "r") as pot_file:
-        comment = pot_file.readline()
+        _ = pot_file.readline()
         atomic_number, mass, lat_param, lat_type = pot_file.readline().split()
         atomic_number = int(atomic_number)
         mass = float(mass)

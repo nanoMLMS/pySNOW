@@ -6,6 +6,7 @@ import numpy as np
 from snow.lodispp.pp_io import read_rgl, read_eam
 from tqdm import tqdm
 from scipy.spatial.distance import pdist
+from snow.lodispp.utils import nearest_neighbours
 def properties_rgl(coords: np.ndarray, elements: np.ndarray, pot_file: str, dist_mat: np.ndarray, l_pressure: bool):
     """Calculate energy, density and pressure for a given atomic configuration given an interatomic potential parameter file.
 
@@ -151,16 +152,54 @@ def pair_energy_eam(pot_file: str, coords: np.ndarray) -> float:
     
     potential = read_eam(pot_file)
     
-    idx_closer_r = min(range(len(potential["r"])), key=lambda i: abs(potential["r"][i] - r_ij))
+    idx_closer_r = np.searchsorted(potential["r"], r_ij)
     
     rho_r = potential["rho_r"][idx_closer_r]
     phi_r = potential["Z_r"][idx_closer_r]
 
-    idx_closer_rho = min(range(len(potential["rho_r"])), key=lambda i: abs(potential["rho_r"][i] - rho_r))
+    idx_closer_rho = np.searchsorted(potential["r"], rho_r)
     
     F_rho = potential["F_rho"][idx_closer_rho]
     
-    return F_rho, phi_r
+    return F_rho + 0.5 * phi_r
+
+def energy_eam(coords: np.ndarray, pot_file: str) -> np.ndarray:
+    """_summary_
+
+    Parameters
+    ----------
+    coords : np.ndarray
+        _description_
+    pot_file : str
+        _description_
+
+    Returns
+    -------
+    np.ndarray
+        _description_
+    """
     
+    N_atoms = np.shape(coords)[0]
+    
+    potential = read_eam(pot_file)
+    cut_off = potential["cut_off"]
+    
+    neigh_list = nearest_neighbours(1, coords = coords, cut_off = cut_off)
+    
+    pot_en = np.zeros(N_atoms)
+    print("Computing energies for each atom")
+    for i in tqdm(range (N_atoms)):
+        en_i = 0
+        for neigh in neigh_list[i]:
+            if neigh != i:
+                coords_ij = np.array([coords[i], coords[neigh]])
+                en_ij = pair_energy_eam(pot_file=pot_file, coords=coords_ij)
+                en_i += en_ij
+        pot_en[i] = en_i
+    return pot_en
+        
+        
+        
+        
     
     
