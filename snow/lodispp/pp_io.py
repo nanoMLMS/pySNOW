@@ -32,9 +32,11 @@ def read_eam(filepot: str) -> dict:
         Z_r = []
         rho_r = []
         
-        r = np.arange(0, (n_rho - 1) * d_r, d_r)
+        r = np.arange(0, (n_r - 1) * d_r, d_r)
+        rho = np.arange(0, (n_rho - 1) * d_rho, d_rho)
+
         print(r)
-        for rho in range(int(n_rho) // 5):
+        for _ in range(int(n_rho) // 5):
             line = pot_file.readline().split()
             for i in range(5):
                 
@@ -57,7 +59,9 @@ def read_eam(filepot: str) -> dict:
         "F_rho": F_rho,
         "Z_r": Z_r,
         "rho_r": rho_r,
-        "r": r
+        "r": r,
+        "rho": rho,
+        "cut_off": r_cut
     }
 
 
