@@ -236,7 +236,7 @@ def read_xyz(file_path: str) -> Tuple[np.ndarray, np.ndarray]:
         filepath = os.path.join(script_dir, file_path)
 
         # Open the file
-        with open(filepath, "r") as xyz_file:
+        with open(file_path, "r") as xyz_file:
             # Number of atoms
             n_atoms = int(xyz_file.readline().strip())
 

@@ -128,7 +128,7 @@ def properties_rgl(coords: np.ndarray, elements: np.ndarray, pot_file: str, dist
         if l_pressure:
             press_atoms[i] = (presr_i + presb_i) / at_vol[0]
     
-    return density, pot_energy, press_atoms
+    return density, -pot_energy, press_atoms
              
                     
 
@@ -155,9 +155,12 @@ def pair_energy_eam(pot_file: str, coords: np.ndarray) -> float:
     idx_closer_r = np.searchsorted(potential["r"], r_ij)
     
     rho_r = potential["rho_r"][idx_closer_r]
-    phi_r = potential["Z_r"][idx_closer_r]
-
-    idx_closer_rho = np.searchsorted(potential["r"], rho_r)
+    
+    Z_r = potential["Z_r"][idx_closer_r]
+    phi_r = 27.2 * 0.529 * Z_r * Z_r / r_ij
+    
+    idx_closer_rho = np.searchsorted(potential["rho_r"], rho_r)
+    
     
     F_rho = potential["F_rho"][idx_closer_rho]
     

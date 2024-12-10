@@ -103,8 +103,9 @@ def pddf_calculator(index_frame, coords, bin_precision = None, bin_count = None)
     for i in range(n_bins_int):
         for j in  range(n_atoms):
             for k in range(n_atoms):
-                if (dist_mat[j,k] < bin_precision * i and dist_mat[j,k] >= (bin_precision * (i - 1))):
-                    dist_count[i] += 1
+                if k != j:
+                    if (dist_mat[j,k] < bin_precision * i and dist_mat[j,k] >= (bin_precision * (i - 1))):
+                        dist_count[i] += 1
         dist[i] = bin_precision * i
     
     return dist, dist_count
