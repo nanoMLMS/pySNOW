@@ -66,12 +66,12 @@ def sparse_adjacency_matrix(index_frame, coords, cutoff):
     adjacency_matrix = coo_matrix((np.ones(len(rows), dtype=int), (rows, cols)))
 
     return adjacency_matrix
-def pddf_calculator(index_frame, coords, bin_precision = None, bin_count = None):
+def pddf_calculator(index_frame, coords, bin_precision=None, bin_count=None):
     """
     Computes the pair distance distribution function for a given set of coordinates of atoms. \n
     The user can either provide a bin precision or the numer of bins depending on wheter they are striving for a specific precision in the bins
     or on a specific number of bins for representation.
-    
+
     Parameters
     ----------
     index_frame : int
@@ -81,33 +81,37 @@ def pddf_calculator(index_frame, coords, bin_precision = None, bin_count = None)
     bin_precision: float, optional
         Specify a value if you want to compute the PDDF with a given bin precision (in Angstrom)
     bin_count: int, optional
-        Specify a value if you want to compute the PDDF with a given number of bins 
-    
+        Specify a value if you want to compute the PDDF with a given number of bins
+
     Returns
     -------
     tuple
         - ndarray: the values of the interatomic distances for each bin
         - ndarray: the number of atoms within a given distance for each bin
-    
+
     """
     n_atoms = np.shape(coords)[0]
-    dist_mat, dist_max, dist_min = distance_matrix(index_frame=index_frame, coords=coords)
+    dist_mat, dist_max, dist_min = distance_matrix(
+        index_frame=index_frame, coords=coords
+    )
+
+    triu_indeces = np.triu_indices(n_atoms, k=1)
+    distances = dist_mat[triu_indeces]
     if bin_precision:
-        n_bins = dist_max / bin_precision
-    else:
+        n_bins = int(np.ceil(dist_max / bin_precision))
+    elif bin_count:
         n_bins = bin_count
         bin_precision = dist_max / n_bins
-    n_bins_int = int(n_bins)
-    dist_count = np.zeros(n_bins_int)
-    dist = np.zeros(n_bins_int)
-    for i in range(n_bins_int):
-        for j in  range(n_atoms):
-            for k in range(n_atoms):
-                if (dist_mat[j,k] < bin_precision * i and dist_mat[j,k] >= (bin_precision * (i - 1))):
-                    dist_count[i] += 1
-        dist[i] = bin_precision * i
-    
+    else:
+        raise ValueError("You must specify either bin_precision or bin_count.")
+
+    bins = np.linspace(0, dist_max, n_bins + 1)
+    dist_count, _ = np.histogram(distances, bins=bins)
+
+    return bins[:-1] + bin_precision / 2, dist_count
+
     return dist, dist_count
+
 
 
 
