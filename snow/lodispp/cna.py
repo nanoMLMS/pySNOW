@@ -12,6 +12,7 @@ from snow.lodispp.utils import (
 
 
 def longest_path_or_cycle(neigh_common, neigh_list):
+
     graph = {node: set() for node in neigh_common}
     for node in neigh_common:
         for neighbor in neigh_list[node]:
@@ -49,14 +50,33 @@ def longest_path_or_cycle(neigh_common, neigh_list):
 
 def calculate_cna(
     index_frame, coords, cut_off, return_pair=False
-) -> (int, np.ndarray):
-    neighbors_list = nearest_neighbours(index_frame, coords, cut_off)
+) -> tuple[int, np.ndarray]:
+    """_summary_
+
+    Parameters
+    ----------
+    index_frame : int
+        _description_
+    coords : ndarray
+        3xNatoms array containing the coordainates of each atom
+    cut_off : float
+        cutoff radius for the determination of nearest neaighbours
+    return_pair : bool, optional
+        Wether to return an ordered list of the inideces of the atoms forming a given pair, by default False
+
+    Returns
+    -------
+    tuple[int, np.ndarray, list]
+        The number of pairs, the cna signatures [r, s, t] for each pair and the ordered list of pairs (if return_pair == True)
+    tuple[int, np.ndarray]
+        The number of pairs, the cna signatures [r, s, t] for each pair
+    """
+
+    neigh_list = nearest_neighbours(index_frame, coords, cut_off)
 
     pairs = pair_list(index_frame=index_frame, coords=coords, cut_off=cut_off)
-    neigh_list, coord_numb = coordination_number(
-        index_frame=index_frame, coords=coords, cut_off=cut_off, neigh_list=True
-    )
-
+    
+    
     r = np.zeros(len(pairs))
     s = np.zeros(len(pairs))
     t = np.zeros(len(pairs))
@@ -125,3 +145,237 @@ def write_cna(
                 f.write(
                     f"{np.unique(cna, axis=0, return_counts=True)[0][i]}, {np.unique(cna, axis=0, return_counts=True)[1][i]},{p}\n"
                 )
+
+
+def cna_peratom(index_frame: int, coords: np.ndarray, cut_off: float):
+    """_summary_
+
+    Parameters
+    ----------
+    index_frame : int
+        _description_
+    coords : np.ndarray
+        _description_
+    cut_off : float
+        _description_
+    """
+    _, cna, pair_list = calculate_cna(index_frame=index_frame, coords=coords, cut_off=cut_off, return_pair=True)
+    cna_atom = []
+
+    for i in range(len(coords)):
+        cna_i = []
+        for j, p in enumerate(pair_list):
+            if i in p:
+                cna_i.append(cna[j])
+        unique_i = np.unique(cna_i, axis=0, return_counts=True)
+        count = unique_i[1]
+        cnas = unique_i[0]
+
+        
+        cna_atom.append(unique_i)
+    return cna_atom
+
+def cnap_peratom(index_frame: int, coords: np.ndarray, cut_off: float):
+    """CComputes the CNA Pattern index for each atom in the system
+
+    Parameters
+    ----------
+    index_frame : int
+        _description_
+    coords : np.ndarray
+        _description_
+    cut_off : float
+        _description_
+
+    Returns
+    -------
+    _type_
+        _description_
+    """
+    cna = cna_peratom(1, coords, cut_off)
+    cna_atom = np.zeros(len(coords))
+    count = 0
+    for i in range(len(coords)):
+
+        n_sigs = len(
+            cna[i][1]
+        )  # number of unique signatures to which atom i partecipatr
+        sigs = cna[i][0]  # the unique signatures themselves
+        count = cna[i][1]  # the count of each signature
+        if n_sigs == 1 and count[0] == 12:
+            if (sigs[0] == [5, 5, 5]).all():
+                cna_atom[i] = 5
+            elif (sigs[0] == [4, 2, 1]).all():
+                cna_atom[i] = 4
+        elif n_sigs == 2:
+            if [4, 2, 2] in sigs and [5, 5, 5] in sigs:
+
+                idx_422 = np.where(np.all(sigs == [4, 2, 2], axis=1))[0]
+                idx_555 = np.where(np.all(sigs == [5, 5, 5], axis=1))[0]
+                n_422 = count[idx_422][0] if count[idx_422].size > 0 else 0
+                n_555 = count[idx_555][0] if count[idx_555].size > 0 else 0
+
+                if n_422 == 10 and n_555 == 2:
+                    cna_atom[i] = 3
+            if [4, 2, 1] in sigs and [3, 1, 1] in sigs:
+                idx_311 = np.where(np.all(sigs == [3, 1, 1], axis=1))[0]
+                idx_421 = np.where(np.all(sigs == [4, 2, 1], axis=1))[0]
+                n_311 = count[idx_311][0] if count[idx_311].size > 0 else 0
+                n_421 = count[idx_421][0] if count[idx_421].size > 0 else 0
+
+                if n_311 == 6 and n_421 == 3:
+                    cna_atom[i] = 15
+            if [2, 1, 1] in sigs and [4, 2, 1] in sigs:
+                idx_421 = np.where(np.all(sigs == [4, 2, 1], axis=1))[0]
+                idx_211 = np.where(np.all(sigs == [2, 1, 1], axis=1))[0]
+
+                if (
+                    idx_421.size > 0 and idx_211.size > 0
+                ):  # Ensure non-empty indices
+                    n_421 = count[idx_421][0] if count[idx_421].size > 0 else 0
+                    n_211 = count[idx_211][0] if count[idx_211].size > 0 else 0
+
+                    if n_211 == 4 and n_421 == 1:
+                        cna_atom[i] = 11
+                    elif n_211 == 4 and n_421 == 4:
+                        cna_atom[i] = 12
+            if [3, 2, 2] in sigs and [5, 5, 5] in sigs:
+                idx_322 = np.where(np.all(sigs == [3, 2, 2], axis=1))[0]
+                idx_555 = np.where(np.all(sigs == [5, 5, 5], axis=1))[0]
+                n_322 = count[idx_322][0] if count[idx_322].size > 0 else 0
+                n_555 = count[idx_555][0] if count[idx_555].size > 0 else 0
+
+                if n_322 == 5 and n_555 == 1:
+                    cna_atom[i] = 14
+            if [4, 2, 1] in sigs and [4, 2, 2] in sigs:
+                idx_421 = np.where(np.all(sigs == [4, 2, 1], axis=1))[0]
+                idx_422 = np.where(np.all(sigs == [4, 2, 2], axis=1))[0]
+                n_422 = count[idx_422][0] if count[idx_422].size > 0 else 0
+                n_421 = count[idx_421][0] if count[idx_421].size > 0 else 0
+
+                if n_421 == 6 and n_422 == 6:
+                    cna_atom[i] = 16
+        elif n_sigs == 3:
+            if [1, 0, 0] in sigs and [2, 1, 1] in sigs and [4, 2, 2] in sigs:
+                idx_100 = np.where(np.all(sigs == [1, 0, 0], axis=1))[0]
+                idx_211 = np.where(np.all(sigs == [2, 1, 1], axis=1))[0]
+                idx_422 = np.where(np.all(sigs == [4, 2, 2], axis=1))[0]
+                n_100 = count[idx_100][0] if count[idx_100].size > 0 else 0
+                n_211 = count[idx_211][0] if count[idx_211].size > 0 else 0
+                n_422 = count[idx_422][0] if count[idx_422].size > 0 else 0
+
+                if n_100 == 2 and n_211 == 2 and n_422 == 2:
+                    cna_atom[i] = 6
+            if [2, 0, 0] in sigs and [3, 1, 1] in sigs and [4, 2, 1] in sigs:
+                idx_200 = np.where(np.all(sigs == [2, 0, 0], axis=1))[0]
+                idx_311 = np.where(np.all(sigs == [3, 1, 1], axis=1))[0]
+                idx_421 = np.where(np.all(sigs == [4, 2, 1], axis=1))[0]
+                n_200 = count[idx_200][0] if count[idx_200].size > 0 else 0
+                n_311 = count[idx_311][0] if count[idx_311].size > 0 else 0
+                n_421 = count[idx_421][0] if count[idx_421].size > 0 else 0
+
+                if n_200 == 2 and n_311 == 4 and n_421 == 1:
+                    cna_atom[i] = 8
+            if [2, 1, 1] in sigs and [3, 1, 1] in sigs and [4, 2, 1] in sigs:
+                idx_211 = np.where(np.all(sigs == [2, 1, 1], axis=1))[0]
+                idx_311 = np.where(np.all(sigs == [3, 1, 1], axis=1))[0]
+                idx_421 = np.where(np.all(sigs == [4, 2, 1], axis=1))[0]
+                n_211 = count[idx_211][0] if count[idx_211].size > 0 else 0
+                n_311 = count[idx_311][0] if count[idx_311].size > 0 else 0
+                n_421 = count[idx_421][0] if count[idx_421].size > 0 else 0
+
+                if n_211 == 3 and n_311 == 2 and n_421 == 2:
+                    cna_atom[i] = 10
+            if [3, 1, 1] in sigs and [3, 2, 2] in sigs and [4, 2, 2] in sigs:
+                idx_311 = np.where(np.all(sigs == [3, 1, 1], axis=1))[0]
+                idx_322 = np.where(np.all(sigs == [3, 2, 2], axis=1))[0]
+                idx_422 = np.where(np.all(sigs == [4, 2, 2], axis=1))[0]
+                n_311 = count[idx_311][0] if count[idx_311].size > 0 else 0
+                n_322 = count[idx_322][0] if count[idx_322].size > 0 else 0
+                n_422 = count[idx_422][0] if count[idx_422].size > 0 else 0
+
+                if n_311 == 4 and n_322 == 2 and n_422 == 2:
+                    cna_atom[i] = 13
+        elif n_sigs == 4:
+
+            if (
+                [1, 0, 0] in sigs
+                and [2, 1, 1] in sigs
+                and [3, 2, 2] in sigs
+                and [4, 2, 2] in sigs
+            ):
+                idx_100 = np.where(np.all(sigs == [1, 0, 0], axis=1))[0]
+                idx_211 = np.where(np.all(sigs == [2, 1, 1], axis=1))[0]
+                idx_322 = np.where(np.all(sigs == [3, 2, 2], axis=1))[0]
+                idx_422 = np.where(np.all(sigs == [4, 2, 2], axis=1))[0]
+                n_100 = count[idx_100][0] if count[idx_100].size > 0 else 0
+                n_211 = count[idx_211][0] if count[idx_211].size > 0 else 0
+                n_322 = count[idx_322][0] if count[idx_322].size > 0 else 0
+                n_422 = count[idx_422][0] if count[idx_422].size > 0 else 0
+
+                if n_100 == 1 and n_211 == 2 and n_322 == 1 and n_422 == 1:
+                    cna_atom[i] = 1
+
+            if (
+                [2, 0, 0] in sigs
+                and [2, 1, 1] in sigs
+                and [3, 1, 1] in sigs
+                and [4, 2, 1] in sigs
+            ):
+                idx_200 = np.where(np.all(sigs == [2, 0, 0], axis=1))[0]
+                idx_211 = np.where(np.all(sigs == [2, 1, 1], axis=1))[0]
+                idx_311 = np.where(np.all(sigs == [3, 1, 1], axis=1))[0]
+                idx_421 = np.where(np.all(sigs == [4, 2, 1], axis=1))[0]
+                n_200 = count[idx_200][0] if count[idx_200].size > 0 else 0
+                n_211 = count[idx_211][0] if count[idx_211].size > 0 else 0
+                n_311 = count[idx_311][0] if count[idx_311].size > 0 else 0
+                n_421 = count[idx_421][0] if count[idx_421].size > 0 else 0
+
+                if n_200 == 1 and n_211 == 2 and n_311 == 2 and n_421 == 1:
+                    cna_atom[i] = 2
+
+            if (
+                [3, 0, 0] in sigs
+                and [3, 1, 1] in sigs
+                and [4, 2, 1] in sigs
+                and [4, 2, 2] in sigs
+            ):
+                idx_300 = np.where(np.all(sigs == [3, 0, 0], axis=1))[0]
+                idx_311 = np.where(np.all(sigs == [3, 1, 1], axis=1))[0]
+                idx_421 = np.where(np.all(sigs == [4, 2, 1], axis=1))[0]
+                idx_422 = np.where(np.all(sigs == [4, 2, 2], axis=1))[0]
+                n_300 = count[idx_300][0] if count[idx_300].size > 0 else 0
+                n_311 = count[idx_311][0] if count[idx_311].size > 0 else 0
+                n_421 = count[idx_421][0] if count[idx_421].size > 0 else 0
+                n_422 = count[idx_422][0] if count[idx_422].size > 0 else 0
+
+                if n_300 == 2 and n_311 == 4 and n_421 == 2 and n_422 == 2:
+                    cna_atom[i] = 9
+        elif n_sigs == 5:
+            if (
+                [2, 0, 0] in sigs
+                and [3, 0, 0] in sigs
+                and [3, 1, 1] in sigs
+                and [3, 2, 2] in sigs
+                and [4, 2, 2] in sigs
+            ):
+                idx_200 = np.where(np.all(sigs == [2, 0, 0], axis=1))[0]
+                idx_300 = np.where(np.all(sigs == [3, 0, 0], axis=1))[0]
+                idx_311 = np.where(np.all(sigs == [3, 1, 1], axis=1))[0]
+                idx_322 = np.where(np.all(sigs == [3, 2, 2], axis=1))[0]
+                idx_422 = np.where(np.all(sigs == [4, 2, 2], axis=1))[0]
+                n_200 = count[idx_200][0] if count[idx_200].size > 0 else 0
+                n_300 = count[idx_300][0] if count[idx_300].size > 0 else 0
+                n_311 = count[idx_311][0] if count[idx_311].size > 0 else 0
+                n_322 = count[idx_322][0] if count[idx_322].size > 0 else 0
+                n_422 = count[idx_422][0] if count[idx_422].size > 0 else 0
+
+                if (
+                    n_200 == 2
+                    and n_300 == 1
+                    and n_311 == 2
+                    and n_322 == 1
+                    and n_422 == 1
+                ):
+                    cna_atom[i] = 7
+    return cna_atom
