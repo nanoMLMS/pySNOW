@@ -157,29 +157,32 @@ el, coords = read_xyz(infile)
 cna_atom = cnap_peratom(1, coords, 4.08 * 0.85)
 write_xyz(outfile, el, coords, cna_atom.reshape(-1, 1))
 ```
+#### **Usage**  
+```bash
+python cnapatterner.py -i input.xyz -o output.xyz
+```
 
-The follwoing table reports for each CNAP index the description of the structure:
+#### **CNAp Index Descriptions**  
 
+| **CNAp** | **Description**                                      |
+|:--------:|------------------------------------------------------|
+| 1        | Vertex between two (111) facets and a (100) facet    |
+| 2        | Edge between (100) and a slightly distorted (111)    |
+| 3        | Atoms lying on a (555) symmetry axis                 |
+| 4        | FCC bulk                                             |
+| 5        | Intersection of six five-fold axes                   |
+| 6        | Edge between (100) facets                            |
+| 7        | Vertex on twinning planes shared by (111) facets     |
+| 8        | Edge between (111) re-entrances and (111) facets     |
+| 9        | Re-entrance delimited by (111) facets                |
+| 10       | Edge between (100) and (111) facets                  |
+| 11       | Vertex shared by (100) and (111) facets              |
+| 12       | (100) facet                                          |
+| 13       | Five-fold symmetry axis (without center)             |
+| 14       | Five-fold vertex                                     |
+| 15       | (111) face                                           |
+| 16       | Twinning plane                                       |
 
-| CNAp | Description                                               |
-|------|-----------------------------------------------------------|
-| 1    | Vertex from CNAP16 bordering two (111) facets and a (100) |
-| 2    | Edge between a (100) and a slightly distorted (111) facet |
-| 3    | Atoms lying on a (555) symmetry axis                      |
-| 4    | FCC bulk                                                  |
-| 5    | Interception of six five-fold axis                        |
-| 6    | Edge between (100) facet                                  |
-| 7    | Vertex lying on twinning planes shared by (111) facets    |
-| 8    | Edge between (111) re-entrances and (111) facets          |
-| 9    | Re-entrance delimited by (111) facet                      |
-| 10   | Edge between (100) and (111) facets                       |
-| 11   | Vertex shared by (100) and (111) facets                   |
-| 12   | (100) facet                                               |
-| 13   | Five-fold symmetry axes (no centre)                       |
-| 14   | Five-fold vertex                                          |
-| 15   | (111) face                                                |
-| 16   | Twinning plane                                            |
-
-![Au5010ToCnap](https://github.com/user-attachments/assets/46d18b9e-3829-4cf1-82c4-a8204f4da237)
-
-
+<div align="center">
+  <img src="https://github.com/user-attachments/assets/46d18b9e-3829-4cf1-82c4-a8204f4da237" width="60%">
+</div>
