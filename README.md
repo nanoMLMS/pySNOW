@@ -179,3 +179,7 @@ The follwoing table reports for each CNAP index the description of the structure
 | 14   | Five-fold vertex                                          |
 | 15   | (111) face                                                |
 | 16   | Twinning plane                                            |
+
+![Au5010ToCnap](https://github.com/user-attachments/assets/46d18b9e-3829-4cf1-82c4-a8204f4da237)
+
+
