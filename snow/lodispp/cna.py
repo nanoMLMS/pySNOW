@@ -176,7 +176,8 @@ def cna_peratom(index_frame: int, coords: np.ndarray, cut_off: float):
     return cna_atom
 
 def cnap_peratom(index_frame: int, coords: np.ndarray, cut_off: float):
-    """CComputes the CNA Pattern index for each atom in the system
+    """Computes the CNA Pattern index for each atom in the system.
+    
 
     Parameters
     ----------
