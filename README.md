@@ -121,3 +121,61 @@ The strain, as computed by SNOW, is a measure of the deformation of interatomic 
 ### Steinhardt Parameters
 
 Steinhardt parameters are order parameters for atomistic structures 
+
+
+### CNA Patterns
+
+pySNOW is capable of performing a simple identification of what type of structure each atom belon based on the 
+study of the number of singatures each atom partecipates to.
+
+The following code is a simple CLI tool that allows users to input an xyz file with a given name and return an xyz file
+having as an extra column an integer whihch cathegorize the atom based on the structure to which the atom belongs to:
+
+```python
+import argparse
+import numpy as np
+from snow.lodispp.cna import cnap_peratom
+from snow.lodispp.pp_io import read_xyz, write_xyz
+
+parser = argparse.ArgumentParser(
+    prog="CNAPatterner",
+    description="It patterns the CNA",
+    epilog="Text at the bottom of help",
+)
+
+parser.add_argument("-i", "--infile", help="Input xyz file")
+parser.add_argument("-o", "--outfile", help="To what xyz file write CNAp")
+
+args = parser.parse_args()
+
+infile = args.infile
+outfile = args.outfile
+
+el, coords = read_xyz(infile)
+
+
+cna_atom = cnap_peratom(1, coords, 4.08 * 0.85)
+write_xyz(outfile, el, coords, cna_atom.reshape(-1, 1))
+```
+
+The follwoing table reports for each CNAP index the description of the structure:
+
+
+| CNAp | Description                                               |
+|------|-----------------------------------------------------------|
+| 1    | Vertex from CNAP16 bordering two (111) facets and a (100) |
+| 2    | Edge between a (100) and a slightly distorted (111) facet |
+| 3    | Atoms lying on a (555) symmetry axis                      |
+| 4    | FCC bulk                                                  |
+| 5    | Interception of six five-fold axis                        |
+| 6    | Edge between (100) facet                                  |
+| 7    | Vertex lying on twinning planes shared by (111) facets    |
+| 8    | Edge between (111) re-entrances and (111) facets          |
+| 9    | Re-entrance delimited by (111) facet                      |
+| 10   | Edge between (100) and (111) facets                       |
+| 11   | Vertex shared by (100) and (111) facets                   |
+| 12   | (100) facet                                               |
+| 13   | Five-fold symmetry axes (no centre)                       |
+| 14   | Five-fold vertex                                          |
+| 15   | (111) face                                                |
+| 16   | Twinning plane                                            |
