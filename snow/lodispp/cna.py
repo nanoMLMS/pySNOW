@@ -110,6 +110,66 @@ def calculate_cna(
 
     return len(pairs), cna
 
+def calculate_cna_fast(index_frame, coords, cut_off, return_pair=False):
+    """
+    Faster version of calculate_cna that precomputes neighbor sets.
+    
+    Parameters
+    ----------
+    index_frame : int
+        _description_
+    coords : ndarray
+        3xNatoms array containing the coordinates of each atom
+    cut_off : float
+        cutoff radius for the determination of nearest neighbors
+    return_pair : bool, optional
+        Whether to return an ordered list of the indices of the atoms forming a given pair, by default False
+
+    Returns
+    -------
+    tuple[int, np.ndarray, list]
+        The number of pairs, the cna signatures [r, s, t] for each pair and the ordered list of pairs (if return_pair == True)
+    tuple[int, np.ndarray]
+        The number of pairs, the cna signatures [r, s, t] for each pair
+    """
+    # Get neighbor list and pair list (assumed to be implemented efficiently)
+    neigh_list = nearest_neighbours(index_frame, coords, cut_off)
+    pairs = pair_list(index_frame=index_frame, coords=coords, cut_off=cut_off)
+    
+    # Precompute neighbor sets for fast membership tests
+    neigh_sets = [set(neigh) for neigh in neigh_list]
+
+    # Initialize result arrays
+    r = np.empty(len(pairs), dtype=int)
+    s = np.empty(len(pairs), dtype=float)
+    t = np.empty(len(pairs), dtype=float)
+    ret_pair = [] if return_pair else None
+
+    for i, p in enumerate(pairs):
+        # Get neighbor sets for the two atoms in the pair
+        set1 = neigh_sets[p[0]]
+        set2 = neigh_sets[p[1]]
+        # Compute common neighbors using set intersection
+        common = set1 & set2
+        r[i] = len(common)
+        
+        # For s, sum the number of common neighbors between each neighbor in 'common'
+        # and the set 'common' itself, then divide by 2.
+        s_val = sum(len(neigh_sets[j] & common) for j in common) / 2
+        s[i] = s_val
+
+        # Compute t using the existing function.
+        # If longest_path_or_cycle expects a numpy array, we convert common accordingly.
+        t[i] = longest_path_or_cycle(np.array(list(common)), neigh_list)
+
+        if return_pair:
+            ret_pair.append(p)
+
+    cna = np.column_stack((r, s, t))
+    if return_pair:
+        return len(pairs), cna, ret_pair
+    return len(pairs), cna
+
 
 def write_cna(
     frame,
@@ -147,37 +207,56 @@ def write_cna(
                 )
 
 
-def cna_peratom(index_frame: int, coords: np.ndarray, cut_off: float):
-    """_summary_
 
+def cna_peratom(index_frame: int, coords: np.ndarray, cut_off: float):
+    """
+    Optimized per-atom CNA calculation by precomputing a mapping from atom indices
+    to pair indices. This avoids scanning the entire pair list for every atom.
+    
     Parameters
     ----------
     index_frame : int
         _description_
     coords : np.ndarray
-        _description_
+        Array containing the coordinates of each atom.
     cut_off : float
-        _description_
-    """
-    _, cna, pair_list = calculate_cna(index_frame=index_frame, coords=coords, cut_off=cut_off, return_pair=True)
-    cna_atom = []
-
-    for i in range(len(coords)):
-        cna_i = []
-        for j, p in enumerate(pair_list):
-            if i in p:
-                cna_i.append(cna[j])
-        unique_i = np.unique(cna_i, axis=0, return_counts=True)
-        count = unique_i[1]
-        cnas = unique_i[0]
-
+        Cutoff radius for nearest-neighbor determination.
         
-        cna_atom.append(unique_i)
+    Returns
+    -------
+    list of tuple[np.ndarray, np.ndarray]
+        For each atom, a tuple (unique_signatures, counts) representing the unique
+        CNA signatures from all pairs involving that atom and their respective counts.
+    """
+    # Compute CNA signatures and the corresponding pair list
+    _, cna, pair_list = calculate_cna_fast(
+        index_frame=index_frame, coords=coords, cut_off=cut_off, return_pair=True
+    )
+    num_atoms = len(coords)
+    
+    # Precompute a mapping from each atom to the indices of pairs that involve it.
+    atom_to_pair = [[] for _ in range(num_atoms)]
+    for idx, (i, j) in enumerate(pair_list):
+        atom_to_pair[i].append(idx)
+        atom_to_pair[j].append(idx)
+    
+    # Build the per-atom CNA information using the precomputed mapping.
+    cna_atom = []
+    for i in range(num_atoms):
+        pair_indices = atom_to_pair[i]
+        if pair_indices:
+            # Use NumPy advanced indexing to quickly select the relevant CNA rows.
+            cna_i = cna[pair_indices]
+            unique_signatures, counts = np.unique(cna_i, axis=0, return_counts=True)
+            cna_atom.append((unique_signatures, counts))
+        else:
+            # If no pairs include atom i, return empty arrays.
+            cna_atom.append((np.array([]), np.array([])))
     return cna_atom
 
 def cnap_peratom(index_frame: int, coords: np.ndarray, cut_off: float):
     """Computes the CNA Pattern index for each atom in the system.
-    
+
 
     Parameters
     ----------
