@@ -110,7 +110,7 @@ def calculate_cna(
 
     return len(pairs), cna
 
-def calculate_cna_fast(index_frame, coords, cut_off, return_pair=False):
+def calculate_cna_fast(index_frame, coords, cut_off = None, return_pair=False, pbc = False):
     """
     Faster version of calculate_cna that precomputes neighbor sets.
     
@@ -133,8 +133,13 @@ def calculate_cna_fast(index_frame, coords, cut_off, return_pair=False):
         The number of pairs, the cna signatures [r, s, t] for each pair
     """
     # Get neighbor list and pair list (assumed to be implemented efficiently)
-    neigh_list = nearest_neighbours(index_frame, coords, cut_off)
-    pairs = pair_list(index_frame=index_frame, coords=coords, cut_off=cut_off)
+
+    if (cut_off == None):
+        r_i = np.zeros(len(coords))
+
+
+    neigh_list = nearest_neighbours(index_frame, coords, cut_off, pbc=pbc)
+    pairs = pair_list(index_frame=index_frame, coords=coords, cut_off=cut_off, pbc = pbc)
     
     # Precompute neighbor sets for fast membership tests
     neigh_sets = [set(neigh) for neigh in neigh_list]
@@ -208,7 +213,7 @@ def write_cna(
 
 
 
-def cna_peratom(index_frame: int, coords: np.ndarray, cut_off: float):
+def cna_peratom(index_frame: int, coords: np.ndarray, cut_off: float, pbc: bool = False):
     """
     Optimized per-atom CNA calculation by precomputing a mapping from atom indices
     to pair indices. This avoids scanning the entire pair list for every atom.
@@ -230,7 +235,7 @@ def cna_peratom(index_frame: int, coords: np.ndarray, cut_off: float):
     """
     # Compute CNA signatures and the corresponding pair list
     _, cna, pair_list = calculate_cna_fast(
-        index_frame=index_frame, coords=coords, cut_off=cut_off, return_pair=True
+        index_frame=index_frame, coords=coords, cut_off=cut_off, return_pair=True, pbc=pbc
     )
     num_atoms = len(coords)
     
@@ -254,7 +259,7 @@ def cna_peratom(index_frame: int, coords: np.ndarray, cut_off: float):
             cna_atom.append((np.array([]), np.array([])))
     return cna_atom
 
-def cnap_peratom(index_frame: int, coords: np.ndarray, cut_off: float):
+def cnap_peratom(index_frame: int, coords: np.ndarray, cut_off: float, pbc: bool = False):
     """Computes the CNA Pattern index for each atom in the system.
 
 
@@ -263,16 +268,17 @@ def cnap_peratom(index_frame: int, coords: np.ndarray, cut_off: float):
     index_frame : int
         _description_
     coords : np.ndarray
-        _description_
+        3xNatoms array containing the coordainates of the atoms in the system
     cut_off : float
-        _description_
+        Cutoff radius for the determination of neighbours
 
     Returns
     -------
-    _type_
-        _description_
+    np.ndarray
+        1D array containing for each atom an integer identifing the structure (check the documentation)
+        
     """
-    cna = cna_peratom(1, coords, cut_off)
+    cna = cna_peratom(1, coords, cut_off, pbc=pbc)
     cna_atom = np.zeros(len(coords))
     count = 0
     for i in range(len(coords)):
