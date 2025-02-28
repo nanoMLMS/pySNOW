@@ -96,7 +96,7 @@ What has been described is referred to **atop** GCN (a-GCN), to differentiate wi
 Note that while the a-GCN function returns a list of values for each atom, the b-gcn returns values for each pair, for output and representation purposes is possible to obtain also the coordinates of the midpoints of each pair so that a "phantom" atom can be written to an xyz file to represent the GCN for those bridge sites.
 
 ```python
-from snow.lodispp.utils import coordination_number
+from snow.descriptors.gcn import agcn_calculator, bridge_gcn
 agcn = agcn_calculator(index_frame = 1, coords= sys_coords, cut_off = 2.89, gcn_max = 12.0)
 phant_xyz, pairs, bgcn = bridge_gcn(index_frame = 1, coords = sys_coords, cut_off = 2.89, gcn_max=18.0, phantom=True)
 
