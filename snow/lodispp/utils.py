@@ -114,7 +114,149 @@ def pddf_calculator(index_frame, coords, bin_precision=None, bin_count=None):
 
     return bins[:-1] + bin_precision / 2, dist_count
 
-    return dist, dist_count
+
+
+def hetero_distance_matrix(index_frame, coords, elements):
+    """_summary_
+
+    Parameters
+    ----------
+    index_frame : _type_
+        _description_
+    coords : _type_
+        _description_
+    elements : _type_
+        _description_
+
+    Returns
+    -------
+    _type_
+        _description_
+    """
+    n_atoms = np.shape(coords)[0]
+    dist_mat, dist_max, dist_min = distance_matrix(
+        index_frame=index_frame, coords=coords
+    )
+
+    triu_indices = np.triu_indices(n_atoms, k=1)
+    id_i, id_j = triu_indices
+
+    for i in range(len(id_i)):
+        id_is, id_js = id_i[i], id_j[i]
+
+        if elements[id_is] == elements[id_js]:
+            dist_mat[id_is, id_js] = 0
+            dist_mat[id_js, id_is] = 0  # Ensure symmetry
+    
+    return dist_mat
+
+def hetero_pddf_calculator(index_frame, coords, elements, bin_precision=None, bin_count=None):
+    """_summary_
+
+    Parameters
+    ----------
+    index_frame : _type_
+        _description_
+    coords : _type_
+        _description_
+    elements : _type_
+        _description_
+    bin_precision : _type_, optional
+        _description_, by default None
+    bin_count : _type_, optional
+        _description_, by default None
+
+    Returns
+    -------
+    _type_
+        _description_
+
+    Raises
+    ------
+    ValueError
+        _description_
+    ValueError
+        _description_
+    """
+    n_atoms = np.shape(coords)[0]
+    dist_mat = hetero_distance_matrix(index_frame=index_frame, elements=elements, coords=coords)
+
+    triu_indices = np.triu_indices(n_atoms, k=1)
+    distances = dist_mat[triu_indices]
+
+    # Exclude zero distances
+    distances = distances[distances > 0]
+
+    if distances.size == 0:
+        raise ValueError("No valid nonzero distances found. Check your input data.")
+
+    dist_max = np.max(distances)
+
+    if bin_precision:
+        n_bins = int(np.ceil(dist_max / bin_precision))
+    elif bin_count:
+        n_bins = bin_count
+        bin_precision = dist_max / n_bins
+    else:
+        raise ValueError("You must specify either bin_precision or bin_count.")
+
+    bins = np.linspace(0, dist_max, n_bins + 1)
+    dist_count, _ = np.histogram(distances, bins=bins)
+
+    return bins[:-1] + bin_precision / 2, dist_count
+
+
+def chemical_pddf_calculator(index_frame, coords, elements, bin_precision=None, bin_count=None):
+    """
+    Computes the pair distance distribution function for a given set of coordinates of atoms. \n
+    The user can either provide a bin precision or the numer of bins depending on wheter they are striving for a specific precision in the bins
+    or on a specific number of bins for representation.
+
+    Parameters
+    ----------
+    index_frame : int
+        Index of the frame relative to the snapshot, primarily for reference.
+    coords : ndarray
+        Array of the coordinates of the atoms forming the system.
+    elements: ndarray
+        Array of elements
+    bin_precision: float, optional
+        Specify a value if you want to compute the PDDF with a given bin precision (in Angstrom)
+    bin_count: int, optional
+        Specify a value if you want to compute the PDDF with a given number of bins
+
+    Returns
+    -------
+    tuple
+        - ndarray: the values of the interatomic distances for each bin
+        - ndarray: the number of atoms within a given distance for each bin
+
+    """
+    unique_elements, n_elements = np.unique(elements, return_counts=True)
+    
+    pddf_dict = {}
+    elements = np.array(elements)
+    if bin_count:
+        d_tot, pddf_tot = pddf_calculator(index_frame=index_frame, coords=coords, bin_count=bin_count)
+    elif bin_precision:
+        d_tot, pddf_tot = pddf_calculator(index_frame=index_frame, coords=coords, bin_precision=bin_precision)
+
+    pddf_dict["Tot"] = [d_tot, pddf_tot]
+    for el in unique_elements:
+        
+        idx_el = np.where(elements == str(el))[0]
+        coords_el = np.array(coords[idx_el])
+
+        if bin_count:
+            d_el, pddf_el = pddf_calculator(index_frame=index_frame, coords=coords_el, bin_count=bin_count)
+        elif bin_precision:
+            d_el, pddf_el = pddf_calculator(index_frame=index_frame, coords=coords_el, bin_precision=bin_precision)
+        else:
+            raise ValueError("Either bin_count or bin_precision must be provided.")
+
+        pddf_dict[el] = [d_el, pddf_el]    
+
+    return pddf_dict
 
 
 
@@ -343,8 +485,7 @@ def partial_rdf_calculator(
     hull = ConvexHull(coords)
     box_volume = hull.volume
     for el in unique_elements:
-        print("el = {} and is of type {}".format(el, type(el)))
-        print("elements is of type {}".format(type(elements)))
+
         idx_el = np.where(elements == str(el))[0]
         coords_el = np.array(coords[idx_el])
 
