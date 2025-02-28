@@ -111,40 +111,95 @@ def pddf_calculator(index_frame, coords, bin_precision=None, bin_count=None):
     return bins[:-1] + bin_precision / 2, dist_count
 
     return dist, dist_count
-
-
-
-
-def nearest_neighbours(index_frame: int, coords: np.ndarray, cut_off: float) -> list:
+def apply_pbc(coords, box_size):
     """
-    From the coordinates of a structure, produces a list of neighbors for each atom.
-    The calculation is performed using a scipy cKDTree structure to optimize computational time.
+    Apply periodic boundary conditions to atom coordinates.
+    Maps coordinates to be within the simulation box.
 
     Parameters
     ----------
-        index_frame : int
-            Number of the frame if a movie.
-        coords: ndarray
-            Array with the XYZ coordinates of the atoms, shape (n_atoms, 3).
-        cut_off : float
-            Cutoff distance for finding neighbors in angstrom.
+    coords : np.ndarray
+        Atom coordinates array, shape (n_atoms, 3).
+    box_size : np.ndarray
+        Box size array (3,) or (3,2) depending on box format.
 
     Returns
     -------
-        list of lists
-            List of lists of the indices of the neighbors of each atom(i-th list corresponds to neighbors of the i-th atom).
+    np.ndarray
+        Coordinates after applying PBC.
     """
-    # Build KD-tree from coordinates
-    neigh_tree = cKDTree(coords)
-    
-    # Query each atom's neighbors within the cutoff distance
+    if box_size.shape == (3, 2):  # Lower and upper bounds provided
+        lower_bounds = box_size[:, 0]
+        upper_bounds = box_size[:, 1]
+        # Apply modulo to map the coordinates back into the box
+        coords = np.mod(coords - lower_bounds, upper_bounds - lower_bounds) + lower_bounds
+    elif box_size.shape == (3,):  # Direct box lengths
+        coords = np.mod(coords, box_size)
+    else:
+        raise ValueError("Box size must be of shape (3,) or (3,2)")
+
+    return coords
+
+
+def bounding_box(points):
+    """Calculate an axis-aligned bounding box from a set of points."""
+    x_coordinates, y_coordinates, z_coordinates = zip(*points)
+    return np.array([
+        [min(x_coordinates), max(x_coordinates)],
+        [min(y_coordinates), max(y_coordinates)],
+        [min(z_coordinates), max(z_coordinates)],
+    ])
+
+def nearest_neighbours(index_frame: int, coords: np.ndarray, cut_off: float, pbc: bool = False, box: np.ndarray = None) -> list:
+    """
+    Computes nearest neighbors for each atom, considering periodic boundary conditions (PBC) if requested.
+
+    Parameters
+    ----------
+    index_frame : int
+        Number of the frame if a movie.
+    coords : ndarray
+        XYZ coordinates of atoms, shape (n_atoms, 3).
+    cut_off : float
+        Cutoff distance for finding neighbors (in Å).
+    pbc : bool, optional
+        Whether to apply periodic boundary conditions (default: False).
+    box : ndarray, optional
+        Simulation box size in the form (3,) for orthorhombic boxes or (3,2) for lower and upper bounds.
+
+    Returns
+    -------
+    list of lists
+        Each sublist contains the indices of neighboring atoms for the corresponding atom.
+    """
+    if pbc:
+        if box is None:
+            # Estimate bounding box if no box size is provided
+            box = bounding_box(coords)
+        coords = apply_pbc(coords, box)
+        # Ensure box is correctly formatted
+        if box.shape == (3, 2):  # Lower and upper bounds provided
+            box_size = box[:, 1] - box[:, 0]
+        elif box.shape == (3,):  # Direct box lengths
+            box_size = box
+        else:
+            raise ValueError("Box must be of shape (3,) or (3,2)")
+
+        # Create KD-tree with periodic boundaries
+        neigh_tree = cKDTree(coords, boxsize=box_size)
+    else:
+        # Standard KD-tree without PBC
+        neigh_tree = cKDTree(coords)
+
+    # Find neighbors within cutoff
     neigh = neigh_tree.query_ball_point(coords, cut_off)
-    
-    # Exclude the atom itself from its neighbors
+
+    # Remove self from neighbor lists
     for i in range(len(neigh)):
         neigh[i] = [neighbor for neighbor in neigh[i] if neighbor != i]
-    
+
     return neigh
+
 
 
 def rdf_calculator(index_frame: int, coords: np.ndarray, cut_off, bin_count: int = None, bin_precision: float = None, box_volume = None):
@@ -247,30 +302,58 @@ def partial_rdf_calculator(
    
 
 
-def pair_list(index_frame: int, coords: np.ndarray, cut_off: float) -> list:
-    """Generates list of all pairs of atoms within a certain cut off distance of each other
+
+
+def pair_list(index_frame: int, coords: np.ndarray, cut_off: float, pbc: bool = False, box: np.ndarray = None) -> list:
+    """
+    Generates list of all pairs of atoms within a certain cutoff distance of each other.
 
     Parameters
     ----------
     index_frame : int
-        _description_
+        Index of the frame if a movie (not used in the current version but can be useful for dynamic systems).
     coords : np.ndarray
-        _description_
+        Array with the XYZ coordinates of the atoms, shape (n_atoms, 3).
     cut_off : float
-        _description_
+        Cutoff distance for finding pairs in angstroms.
+    pbc : bool, optional
+        Whether to apply periodic boundary conditions. Defaults to False.
+    box : np.ndarray, optional
+        Simulation box size (either [Lx, Ly, Lz] or [[xmin, xmax], [ymin, ymax], [zmin, zmax]]).
 
     Returns
     -------
     list
-        _description_
+        List of tuples representing pairs of atoms that are within the cutoff distance.
     """
-    tree = cKDTree(coords)
-    pairs = tree.query_pairs(cut_off)
-    pair_list = []
-    for p in pairs:
-        pair_list.append(p)
+    if pbc:
+        if box is None:
+            # Estimate bounding box if no box size is provided
+            box = bounding_box(coords)
+        coords = apply_pbc(coords, box)
+        
+        # Ensure box is correctly formatted
+        if box.shape == (3, 2):  # Lower and upper bounds provided
+            box_size = box[:, 1] - box[:, 0]
+        elif box.shape == (3,):  # Direct box lengths
+            box_size = box
+        else:
+            raise ValueError("Box must be of shape (3,) or (3,2)")
+
+        # Create KD-tree with periodic boundary conditions
+        neigh_tree = cKDTree(coords, boxsize=box_size)
+    else:
+        # Standard KD-tree without PBC
+        neigh_tree = cKDTree(coords)
+
+    # Find all pairs of atoms within the cutoff distance
+    pairs = neigh_tree.query_pairs(cut_off)
     
+    # Convert pairs to a list of tuples
+    pair_list = list(pairs)
+
     return pair_list
+
 
 
         
