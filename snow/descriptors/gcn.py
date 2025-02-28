@@ -1,6 +1,15 @@
-from snow.lodispp.utils import progress_bar, pair_list, coordination_number
+from snow.lodispp.utils import pair_list, coordination_number
 import numpy as np
 
+def progress_bar(current, total, length=50):
+    """
+    Prints a nice progess bar to make look like it is doing something
+    """
+    percent = current / total
+    filled_length = int(length * percent)
+    bar = '=' * filled_length + '-' * (length - filled_length)
+    print(f'\r[{bar}] {percent * 100:.2f}%', end='')
+    return
 
 def agcn_calculator(index_frame, coords, cut_off, gcn_max = 12.0):
     """
