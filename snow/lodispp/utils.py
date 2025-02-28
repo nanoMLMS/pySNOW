@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.spatial.distance import pdist, squareform
-from scipy.spatial import cKDTree
+from scipy.spatial import cKDTree, ConvexHull
 from snow.misc.constants import mass
 from scipy.sparse import coo_matrix
 
@@ -145,6 +145,107 @@ def nearest_neighbours(index_frame: int, coords: np.ndarray, cut_off: float) -> 
         neigh[i] = [neighbor for neighbor in neigh[i] if neighbor != i]
     
     return neigh
+
+
+def rdf_calculator(index_frame: int, coords: np.ndarray, cut_off, bin_count: int = None, bin_precision: float = None, box_volume = None):
+    """Computes the RDF (Radial Distribution Function) for a system of atoms defined by their coordinates
+
+    Parameters
+    ----------
+    index_frame : int
+        _description_
+    coords : np.ndarray
+        _description_
+    cut_off : _type_
+        _description_
+    box_size : _type_, optional
+        _description_, by default None
+    bin_count : int, optional
+        _description_, by default None
+    bin_precision : float, optional
+        _description_, by default None
+
+    Returns
+    -------
+    _type_
+        _description_
+
+    Raises
+    ------
+    ValueError
+        _description_
+    """
+    n_atoms = len(coords)
+
+    # Determine binning parameters
+    if bin_count is None:
+        if bin_precision is not None:
+            bin_count = int(cut_off / bin_precision)
+        else:
+            raise ValueError("Either bin_count or bin_precision must be specified.")
+    
+    bin_edges = np.linspace(0, cut_off, bin_count + 1)
+    bin_centers = 0.5 * (bin_edges[:-1] + bin_edges[1:])
+    rdf = np.zeros(bin_count)
+
+    # Build KD-tree and get all unique pairs
+    tree = cKDTree(coords)
+    pairs = tree.query_pairs(cut_off, output_type="ndarray")  # Unique pairs, excludes self
+
+    # Compute distances only for valid pairs
+    distances = np.linalg.norm(coords[pairs[:, 0]] - coords[pairs[:, 1]], axis=1)
+
+    # Bin distances
+    counts, _ = np.histogram(distances, bins=bin_edges)
+    rdf += counts * 2  # Multiply by 2 since each pair is counted once
+
+    # Normalize RDF
+    shell_volumes = (4 / 3) * np.pi * (bin_edges[1:]**3 - bin_edges[:-1]**3)
+    if box_volume == None:
+        hull = ConvexHull(coords)
+        box_volume = hull.volume
+    
+    number_density = n_atoms / box_volume
+    #rdf = rdf / (number_density * shell_volumes * n_atoms)
+    rdf = rdf / (number_density * shell_volumes * n_atoms)
+    return bin_centers, rdf
+
+
+def partial_rdf_calculator(
+    index_frame: int,
+    elements: np.ndarray,
+    coords: np.ndarray,
+    cut_off: int,
+    bin_count: int = None,
+    bin_precision: float = None
+):
+    unique_elements, n_elements = np.unique(elements, return_counts=True)
+    rdf_dict = {}
+    elements = np.array(elements)
+    hull = ConvexHull(coords)
+    box_volume = hull.volume
+    for el in unique_elements:
+        print("el = {} and is of type {}".format(el, type(el)))
+        print("elements is of type {}".format(type(elements)))
+        idx_el = np.where(elements == str(el))[0]
+        coords_el = np.array(coords[idx_el])
+
+        if bin_count:
+            d_el, rdf_el = rdf_calculator(index_frame=index_frame, coords=coords_el, cut_off = cut_off, bin_count=bin_count, box_volume = box_volume)
+        elif bin_precision:
+            d_el, rdf_el = rdf_calculator(index_frame=index_frame, coords=coords_el, cut_off = cut_off, bin_precision=bin_precision, box_volume = box_volume)
+        else:
+            raise ValueError("Either bin_count or bin_precision must be provided.")
+
+        rdf_dict[el] = [d_el, rdf_el]
+    d_tot, rdf_tot = rdf_calculator(index_frame=index_frame, coords=coords, cut_off = cut_off, bin_count=bin_count)
+    rdf_dict["Tot"] = [d_tot, rdf_tot]
+    return rdf_dict
+
+
+
+   
+
 
 def pair_list(index_frame: int, coords: np.ndarray, cut_off: float) -> list:
     """Generates list of all pairs of atoms within a certain cut off distance of each other
