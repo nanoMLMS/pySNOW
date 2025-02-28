@@ -3,6 +3,7 @@ from scipy.spatial.distance import pdist, squareform
 from scipy.spatial import cKDTree, ConvexHull
 from snow.misc.constants import mass
 from scipy.sparse import coo_matrix
+import os 
 
 def distance_matrix(index_frame, coords):
     """
