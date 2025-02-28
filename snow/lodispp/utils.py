@@ -66,6 +66,8 @@ def sparse_adjacency_matrix(index_frame, coords, cutoff):
     adjacency_matrix = coo_matrix((np.ones(len(rows), dtype=int), (rows, cols)))
 
     return adjacency_matrix
+    
+    
 def pddf_calculator(index_frame, coords, bin_precision=None, bin_count=None):
     """
     Computes the pair distance distribution function for a given set of coordinates of atoms. \n
@@ -111,7 +113,66 @@ def pddf_calculator(index_frame, coords, bin_precision=None, bin_count=None):
     return bins[:-1] + bin_precision / 2, dist_count
 
     return dist, dist_count
+
+
+
+def pddf_calculator_by_element(index_frame, coords, elements, element='Au', bin_precision=None, bin_count=None):
+    """
+    Computes the pair distance distribution function (PDDF) for a given set of coordinates,
+    considering only atoms of a specified chemical element.
+
+    Parameters
+    ----------
+    index_frame : int
+        Index of the frame relative to the snapshot, primarily for reference.
+    coords : ndarray
+        Array of the coordinates of the atoms forming the system.
+    elements : list
+        List of atomic species corresponding to each coordinate.
+    element: str, optional
+        The atomic species to consider (default is 'Au').
+    bin_precision: float, optional
+        Bin precision in Angstroms.
+    bin_count: int, optional
+        Number of bins.
+    Returns
+    -------
+    tuple
+        - ndarray: the values of the interatomic distances for each bin
+        - ndarray: the number of atoms within a given distance for each bin
+    """
+    # Select only the indices of the atoms corresponding to the specified element
+
+    selected_indices = [i for i, el in enumerate(elements) if el == element]
+    selected_coords = coords[selected_indices]
+
+    n_atoms = len(selected_indices)
+    if n_atoms < 2:
+        raise ValueError("Not enough atoms of the specified element to compute PDDF.")
+    
+    dist_mat, dist_max, _ = distance_matrix(index_frame=index_frame, coords=selected_coords)
+    
+    if bin_precision:
+        n_bins = dist_max / bin_precision
+    else:
+        n_bins = bin_count
+        bin_precision = dist_max / n_bins
+    
+    n_bins_int = int(n_bins)
+    dist_count = np.zeros(n_bins_int)
+    dist = np.zeros(n_bins_int)
+    
+    for i in range(n_bins_int):
+        for j in range(n_atoms):
+            for k in range(n_atoms):
+                if j != k and (dist_mat[j, k] < bin_precision * i and dist_mat[j, k] >= (bin_precision * (i - 1))):
+                    dist_count[i] += 1
+        dist[i] = bin_precision * i
+    
+    return dist, dist_count
+    
 def apply_pbc(coords, box_size):
+
     """
     Apply periodic boundary conditions to atom coordinates.
     Maps coordinates to be within the simulation box.
