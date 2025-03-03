@@ -183,14 +183,14 @@ def write_cna(
     pair_list,
     file_path=None,
     signature=True,
-    pattern=True,
+    cna_unique=True
 ):
 
     if frame == 0 and os.path.exists(file_path + "signatures.csv"):
         os.remove(file_path + "signatures.csv")
 
-    if frame == 0 and os.path.exists(file_path + "pattern.csv"):
-        os.remove(file_path + "pattern.csv")
+    if frame == 0 and os.path.exists(file_path + "cna_unique.csv"):
+        os.remove(file_path + "cna_unique.csv")
 
     perc = 100 * np.unique(cna, axis=0, return_counts=True)[1] / len_pair
 
