@@ -1,6 +1,6 @@
 import os
 from os import write
-
+from scipy.spatial import KDTree
 import numpy as np
 
 from snow.lodispp.utils import (
@@ -9,6 +9,7 @@ from snow.lodispp.utils import (
     nearest_neighbours,
     pair_list,
 )
+
 
 
 def longest_path_or_cycle(neigh_common, neigh_list):
@@ -138,7 +139,7 @@ def calculate_cna_fast(index_frame, coords, cut_off = None, return_pair=False, p
         r_i = np.zeros(len(coords))
 
 
-    neigh_list = nearest_neighbours(index_frame, coords, cut_off, pbc=pbc)
+    neigh_list = nearest_neighbours(index_frame = index_frame, coords = coords, cut_off = cut_off, pbc=pbc)
     pairs = pair_list(index_frame=index_frame, coords=coords, cut_off=cut_off, pbc = pbc)
     
     # Precompute neighbor sets for fast membership tests
@@ -149,6 +150,8 @@ def calculate_cna_fast(index_frame, coords, cut_off = None, return_pair=False, p
     s = np.empty(len(pairs), dtype=float)
     t = np.empty(len(pairs), dtype=float)
     ret_pair = [] if return_pair else None
+
+
 
     for i, p in enumerate(pairs):
         # Get neighbor sets for the two atoms in the pair
@@ -213,7 +216,7 @@ def write_cna(
 
 
 
-def cna_peratom(index_frame: int, coords: np.ndarray, cut_off: float, pbc: bool = False):
+def cna_peratom(index_frame: int, coords: np.ndarray, cut_off: float = None, pbc: bool = False):
     """
     Optimized per-atom CNA calculation by precomputing a mapping from atom indices
     to pair indices. This avoids scanning the entire pair list for every atom.
@@ -234,6 +237,8 @@ def cna_peratom(index_frame: int, coords: np.ndarray, cut_off: float, pbc: bool 
         CNA signatures from all pairs involving that atom and their respective counts.
     """
     # Compute CNA signatures and the corresponding pair list
+
+    
     _, cna, pair_list = calculate_cna_fast(
         index_frame=index_frame, coords=coords, cut_off=cut_off, return_pair=True, pbc=pbc
     )
@@ -259,7 +264,7 @@ def cna_peratom(index_frame: int, coords: np.ndarray, cut_off: float, pbc: bool 
             cna_atom.append((np.array([]), np.array([])))
     return cna_atom
 
-def cnap_peratom(index_frame: int, coords: np.ndarray, cut_off: float, pbc: bool = False):
+def cnap_peratom(index_frame: int, coords: np.ndarray, cut_off: float = None, pbc: bool = False):
     """Computes the CNA Pattern index for each atom in the system.
 
 

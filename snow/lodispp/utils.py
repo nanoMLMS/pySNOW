@@ -355,7 +355,8 @@ def bounding_box(points):
         [min(z_coordinates), max(z_coordinates)],
     ])
 
-def nearest_neighbours(index_frame: int, coords: np.ndarray, cut_off: float, pbc: bool = False, box: np.ndarray = None) -> list:
+
+def nearest_neighbours(index_frame: int, coords: np.ndarray, cut_off: float = None, pbc: bool = False, box: np.ndarray = None) -> list:
     """
     Computes nearest neighbors for each atom, considering periodic boundary conditions (PBC) if requested.
 
@@ -365,8 +366,8 @@ def nearest_neighbours(index_frame: int, coords: np.ndarray, cut_off: float, pbc
         Number of the frame if a movie.
     coords : ndarray
         XYZ coordinates of atoms, shape (n_atoms, 3).
-    cut_off : float
-        Cutoff distance for finding neighbors (in Å).
+    cut_off : float, optional
+        Cutoff distance for finding neighbors (in Å). If None, an adaptive cutoff is used.
     pbc : bool, optional
         Whether to apply periodic boundary conditions (default: False).
     box : ndarray, optional
@@ -377,11 +378,12 @@ def nearest_neighbours(index_frame: int, coords: np.ndarray, cut_off: float, pbc
     list of lists
         Each sublist contains the indices of neighboring atoms for the corresponding atom.
     """
+    sqrt_2 = np.sqrt(2)
+
     if pbc:
         if box is None:
-            # Estimate bounding box if no box size is provided
-            box = bounding_box(coords)
-        coords = apply_pbc(coords, box)
+            raise ValueError("Box must be provided if PBC is enabled.")
+
         # Ensure box is correctly formatted
         if box.shape == (3, 2):  # Lower and upper bounds provided
             box_size = box[:, 1] - box[:, 0]
@@ -396,14 +398,23 @@ def nearest_neighbours(index_frame: int, coords: np.ndarray, cut_off: float, pbc
         # Standard KD-tree without PBC
         neigh_tree = cKDTree(coords)
 
-    # Find neighbors within cutoff
-    neigh = neigh_tree.query_ball_point(coords, cut_off)
+    r_cut = np.full(len(coords), cut_off if cut_off is not None else 0.0)
 
-    # Remove self from neighbor lists
-    for i in range(len(neigh)):
-        neigh[i] = [neighbor for neighbor in neigh[i] if neighbor != i]
+    if cut_off is None:
+        # Compute an adaptive cutoff
+        for i, atom in enumerate(coords):
+            d, _ = neigh_tree.query(atom, k=12)  # 12 nearest neighbors
+            d_avg = np.mean(d)
+            r_cut[i] = (1.0 + sqrt_2) / 2.0 * d_avg  # Adaptive cutoff
+
+    # Find neighbors within cutoff
+    neigh = []
+    for i, atom in enumerate(coords):
+        neighbors = neigh_tree.query_ball_point(atom, r_cut[i])  # Find points within radius
+        neigh.append([n for n in neighbors if n != i])  # Remove self
 
     return neigh
+
 
 
 
@@ -503,14 +514,12 @@ def partial_rdf_calculator(
 
 
 
-   
+import numpy as np
+from scipy.spatial import cKDTree
 
-
-
-
-def pair_list(index_frame: int, coords: np.ndarray, cut_off: float, pbc: bool = False, box: np.ndarray = None) -> list:
+def pair_list(index_frame: int, coords: np.ndarray, cut_off: float = None, pbc: bool = False, box: np.ndarray = None) -> list:
     """
-    Generates list of all pairs of atoms within a certain cutoff distance of each other.
+    Generates a list of all pairs of atoms within a certain adaptive cutoff distance of each other.
 
     Parameters
     ----------
@@ -518,8 +527,8 @@ def pair_list(index_frame: int, coords: np.ndarray, cut_off: float, pbc: bool = 
         Index of the frame if a movie (not used in the current version but can be useful for dynamic systems).
     coords : np.ndarray
         Array with the XYZ coordinates of the atoms, shape (n_atoms, 3).
-    cut_off : float
-        Cutoff distance for finding pairs in angstroms.
+    cut_off : float, optional
+        Cutoff distance for finding pairs in angstroms. If None, an adaptive cutoff is used per atom.
     pbc : bool, optional
         Whether to apply periodic boundary conditions. Defaults to False.
     box : np.ndarray, optional
@@ -530,12 +539,12 @@ def pair_list(index_frame: int, coords: np.ndarray, cut_off: float, pbc: bool = 
     list
         List of tuples representing pairs of atoms that are within the cutoff distance.
     """
+    sqrt_2 = np.sqrt(2)
+
     if pbc:
         if box is None:
-            # Estimate bounding box if no box size is provided
-            box = bounding_box(coords)
-        coords = apply_pbc(coords, box)
-        
+            raise ValueError("Box must be provided if PBC is enabled.")
+
         # Ensure box is correctly formatted
         if box.shape == (3, 2):  # Lower and upper bounds provided
             box_size = box[:, 1] - box[:, 0]
@@ -544,19 +553,31 @@ def pair_list(index_frame: int, coords: np.ndarray, cut_off: float, pbc: bool = 
         else:
             raise ValueError("Box must be of shape (3,) or (3,2)")
 
-        # Create KD-tree with periodic boundary conditions
+        # Create KD-tree with periodic boundaries
         neigh_tree = cKDTree(coords, boxsize=box_size)
     else:
         # Standard KD-tree without PBC
         neigh_tree = cKDTree(coords)
 
-    # Find all pairs of atoms within the cutoff distance
-    pairs = neigh_tree.query_pairs(cut_off)
-    
-    # Convert pairs to a list of tuples
-    pair_list = list(pairs)
+    # Compute an adaptive cutoff for each atom if not provided
+    r_cut = np.full(len(coords), cut_off if cut_off is not None else 0.0)
 
-    return pair_list
+    if cut_off is None:
+        for i, atom in enumerate(coords):
+            d, _ = neigh_tree.query(atom, k=12)  # 12 nearest neighbors
+            d_avg = np.mean(d)
+            r_cut[i] = (1.0 + sqrt_2) / 2.0 * d_avg  # Adaptive cutoff per atom
+
+    # Find atom pairs within adaptive cutoffs
+    pairs = set()
+    for i, atom in enumerate(coords):
+        neighbors = neigh_tree.query_ball_point(atom, r_cut[i])
+        for j in neighbors:
+            if i < j:  # Avoid duplicates (ensures (i, j) but not (j, i))
+                pairs.add((i, j))
+
+    return list(pairs)
+
 
 
 
