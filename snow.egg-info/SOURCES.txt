@@ -8,7 +8,9 @@ snow.egg-info/requires.txt
 snow.egg-info/top_level.txt
 snow/descriptors/__init__.py
 snow/descriptors/gcn.py
+snow/descriptors/lae.py
 snow/descriptors/steinhardt.py
+snow/lodispp/cna.py
 snow/lodispp/physics.py
 snow/lodispp/pp_io.py
 snow/lodispp/utils.py
@@ -18,4 +20,3 @@ snow/misc/transform.py
 snow/strain/__init__.py
 snow/strain/strain_mono.py
 test/test_cn.py
-test/test_stuff.py
