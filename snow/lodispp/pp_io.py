@@ -194,6 +194,8 @@ def read_xyz_movie(file_path: str) -> Tuple[np.ndarray, np.ndarray]:
     """Obtains the coordinates and elements for each frame of an xyz trajectory (for now it only supports trajectories
     where the number of atoms and chemical composition is fixed through the whole trajectory).
 
+    Note that it only creates a singe array for the elements rather than a per-frame array.
+
     Parameters
     ----------
     file_path : str
