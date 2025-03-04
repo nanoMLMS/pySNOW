@@ -110,7 +110,7 @@ def calculate_cna(
         return len(pairs), cna, ret_pair
 
     return len(pairs), cna
-
+from tqdm import tqdm
 def calculate_cna_fast(index_frame, coords, cut_off = None, return_pair=False, pbc = False):
     """
     Faster version of calculate_cna that precomputes neighbor sets.
@@ -153,7 +153,7 @@ def calculate_cna_fast(index_frame, coords, cut_off = None, return_pair=False, p
 
 
 
-    for i, p in enumerate(pairs):
+    for i, p in enumerate(tqdm(pairs, desc="Processing pairs")):
         # Get neighbor sets for the two atoms in the pair
         set1 = neigh_sets[p[0]]
         set2 = neigh_sets[p[1]]
@@ -264,8 +264,9 @@ def cna_peratom(index_frame: int, coords: np.ndarray, cut_off: float = None, pbc
             cna_atom.append((np.array([]), np.array([])))
     return cna_atom
 
-def cnap_peratom(index_frame: int, coords: np.ndarray, cut_off: float = None, pbc: bool = False):
-    """Computes the CNA Pattern index for each atom in the system.
+def cnap_peratom(index_frame: int, coords: np.ndarray, cut_off: float = None, pbc: bool = False) -> np.ndarray:
+    """Computes the CNA Patterns for each atom in the system, assigning to each an integer which can be used to 
+    identify the local structure, mapping integer-structure can be found in the README.
 
 
     Parameters
@@ -286,7 +287,8 @@ def cnap_peratom(index_frame: int, coords: np.ndarray, cut_off: float = None, pb
     cna = cna_peratom(1, coords, cut_off, pbc=pbc)
     cna_atom = np.zeros(len(coords))
     count = 0
-    for i in range(len(coords)):
+    for i in tqdm(range(len(coords)), desc="Processing patterns"):
+        
 
         n_sigs = len(
             cna[i][1]

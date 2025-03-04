@@ -6,6 +6,8 @@ from snow.misc.constants import mass
 from scipy.sparse import coo_matrix
 import os 
 
+rescale = (1 + np.sqrt(2)) / 2
+
 def distance_matrix(index_frame, coords):
     """
     Computes distance between atoms and saves them in a matrix of distances
@@ -405,7 +407,7 @@ def nearest_neighbours(index_frame: int, coords: np.ndarray, cut_off: float = No
         for i, atom in enumerate(coords):
             d, _ = neigh_tree.query(atom, k=12)  # 12 nearest neighbors
             d_avg = np.mean(d)
-            r_cut[i] = (1.0 + sqrt_2) / 2.0 * d_avg  # Adaptive cutoff
+            r_cut[i] = rescale * d_avg  # Adaptive cutoff
 
     # Find neighbors within cutoff
     neigh = []
@@ -418,28 +420,35 @@ def nearest_neighbours(index_frame: int, coords: np.ndarray, cut_off: float = No
 
 
 
-def rdf_calculator(index_frame: int, coords: np.ndarray, cut_off, bin_count: int = None, bin_precision: float = None, box_volume = None):
-    """Computes the RDF (Radial Distribution Function) for a system of atoms defined by their coordinates
+def rdf_calculator(index_frame: int, 
+                   coords: np.ndarray, 
+                   cut_off: float, 
+                   bin_count: int = None, 
+                   bin_precision: float = None, 
+                   box_volume = None) -> tuple[np.ndarray, np.ndarray]:
+    """
 
     Parameters
     ----------
     index_frame : int
         _description_
+    elements : np.ndarray
+        _description_
     coords : np.ndarray
-        _description_
-    cut_off : _type_
-        _description_
-    box_size : _type_, optional
-        _description_, by default None
+        XYZ coordinates of atoms, shape (n_atoms, 3).
+    cut_off : float
+        Cutoff distance for finding pairs in angstroms. If None, an adaptive cutoff is used per atom.
     bin_count : int, optional
-        _description_, by default None
+        Number of bins, by default None
     bin_precision : float, optional
-        _description_, by default None
+        Bin precision, by default None
+    box_volume = None: float, optional
+        Box dimension for PBC (WIP), by default None (no PBC, good for isolated systems)
 
     Returns
     -------
-    _type_
-        _description_
+    tuple[np.ndarray, np.ndarray]
+        Binned distance and rdf
 
     Raises
     ------
@@ -489,7 +498,41 @@ def partial_rdf_calculator(
     cut_off: int,
     bin_count: int = None,
     bin_precision: float = None
-):
+) -> dict:
+    """Computes the radial distribution function for the system computing both the total and elemnt separated function, that is,
+    if there are two atomic species (say Au and Pd) it computes the Au-Au, Pd-Pd and "chemical blind" RDF.
+
+    To bin the distribution the user can decide wether they want to specify the bin precision (in Angstrom) or the number of bins. One of 
+    the two has to be chosen.
+
+    To facilitate the representation and use, the cmputed RDF is returned as a dictionary. 
+    
+    Parameters
+    ----------
+    index_frame : int
+        _description_
+    elements : np.ndarray
+        _description_
+    coords : np.ndarray
+        XYZ coordinates of atoms, shape (n_atoms, 3).
+    cut_off : float
+        Cutoff distance for finding pairs in angstroms. If None, an adaptive cutoff is used per atom.
+    bin_count : int, optional
+        Number of bins, by default None
+    bin_precision : float, optional
+        Bin precision, by default None
+
+    Returns
+    -------
+    dict
+        Dictionary containing as keys the element for which the rdf has been computed and as value two arrays, one continaing the bineed distance
+        the other containg the computed RDF.
+
+    Raises
+    ------
+    ValueError
+        Raised if the user does not specify either the bin_count or the bin_precision.
+    """
     unique_elements, n_elements = np.unique(elements, return_counts=True)
     rdf_dict = {}
     elements = np.array(elements)
@@ -566,7 +609,7 @@ def pair_list(index_frame: int, coords: np.ndarray, cut_off: float = None, pbc: 
         for i, atom in enumerate(coords):
             d, _ = neigh_tree.query(atom, k=12)  # 12 nearest neighbors
             d_avg = np.mean(d)
-            r_cut[i] = (1.0 + sqrt_2) / 2.0 * d_avg  # Adaptive cutoff per atom
+            r_cut[i] = rescale * d_avg  # Adaptive cutoff per atom
 
     # Find atom pairs within adaptive cutoffs
     pairs = set()
@@ -584,17 +627,22 @@ def pair_list(index_frame: int, coords: np.ndarray, cut_off: float = None, pbc: 
         
 
 def second_neighbours(index_frame: int, coords: np.ndarray, cutoff: float) -> list:
-    """
-    Compute the second nearest neighbours as the first enighbours of the first neighbours of each atom which are not also first neighbours of the aotm itself. \n
-    Computes as the neighbours of j neighbour of i not also in the intersection of neigh[i] and neigh[j].
-    
-    Parameters:
-        index_frame (int): Number of the frame if a movie
-        coords (array): array with the XYZ coordinates of the atoms
-        cut_off (float): cut off for the neighbours in angstrom
-        Returns:
-        neigh (list of lists): List of lists of the indeces of the second neighbours of each atom (i-th list of the list of lists is the list of second neighbouring atom indeces of the i-th atom)
-    
+    """Generates a list of lists of atomic indeces for each atom corresponding to aotoms that are neighbours of first neighbours 
+    excluding those which are already first neighbours. 
+
+    Parameters
+    ----------
+    index_frame : int
+        Index of the frame if a movie (not used in the current version but can be useful for dynamic systems).
+    coords : np.ndarray
+        Array with the XYZ coordinates of the atoms, shape (n_atoms, 3).
+    cutoff : float
+        Cutoff distance for finding pairs in angstroms. If None, an adaptive cutoff is used per atom.
+
+    Returns
+    -------
+    list
+        List of lists containing indeces of second neighbours for each atom
     """
     neigh = nearest_neighbours(index_frame=index_frame, coords=coords, cut_off=cutoff)
     snn_list = []
@@ -649,7 +697,7 @@ def coordination_number(index_frame, coords, cut_off, neigh_list = False):
     
 
 
-def center_of_mass(index_frame: int, coords: np.ndarray, elements):
+def center_of_mass(index_frame: int, coords: np.ndarray, elements) -> np.ndarray:
     """
     Calculate the center of mass for a given frame of coordinates.
     
