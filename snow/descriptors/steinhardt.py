@@ -2,7 +2,12 @@ import numpy as np
 from scipy.special import sph_harm
 from scipy.spatial import cKDTree
 from snow.lodispp.utils import nearest_neighbours
-from tqdm import tqdm
+try:
+    from tqdm import tqdm
+except ImportError:
+    # If tqdm is not installed, define a dummy tqdm that does nothing.
+    def tqdm(iterable, **kwargs):
+        return iterable
 
 def peratom_steinhardt(index_frame: int, coords: np.ndarray, l: list, cut_off: float):
     """
@@ -25,8 +30,10 @@ def peratom_steinhardt(index_frame: int, coords: np.ndarray, l: list, cut_off: f
             Array of Steinhardt parameters (Q_l) for each l and for each atom. 
     """
     n_atoms = coords.shape[0]
-    tree = cKDTree(coords)
-    neigh_list = tree.query_ball_tree(tree, cut_off)
+    #tree = cKDTree(coords)
+    print(cut_off)
+    neigh_list = nearest_neighbours(index_frame=index_frame, coords=coords, cut_off=cut_off)
+    
 
     # Array to store Q_l for each atom
     Q_l = np.zeros((len(l), n_atoms))

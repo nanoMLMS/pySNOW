@@ -2,7 +2,12 @@ import os
 from os import write
 from scipy.spatial import KDTree
 import numpy as np
-
+try:
+    from tqdm import tqdm
+except ImportError:
+    # If tqdm is not installed, define a dummy tqdm that does nothing.
+    def tqdm(iterable, **kwargs):
+        return iterable
 from snow.lodispp.utils import (
     adjacency_matrix,
     coordination_number,
@@ -110,7 +115,7 @@ def calculate_cna(
         return len(pairs), cna, ret_pair
 
     return len(pairs), cna
-from tqdm import tqdm
+
 def calculate_cna_fast(index_frame, coords, cut_off = None, return_pair=False, pbc = False):
     """
     Faster version of calculate_cna that precomputes neighbor sets.
