@@ -11,17 +11,37 @@ def progress_bar(current, total, length=50):
     print(f'\r[{bar}] {percent * 100:.2f}%', end='')
     return
 
-def agcn_calculator(index_frame, coords, cut_off, gcn_max = 12.0):
+
+def agcn_calculator(index_frame, coords, cut_off, dbulk : list[float], thr_cn: int, gcn_max = 12.0, strained: bool = False):
     """
     """
     neigh_list, coord_numbers = coordination_number(index_frame, coords, cut_off, neigh_list=True)
     n_atoms = len(coord_numbers)
     agcn = np.zeros(n_atoms)
-    
+    sites=[]
+
     for i, atom_neighbors in enumerate(neigh_list):
-        agcn_i = sum(coord_numbers[neigh] for neigh in atom_neighbors)
-        agcn[i] = agcn_i / gcn_max
-    return agcn           
+        if coord_numbers[i] >= thr_cn:
+            continue
+        sites.append(coords[i])
+        if strained:
+            sgcn=0
+            for nb in neigh_list[i]:
+                for nnb in neigh_list[nb]:
+                    d_nb_nnb= np.linalg.norm(coords[nb] - coords[nnb])
+                    sgcn += dbulk/d_nb_nnb
+            self_sgcn=0
+            for nb in neigh_list[i]:
+                break
+                d_nb_nnb= np.linalg.norm(coords[nb] - coords[i])
+                self_sgcn += dbulk/d_nb_nnb
+            agcn[i]=((sgcn-self_sgcn)/gcn_max)
+        else:
+            agcn_i = sum(coord_numbers[neigh] for neigh in atom_neighbors)# - coord_numbers[i]
+            agcn[i]=(agcn_i / gcn_max)
+    return sites,agcn
+
+
 
 
 def bridge_gcn(index_frame: int, coords: np.ndarray, cut_off: float, gcn_max=18.0, phantom=False):
