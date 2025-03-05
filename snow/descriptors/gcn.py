@@ -43,11 +43,10 @@ def agcn_calculator(index_frame, coords, cut_off, dbulk : list[float], thr_cn: i
 
 
 
-
-def bridge_gcn(index_frame: int, coords: np.ndarray, cut_off: float, gcn_max=18.0, phantom=False):
+def bridge_gcn(index_frame: int, coords: np.ndarray, cut_off: float, dbulk : list[float], thr_cn: int, gcn_max=18.0, phantom=False, strained: bool = False):
     """
-    Identifies bridge absorption sites and computes the Generalized Coordination Number (GCN) 
-    for a site. The GCN is defined as the sum of the coordination numbers of the neighbors 
+    Identifies bridge absorption sites and computes the Generalized Coordination Number (GCN)
+    for a site. The GCN is defined as the sum of the coordination numbers of the neighbors
     of the two atoms forming the site, counted only once.
 
     Parameters
@@ -61,12 +60,13 @@ def bridge_gcn(index_frame: int, coords: np.ndarray, cut_off: float, gcn_max=18.
     - gcn_max : float, optional
         Maximum typical coordination number in the specific system (default is 18.0).
     - phantom : bool, optional
-        If True, also returns the coordinates of the midpoints between pairs for 
+        If True, also returns the coordinates of the midpoints between pairs for
         representation and testing (default is False).
 
     Returns
     -------
     If phantom is True:
+def three_hollow_gcn(index_frame: int, coords: np.ndarray, cut_off: float, thr_cn : int , gcn_max : float =18.0, phantom : bool =False) -> list:
         tuple
             - ndarray: Coordinates of the midpoints.
             - list: List of pairs.
@@ -78,21 +78,41 @@ def bridge_gcn(index_frame: int, coords: np.ndarray, cut_off: float, gcn_max=18.
     """
     pairs = pair_list(index_frame=index_frame, coords=coords, cut_off=cut_off)
     neigh_list, coord_numb = coordination_number(index_frame=index_frame, coords=coords, cut_off=cut_off, neigh_list=True)
-    b_gcn = np.zeros(len(pairs))
+    #b_gcn = np.zeros(len(pairs))
+    b_gcn=[]
+    sites=[]
     for i, p in enumerate(pairs):
         neigh_1 = neigh_list[p[0]]
         neigh_2 = neigh_list[p[1]]
+        if not (len(neigh_1) <= thr_cn and len(neigh_2) <= thr_cn):
+            continue
         neigh_unique_12 = np.unique(np.concatenate((neigh_1, neigh_2)))
-        b_gcn_i = sum(coord_numb[neigh] for neigh in neigh_unique_12) - (coord_numb[p[0]] + coord_numb[p[1]])
-        b_gcn[i] = b_gcn_i / gcn_max
-    if phantom:
-        phant_xyz = np.zeros((len(pairs), 3))
-        for i, p in enumerate(pairs):
+        if strained:
+            sgcn=0
+            for nb in neigh_unique_12:
+                for nnb in neigh_list[nb]:
+                    d_nb_nnb= np.linalg.norm(coords[nb] - coords[nnb])
+                    sgcn += dbulk/d_nb_nnb
+            self_sgcn=0
+            for nb in p :
+                for nnb in neigh_list[nb]:
+                    d_nb_nnb= np.linalg.norm(coords[nb] - coords[nnb])
+                    self_sgcn += dbulk/d_nb_nnb
+            b_gcn.append((sgcn-self_sgcn)/gcn_max)
+        else:
+            b_gcn_i = sum(coord_numb[neigh] for neigh in neigh_unique_12) - (coord_numb[p[0]] + coord_numb[p[1]])
+            b_gcn.append(b_gcn_i / gcn_max)
+        if phantom:
             pos_1 = coords[p[0]]
             pos_2 = coords[p[1]]
-            phant_xyz[i] = (pos_1 + pos_2) / 2
-        return phant_xyz, pairs, b_gcn
-    return pairs, b_gcn
+            sites.append((pos_1 + pos_2) / 2)
+    if phantom:
+        return sites, b_gcn
+    else:
+        return b_gcn
+
+
+
     
 
 def three_hollow_gcn(index_frame: int, coords: np.ndarray, cut_off: float, thr_cn: int, dbulk: list[float],
