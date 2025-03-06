@@ -10,6 +10,7 @@ snow/descriptors/__init__.py
 snow/descriptors/gcn.py
 snow/descriptors/lae.py
 snow/descriptors/steinhardt.py
+snow/lodispp/__init__.py
 snow/lodispp/cna.py
 snow/lodispp/physics.py
 snow/lodispp/pp_io.py
