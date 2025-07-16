@@ -1,7 +1,7 @@
 import numpy as np
 from collections import Counter
 
-from snow.descriptors.gcn_leti import *
+from snow.descriptors.gcn import *
 from snow.lodispp.pp_io import *
 
 def prepare_data(data_list):
