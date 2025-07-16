@@ -82,13 +82,13 @@ def three_hollow_gcn(index_frame: int, coords: np.ndarray, cut_off: float, thr_c
     b_gcn=[]
     sites=[]
     for i, p in enumerate(pairs):
+        if not (coord_numb[p[0]] < thr_cn and coord_numb[p[1]] < thr_cn):
+            continue
         neigh_1 = neigh_list[p[0]]
         neigh_2 = neigh_list[p[1]]
-        if not (len(neigh_1) <= thr_cn and len(neigh_2) <= thr_cn):
-            continue
         neigh_unique_12 = np.unique(np.concatenate((neigh_1, neigh_2)))
         if strained:
-            sgcn=0
+            sgcn = 0
             for nb in neigh_unique_12:
                 for nnb in neigh_list[nb]:
                     d_nb_nnb= np.linalg.norm(coords[nb] - coords[nnb])
@@ -110,7 +110,6 @@ def three_hollow_gcn(index_frame: int, coords: np.ndarray, cut_off: float, thr_c
         return sites, b_gcn
     else:
         return b_gcn
-
 
 
     
