@@ -809,3 +809,21 @@ def center_of_mass(
 def geometric_com(index_frame: int, coords: np.ndarray):
     gcom = np.mean(coords, axis=0)
     return gcom
+
+
+def kl_div(func1: np.array, func2: np.array) -> float:
+    """
+    Calculate the Kullback-Leibler divergence between two functions.
+
+    Arguments:
+        func1 (np.array) : values taken by the first function for a given set of inputs
+        func2 (np.array) : values taken by the second function for the same set of inputs
+
+    Returns:
+        kldiv (float) : KL Divergency between function 1 and function 2
+    """
+    kldiv = 0.0
+
+    for y1, y2 in zip(func1, func2):
+        kldiv += y1 * np.log(y1 / y2)
+    return kldiv
