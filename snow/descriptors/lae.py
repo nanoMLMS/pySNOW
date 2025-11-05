@@ -6,6 +6,29 @@ from snow.descriptors.gcn import agcn_calculator
 
 def LAE_xyz(index_frame: int, coords: np.ndarray, elements, cut_off):
     # Trova i vicini più prossimi per ogni atomo
+    """
+    Calculates the local atomic environment (LAE) of an atom in a structure.
+    
+    Parameters
+    ----------
+    index_frame : int
+        Placeholder for the index of the frame in a trajectory type structure, derived from molecular dynamics simulations.
+    coords : np.ndarray
+        Coordinates of the atoms in the structure.
+    elements : list
+        List of atomic symbols for each atom in the structure.
+    cut_off : float
+        Cut-off distance for the nearest neighbors, in Angstroms.
+    
+    Returns
+    -------
+    CN_list : list
+        List of the number of nearest neighbors for each atom.
+    num_atom_same_species : list
+        List of the number of atoms of the same species for each atom.
+    num_atom_other_species : list
+        List of the number of atoms of different species for each atom.
+    """
     nearest_neigh = nearest_neighbours(index_frame, coords, cut_off)
 
     CN_list = []
