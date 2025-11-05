@@ -212,16 +212,13 @@ def read_xyz_movie(file_path: str) -> Tuple[np.ndarray, np.ndarray]:
     with open(file_path, "r") as xyz_file:
         # Read the total number of atoms from the first line
         n_atoms = int(xyz_file.readline().strip())
-    
-    # Calculate the number of frames in the file
+        
     num_lines = sum(1 for _ in open(file_path))
     n_frames = num_lines // (n_atoms + 2)
 
-    # Initialize arrays
     coords = np.zeros((n_frames, n_atoms, 3))
     elements = []
 
-    # Parse the file to extract data
     with open(file_path, "r") as xyz_file:
         for frame in range(n_frames):
             _ = xyz_file.readline().strip()  # Skip atom count line
