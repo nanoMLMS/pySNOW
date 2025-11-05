@@ -12,16 +12,43 @@ def progress_bar(current, total, length=50):
     return
 
 
-def agcn_calculator(index_frame, coords, cut_off, dbulk : list[float], thr_cn: int, gcn_max = 12.0, strained: bool = False):
+def agcn_calculator(index_frame, coords, cut_off, gcn_max = 12.0, strained: bool = False, **kwargs):
     """
+    Calculates the atop Generalized Coordination Number (GCN) for a site. The GCN is defined as the sum of the coordination numbers of the neighbors
+    of each atom divided by the maximum typical coordination number in the specific system (gcn_max).
+
+    Parameters
+    ----------
+    - index_frame : int
+        Index of the frame relative to the snapshot, primarily for reference.
+    - coords : ndarray
+        Array of the coordinates of the atoms forming the system.
+    - cut_off : float
+        The cutoff distance for determining nearest neighbors.
+    - gcn_max : float, optional
+        Maximum typical coordination number in the specific system (default is 18.0).
+    -strained : bool, optional
+        iF True computes the strained aGCN (default is False).
+    kwargs:
+        thr_cn: int, optional
+            An atom is considered in the surface if its CN < thr_cn
+        dbulk: float, optional
+            Bulk distance for strained aGCN (default is 0), has to be provided if strained is True
+
+    Returns
+    -------
+    - ndarray: Values of the atop GCN.
     """
     neigh_list, coord_numbers = coordination_number(index_frame, coords, cut_off, neigh_list=True)
     n_atoms = len(coord_numbers)
     agcn = np.zeros(n_atoms)
     sites=[]
 
+    thr_cn = kwargs.get('thr_cn', None)
+    dbulk = kwargs.get('dbulk', 0)
+
     for i, atom_neighbors in enumerate(neigh_list):
-        if coord_numbers[i] >= thr_cn:
+        if thr_cn is not None and coord_numbers[i] >= thr_cn:
             continue
         sites.append(coords[i])
         if strained:
