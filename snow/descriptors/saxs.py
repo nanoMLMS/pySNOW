@@ -1,7 +1,7 @@
 # Module to compute Small Angle X-Ray Scattering spectra of nanoparticles
 # using either their atomic coordinates or their PDDF
 
-# date: Jan 3th, 2026
+# date: Jan 5th, 2026
 # author: davide.alimonti@unimi.it
 
 import numpy as np
