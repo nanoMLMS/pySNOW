@@ -120,7 +120,7 @@ def calculate_cna(
 
 
 def calculate_cna_fast(
-    index_frame, coords, cut_off=None, return_pair=False, pbc=False
+        index_frame, coords, cut_off=None, return_pair=False, pbc=False, display_progress=True
 ):
     """
     Faster version of calculate_cna that precomputes neighbor sets.
@@ -164,7 +164,8 @@ def calculate_cna_fast(
     t = np.empty(len(pairs), dtype=float)
     ret_pair = [] if return_pair else None
 
-    for i, p in enumerate(tqdm(pairs, desc="Processing pairs")):
+    iterator = enumerate(tqdm(pairs, desc="Processing pairs")) if display_progress else enumerate(pairs)
+    for i, p in iterator :
         # Get neighbor sets for the two atoms in the pair
         set1 = neigh_sets[p[0]]
         set2 = neigh_sets[p[1]]
@@ -231,6 +232,7 @@ def cna_peratom(
     coords: np.ndarray,
     cut_off: float = None,
     pbc: bool = False,
+    display_progress: bool = True,
 ):
     """
     Optimized per-atom CNA calculation by precomputing a mapping from atom indices
@@ -259,6 +261,7 @@ def cna_peratom(
         cut_off=cut_off,
         return_pair=True,
         pbc=pbc,
+        display_progress= display_progress,
     )
     num_atoms = len(coords)
 
@@ -294,6 +297,7 @@ def cnap_peratom(
     coords: np.ndarray,
     cut_off: float = None,
     pbc: bool = False,
+    display_progress: bool = True,
 ) -> np.ndarray:
     """
     Computes the CNA patterns per atom and assigns an integer structure ID
@@ -316,7 +320,7 @@ def cnap_peratom(
         Array of integer structure IDs per atom
     """
     # Compute CNA info
-    cna = cna_peratom(1, coords, cut_off, pbc=pbc)
+    cna = cna_peratom(1, coords, cut_off, pbc=pbc, display_progress=display_progress)
     n_atoms = len(coords)
     cna_atom = np.zeros(n_atoms, dtype=int)
 
@@ -369,7 +373,8 @@ def cnap_peratom(
         return 0  # default (unidentified)
 
     # --- Process atoms ---
-    for i in tqdm(range(n_atoms), desc="Processing CNA patterns"):
+    iterator = tqdm(range(n_atoms), desc="Processing CNA patterns") if display_progress else range(n_atoms)
+    for i in iterator :
         sigs = np.array(cna[i][0])
         counts = np.array(cna[i][1]).flatten()
 
