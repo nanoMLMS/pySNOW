@@ -1,7 +1,7 @@
 import numpy as np
 import os
 from snow.lodispp.utils import nearest_neighbours
-from snow.descriptors.gcn import agcn_calculator
+from snow.descriptors.coordination import agcn_calculator
     
 
 def LAE_xyz(index_frame: int, coords: np.ndarray, elements, cut_off):

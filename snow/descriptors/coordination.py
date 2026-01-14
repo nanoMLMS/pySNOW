@@ -1,5 +1,43 @@
-from snow.lodispp.utils import pair_list, coordination_number
 import numpy as np
+from snow.descriptors.utils import pair_list, nearest_neighbours
+
+def coordination_number(index_frame, coords, cut_off, neigh_list=False):
+    """
+    Computes the coordination number (number of nearest neighbours within a cutoff) for each atom in the system,
+    optionally it also returns the neighbour list
+
+    Parameters
+    ----------
+    index_frame : int
+        Index of the frame relative to the snapshot, primarily for reference.
+    coords : ndarray
+        Array of the coordinates of the atoms forming the system.
+    cut_off : float
+        The cutoff distance for determining nearest neighbors.
+    neigh_list : bool, optional
+        Option to return the neighbour list as well as the coordination number of each atom (defualt is False)
+
+    Returns
+    -------
+    If neigh_list is True:
+        tuple
+            - list: neighbour list, the list of indeces of the neighbours of each atom
+            - ndarray: the coordination numbers of each atom
+    Otherwise:
+        - ndarray: the coordination numbers of each atom
+    """
+    neigh = nearest_neighbours(
+        index_frame=index_frame, coords=coords, cut_off=cut_off
+    )
+    n_atoms = np.shape(coords)[0]
+    coord_numb = np.zeros(n_atoms)
+    for i in range(n_atoms):
+        coord_numb[i] = len(neigh[i])
+    if neigh_list:
+        return neigh, coord_numb
+    else:
+        return coord_numb
+
 
 def progress_bar(current, total, length=50):
     """
