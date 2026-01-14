@@ -12,6 +12,39 @@
 # update: add masses as weights everywhere and default masses (all masses=1), add gyration radius also from the gyration tensor
 
 import numpy as np
+from snow import mass
+
+
+def center_of_mass(
+    index_frame: int, coords: np.ndarray, elements
+) -> np.ndarray:
+    """
+    Calculate the center of mass for a given frame of coordinates.
+
+    Parameters:
+        index_frame (int): Index of the frame in the trajectory.
+        coords (np.ndarray): Array of atomic coordinates of shape (frames, atoms, 3).
+        elements (list or np.ndarray): List of element symbols corresponding to the atoms.
+
+    Returns:
+        np.ndarray: The center of mass as a 3D vector.
+    """
+
+    # Get the masses of the elements
+    masses = np.array([mass[e] for e in elements])
+
+    # Compute the total mass
+    total_mass = np.sum(masses)
+
+    # Calculate the weighted average of coordinates
+    com = np.sum(coords * masses[:, None], axis=0) / total_mass
+
+    return com
+
+
+def geometric_com(index_frame: int, coords: np.ndarray):
+    gcom = np.mean(coords, axis=0)
+    return gcom
 
 def compute_gyration_tensor(positions, masses=None, COM=True):
     """ 
