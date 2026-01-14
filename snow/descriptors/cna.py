@@ -12,7 +12,7 @@ except ImportError:
         return iterable
 
 
-from snow.lodispp.utils import (
+from snow.descriptors.utils import (
     adjacency_matrix,
     coordination_number,
     nearest_neighbours,
