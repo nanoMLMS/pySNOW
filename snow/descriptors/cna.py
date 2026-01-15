@@ -120,7 +120,7 @@ def calculate_cna(
 
 
 def calculate_cna_fast(
-    index_frame, coords, cut_off=None, return_pair=False, pbc=False
+    index_frame, coords, cut_off=None, return_pair=False, pbc=False,display_progress=False
 ):
     """
     Faster version of calculate_cna that precomputes neighbor sets.
@@ -135,6 +135,8 @@ def calculate_cna_fast(
         cutoff radius for the determination of nearest neighbors
     return_pair : bool, optional
         Whether to return an ordered list of the indices of the atoms forming a given pair, by default False
+    display_progress: bool
+        Wheter to display a progress bar
 
     Returns
     -------
@@ -164,7 +166,9 @@ def calculate_cna_fast(
     t = np.empty(len(pairs), dtype=float)
     ret_pair = [] if return_pair else None
 
-    for i, p in enumerate(tqdm(pairs, desc="Processing pairs")):
+    iterator = enumerate(tqdm(pairs, desc="Processing pairs")) if display_progress \
+            else enumerate(pairs)
+    for i, p in iterator:
         # Get neighbor sets for the two atoms in the pair
         set1 = neigh_sets[p[0]]
         set2 = neigh_sets[p[1]]
@@ -294,6 +298,7 @@ def cnap_peratom(
     coords: np.ndarray,
     cut_off: float = None,
     pbc: bool = False,
+    display_progress: bool = False,
 ) -> np.ndarray:
     """
     Computes the CNA patterns per atom and assigns an integer structure ID
@@ -309,6 +314,8 @@ def cnap_peratom(
         Cutoff radius for neighbor determination
     pbc : bool
         Whether to use periodic boundary conditions
+    display_progress: bool
+        Wheter to display a progress bar
 
     Returns
     -------
@@ -369,7 +376,9 @@ def cnap_peratom(
         return 0  # default (unidentified)
 
     # --- Process atoms ---
-    for i in tqdm(range(n_atoms), desc="Processing CNA patterns"):
+    iterator = tqdm(range(n_atoms), desc="Processing CNA patterns") if display_progress \
+            else range(n_atoms)
+    for i in iterator:
         sigs = np.array(cna[i][0])
         counts = np.array(cna[i][1]).flatten()
 
