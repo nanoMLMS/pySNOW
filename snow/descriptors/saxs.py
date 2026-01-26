@@ -26,7 +26,7 @@ def thomson(element: str ,q : float):
     """
     coeffs=cm_coeffs[element]
     f = coeffs['c']
-    for a,b in zip(coeffs["as"],coeffs["bs"]):
+    for a,b in zip(coeffs["a"],coeffs["b"]):
         f += a*np.exp(-b*(q/4/np.pi)**2)
     return f
 
