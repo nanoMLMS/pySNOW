@@ -91,5 +91,5 @@ def iq_pddf(element_i: str,element_j : str,nat:int =0,q :float,
     for dist,count in zip(dists,counts):
         intensity += count * np.sinc(q*dist/np.pi)
     intensity *=  fi*fj
-    #intensity += nat * f**2
+    intensity += nat * f**2
     return intensity
