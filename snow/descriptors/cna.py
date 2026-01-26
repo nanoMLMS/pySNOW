@@ -18,7 +18,7 @@ from snow.descriptors.utils import (
     pair_list,
 )
 
-from snow.descriptors.distributions import coordination_number
+from snow.descriptors.coordination import coordination_number
 def longest_path_or_cycle(neigh_common, neigh_list):
 
     graph = {node: set() for node in neigh_common}
