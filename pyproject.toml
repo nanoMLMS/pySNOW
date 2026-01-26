@@ -2,7 +2,7 @@
 name = "snow"
 description = "Integrated tool for structural characterization at atomistic level"
 readme = "README.md"
-version = "0.0.4b"
+version = "0.0.5a"
 keywords = ["snow", "molecular dynamics", "analysis", "atomistic", "nanoparticles"]
 
 authors = [
