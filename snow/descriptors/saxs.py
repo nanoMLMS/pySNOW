@@ -58,8 +58,8 @@ def iq_from_dist_mat(element_i: str,element_j : str,q : float ,dist_mat : np.nda
     iq = intensity * fi*fj
     return iq
 
-def iq_pddf(element_i: str,element_j : str,nat:int =0,q :float,
-            dists:list ,counts:list):
+def iq_pddf(element_i: str,element_j : str,q :float,
+            dists:list ,counts:list ,nat:int =0):
     """
     Computes thes SAXS spectrum from a PDDF.
     Carfeul: if the bin at distance 0 is not included, nat must be
