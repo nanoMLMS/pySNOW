@@ -219,8 +219,8 @@ def write_cna(
             for i, p in enumerate(pair_list):
                 f.write(f"{p[0]}, {p[1]}, {cna[i]}\n")
 
-    if pattern == True:
-        with open(file_path + "pattern.csv", "a") as f:
+    if cna_unique == True:
+        with open(file_path + "cna_unique.csv", "a") as f:
             f.write(f"\n{frame}\n")
 
             for i, p in enumerate(perc):
