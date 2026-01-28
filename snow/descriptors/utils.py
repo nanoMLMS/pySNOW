@@ -266,3 +266,90 @@ def kl_div(func1: np.array, func2: np.array) -> float:
     for y1, y2 in zip(func1, func2):
         kldiv += y1 * np.log(y1 / y2)
     return kldiv
+
+
+
+
+def apply_pbc(coords, box_size):
+    """
+    Apply periodic boundary conditions to atom coordinates.
+    Maps coordinates to be within the simulation box.
+
+    Parameters
+    ----------
+    coords : np.ndarray
+        Atom coordinates array, shape (n_atoms, 3).
+    box_size : np.ndarray
+        Box size array (3,) or (3,2) depending on box format.
+
+    Returns
+    -------
+    np.ndarray
+        Coordinates after applying PBC.
+    """
+    if box_size.shape == (3, 2):  # Lower and upper bounds provided
+        lower_bounds = box_size[:, 0]
+        upper_bounds = box_size[:, 1]
+        # Apply modulo to map the coordinates back into the box
+        coords = (
+            np.mod(coords - lower_bounds, upper_bounds - lower_bounds)
+            + lower_bounds
+        )
+    elif box_size.shape == (3,):  # Direct box lengths
+        coords = np.mod(coords, box_size)
+    else:
+        raise ValueError("Box size must be of shape (3,) or (3,2)")
+
+    return coords
+
+
+def bounding_box(points):
+    """Calculate an axis-aligned bounding box from a set of points."""
+    x_coordinates, y_coordinates, z_coordinates = zip(*points)
+    return np.array(
+        [
+            [min(x_coordinates), max(x_coordinates)],
+            [min(y_coordinates), max(y_coordinates)],
+            [min(z_coordinates), max(z_coordinates)],
+        ]
+    )
+
+
+
+
+
+def second_neighbours(
+    index_frame: int, coords: np.ndarray, cutoff: float
+) -> list:
+    """Generates a list of lists of atomic indeces for each atom corresponding to aotoms that are neighbours of first neighbours
+    excluding those which are already first neighbours.
+
+    Parameters
+    ----------
+    index_frame : int
+        Index of the frame if a movie (not used in the current version but can be useful for dynamic systems).
+    coords : np.ndarray
+        Array with the XYZ coordinates of the atoms, shape (n_atoms, 3).
+    cutoff : float
+        Cutoff distance for finding pairs in angstroms. If None, an adaptive cutoff is used per atom.
+
+    Returns
+    -------
+    list
+        List of lists containing indeces of second neighbours for each atom
+    """
+    neigh = nearest_neighbours(
+        index_frame=index_frame, coords=coords, cut_off=cutoff
+    )
+    snn_list = []
+    n_atoms = np.shape(coords)[0]
+    for i in range(n_atoms):
+        temp_snn = []
+        for j in neigh[i]:
+            int_ij = np.intersect1d(neigh[i], neigh[j], assume_unique=True)
+            snn_ij = np.setdiff1d(neigh[j], int_ij, assume_unique=True).tolist()
+            temp_snn.extend(snn_ij)
+        temp_snn = list(dict.fromkeys(temp_snn))
+        snn_list.append(temp_snn)
+
+    return snn_list
