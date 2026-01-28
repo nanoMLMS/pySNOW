@@ -1,2 +1,3 @@
 *.xyz
-*.pot.DS_Store
+*.pot
+*.DS_Store
