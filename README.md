@@ -14,14 +14,14 @@ If you use SNOW, the functions will genrally provide a tuple: a list of elements
 
 As an example, if we want to read the coordinates from a file named "Au561_Ih.xyz", containing a single snaplshot, we would call:
 ```python
-from snow.lodispp.pp_io import read_xyz
+from snow.io import read_xyz
 el, sys_coords = read_xyz(filename = "Au561_Ih.xyz")
 ```
 since the structure only contains gold atoms (561 of them) we would get **el** as a list of 561 elements, all "Au" and coords a 3x561 array with the coordinates of the atoms.
 
 If, on the other hand, we had a file named, for instance "Au561_md_300k.xyz", containing let's say 100 snapshot of a molecular dynamics simulation for the same structure, we would call:
 ```python
-from snow.lodispp.pp_io import read_xyz_movie
+from snow.io import read_xyz_movie
 el, sys_coords = read_xyz_movie(filename = "Au561_Ih.xyz")
 ```
 now el would be the same as before, coords, on the other hand, would be a higher dimensional array (100x3x561), and we could isolate a single snapshot as, for instance
@@ -31,7 +31,11 @@ coord_5 = sys_coords[5]
 
 Structures can also be written to an xyz file, with any additional data, using the write_xyz function. It is necessary to provide a path to the file where the structure will be stored, the array with the elements and the array with the coordinates, as an example (some of the calculated features will be explained below):
 ```python
-from snow.lodispp.pp_io import read_xyz, write_xyz
+from snow.io import read_xyz, write_xyz
+from snow.descriptors.coordination import coordination_number, agcn_calculator
+from snow.descriptors.steinhardt import peratom_steinhardt
+from snow.descriptors.strain_mono import strain_mono
+
 elements, coords = read_xyz("Au561_Ih.xyz")
 
 # Define parameters
@@ -42,7 +46,6 @@ dist_0 = 1.66 * 2       # Reference distance for strain calculation
 cn = coordination_number(1, coords=coords, cut_off=cutoff_radius)
 strain_syst = strain_mono(index_frame=1, coords=coords, dist_0=dist_0, cut_off=cutoff_radius)
 fnn = nearest_neighbours(1, coords, cutoff_radius)
-snn = second_neighbours(1, coords, cutoff_radius)
 agcn = agcn_calculator(index_frame=1, coords=coords, cutoff=cutoff_radius, gcn_max=12)
 
 # Determine surface atoms
@@ -78,12 +81,12 @@ The coordination number is one of the simplest descriptors of the environment of
 
 When computed by SNOW it returns a one dimensional array of coordination numbers for each atom with the same ordering as in the coordinates array.
 ```python
-from snow.lodispp.utils import coordination_number
+from snow.descriptors.coordination import coordination_number
 cn = coordination_number(index_frame = 1, coords = sys_coords, cut_off = 2.89, neigh_list = False)
 ```
 The neigh_list flag (set to false by default) can be switched to true to also output the neighbour list:
 ```python
-from snow.lodispp.utils import coordination_number
+from snow.descriptors.coordination import coordination_number
 neigh_list, cn = coordination_number(index_frame = 1, coords = sys_coords, cut_off = 2.89, neigh_list = True)
 ```
 
@@ -96,7 +99,7 @@ What has been described is referred to **atop** GCN (a-GCN), to differentiate wi
 Note that while the a-GCN function returns a list of values for each atom, the b-gcn returns values for each pair, for output and representation purposes is possible to obtain also the coordinates of the midpoints of each pair so that a "phantom" atom can be written to an xyz file to represent the GCN for those bridge sites.
 
 ```python
-from snow.descriptors.gcn import agcn_calculator, bridge_gcn
+from snow.descriptors.coordination import agcn_calculator, bridge_gcn
 agcn = agcn_calculator(index_frame = 1, coords= sys_coords, cut_off = 2.89, gcn_max = 12.0)
 phant_xyz, pairs, bgcn = bridge_gcn(index_frame = 1, coords = sys_coords, cut_off = 2.89, gcn_max=18.0, phantom=True)
 
@@ -134,8 +137,8 @@ having as an extra column an integer whihch cathegorize the atom based on the st
 ```python
 import argparse
 import numpy as np
-from snow.lodispp.cna import cnap_peratom
-from snow.lodispp.pp_io import read_xyz, write_xyz
+from snow.descriptors.cna import cnap_peratom
+from snow.io import read_xyz, write_xyz
 
 parser = argparse.ArgumentParser(
     prog="CNAPatterner",

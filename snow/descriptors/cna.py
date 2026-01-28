@@ -14,12 +14,11 @@ except ImportError:
 
 from snow.descriptors.utils import (
     adjacency_matrix,
-    coordination_number,
     nearest_neighbours,
     pair_list,
 )
 
-
+from snow.descriptors.coordination import coordination_number
 def longest_path_or_cycle(neigh_common, neigh_list):
 
     graph = {node: set() for node in neigh_common}
