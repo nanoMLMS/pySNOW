@@ -6,7 +6,7 @@
 
 import numpy as np
 from snow.misc.constants import cm_coeffs
-from snow.utils import distance_matrix
+from snow.descriptors.utils import distance_matrix
 
 def thomson(element: str ,q : float):
     """
@@ -26,7 +26,7 @@ def thomson(element: str ,q : float):
     """
     coeffs=cm_coeffs[element]
     f = coeffs['c']
-    for a,b in zip(coeffs["as"],coeffs["bs"]):
+    for a,b in zip(coeffs["a"],coeffs["b"]):
         f += a*np.exp(-b*(q/4/np.pi)**2)
     return f
 
@@ -58,8 +58,8 @@ def iq_from_dist_mat(element_i: str,element_j : str,q : float ,dist_mat : np.nda
     iq = intensity * fi*fj
     return iq
 
-def iq_pddf(element_i: str,element_j : str,nat:int =0,q :float,
-            dists:list ,counts:list):
+def iq_pddf(element_i: str,element_j : str,q :float,
+            dists:list ,counts:list ,nat:int =0):
     """
     Computes thes SAXS spectrum from a PDDF.
     Carfeul: if the bin at distance 0 is not included, nat must be
@@ -91,5 +91,6 @@ def iq_pddf(element_i: str,element_j : str,nat:int =0,q :float,
     for dist,count in zip(dists,counts):
         intensity += count * np.sinc(q*dist/np.pi)
     intensity *=  fi*fj
-    #intensity += nat * f**2
+    if element_i == element_j:
+        intensity += nat * fi**2
     return intensity
