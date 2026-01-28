@@ -1,5 +1,43 @@
-from snow.lodispp.utils import pair_list, coordination_number
 import numpy as np
+from snow.descriptors.utils import pair_list, nearest_neighbours
+
+def coordination_number(index_frame, coords, cut_off, neigh_list=False):
+    """
+    Computes the coordination number (number of nearest neighbours within a cutoff) for each atom in the system,
+    optionally it also returns the neighbour list
+
+    Parameters
+    ----------
+    index_frame : int
+        Index of the frame relative to the snapshot, primarily for reference.
+    coords : ndarray
+        Array of the coordinates of the atoms forming the system.
+    cut_off : float
+        The cutoff distance for determining nearest neighbors.
+    neigh_list : bool, optional
+        Option to return the neighbour list as well as the coordination number of each atom (defualt is False)
+
+    Returns
+    -------
+    If neigh_list is True:
+        tuple
+            - list: neighbour list, the list of indeces of the neighbours of each atom
+            - ndarray: the coordination numbers of each atom
+    Otherwise:
+        - ndarray: the coordination numbers of each atom
+    """
+    neigh = nearest_neighbours(
+        index_frame=index_frame, coords=coords, cut_off=cut_off
+    )
+    n_atoms = np.shape(coords)[0]
+    coord_numb = np.zeros(n_atoms)
+    for i in range(n_atoms):
+        coord_numb[i] = len(neigh[i])
+    if neigh_list:
+        return neigh, coord_numb
+    else:
+        return coord_numb
+
 
 def progress_bar(current, total, length=50):
     """
@@ -12,16 +50,43 @@ def progress_bar(current, total, length=50):
     return
 
 
-def agcn_calculator(index_frame, coords, cut_off, dbulk : list[float], thr_cn: int, gcn_max = 12.0, strained: bool = False):
+def agcn_calculator(index_frame, coords, cut_off, gcn_max = 12.0, strained: bool = False, **kwargs):
     """
+    Calculates the atop Generalized Coordination Number (GCN) for a site. The GCN is defined as the sum of the coordination numbers of the neighbors
+    of each atom divided by the maximum typical coordination number in the specific system (gcn_max).
+
+    Parameters
+    ----------
+    - index_frame : int
+        Index of the frame relative to the snapshot, primarily for reference.
+    - coords : ndarray
+        Array of the coordinates of the atoms forming the system.
+    - cut_off : float
+        The cutoff distance for determining nearest neighbors.
+    - gcn_max : float, optional
+        Maximum typical coordination number in the specific system (default is 18.0).
+    -strained : bool, optional
+        iF True computes the strained aGCN (default is False).
+    kwargs:
+        thr_cn: int, optional
+            An atom is considered in the surface if its CN < thr_cn
+        dbulk: float, optional
+            Bulk distance for strained aGCN (default is 0), has to be provided if strained is True
+
+    Returns
+    -------
+    - ndarray: Values of the atop GCN.
     """
     neigh_list, coord_numbers = coordination_number(index_frame, coords, cut_off, neigh_list=True)
     n_atoms = len(coord_numbers)
     agcn = np.zeros(n_atoms)
     sites=[]
 
+    thr_cn = kwargs.get('thr_cn', None)
+    dbulk = kwargs.get('dbulk', 0)
+
     for i, atom_neighbors in enumerate(neigh_list):
-        if coord_numbers[i] >= thr_cn:
+        if thr_cn is not None and coord_numbers[i] >= thr_cn:
             continue
         sites.append(coords[i])
         if strained:
