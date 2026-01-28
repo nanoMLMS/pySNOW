@@ -226,7 +226,7 @@ def write_cna(
             for i, p in enumerate(perc):
                 f.write(
                     #f"{np.unique(cna, axis=0, return_counts=True)[0][i]}, {np.unique(cna, axis=0, return_counts=True)[1][i]},{p}\n"
-                    f"{{p}, np.unique(cna, axis=0, return_counts=True)[0][i]},\n" #percentage and signature
+                    f"{p}, {np.unique(cna, axis=0, return_counts=True)[0][i]},\n" #percentage and signature
                 )
 
 
