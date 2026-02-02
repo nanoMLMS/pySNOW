@@ -46,7 +46,7 @@ def geometric_com(index_frame: int, coords: np.ndarray):
     gcom = np.mean(coords, axis=0)
     return gcom
 
-def compute_gyration_tensor(positions, masses=None, COM=True):
+def gyr_tensor(positions, masses=None, COM=True):
     """ 
     Computes the gyration tensor for a given set of coordinates. \n
     This can be done in the center of mass reference system or in the raw provided coordinates.
@@ -86,7 +86,7 @@ def compute_gyration_tensor(positions, masses=None, COM=True):
     return np.array([[Sxx, Sxy, Sxz], [Sxy, Syy, Syz], [Sxz, Syz, Szz]])
 
 
-def compute_gyration_desc_from_tensor(gyration_tensor):
+def gyr_desc_from_tensor(gyration_tensor):
     """ 
     Computes general shape descriptors (gyration radius, asphericity, acylindricity, relative shape anisotropy) from the gyration tensor
     
@@ -122,7 +122,7 @@ def compute_gyration_desc_from_tensor(gyration_tensor):
     return rg, b, c, k
 
 
-def compute_gyration_descriptors(positions, masses=None, COM=True):
+def gyr_desc(positions, masses=None, COM=True):
     """ 
     Computes general shape descriptors obtained from the gyration tensor \n
     (gyration radius, asphericity, acylindricity, relative shape anisotropy) directly from the provided atomic positions. \n
@@ -150,11 +150,11 @@ def compute_gyration_descriptors(positions, masses=None, COM=True):
         relative shape anisotropy
     """
 
-    return compute_gyration_desc_from_tensor(compute_gyration_tensor(positions, masses, COM))
+    return gyr_desc_from_tensor(gyr_tensor(positions, masses, COM))
 
 
 
-def compute_inertia_tensor(positions, masses=None, COM=True):
+def inertia_tensor(positions, masses=None, COM=True):
 
     """ 
     Computes the inertia tensor for a given set of coordinates. \n
@@ -194,7 +194,7 @@ def compute_inertia_tensor(positions, masses=None, COM=True):
     return np.array([[Ixx, Ixy, Ixz], [Ixy, Iyy, Iyz], [Ixz, Iyz, Izz]])
 
 
-def compute_aspect_ratio_from_tensor(inertia_tensor):
+def aspect_ratio_from_tensor(inertia_tensor):
     """
     Computes the aspect ratio, a shape descriptor obtained from the inertia tensor.
 
@@ -211,7 +211,7 @@ def compute_aspect_ratio_from_tensor(inertia_tensor):
 
 
 
-def compute_aspect_ratio(positions, masses=None, COM=True):
+def aspect_ratio(positions, masses=None, COM=True):
     """ 
     Computes the aspect ratio, a shape descriptor derived from the inertia tensor, for a given set of coordinates. \n
     This can be done in the center of mass reference system or in the raw provided coordinates
@@ -232,9 +232,9 @@ def compute_aspect_ratio(positions, masses=None, COM=True):
         aspect ratio
     """
 
-    return compute_aspect_ratio_from_tensor(compute_inertia_tensor(positions, masses, COM))
+    return aspect_ratio_from_tensor(inertia_tensor(positions, masses, COM))
 
-def compute_gyr_rad(positions, masses=None):
+def gyr_rad(positions, masses=None):
     """
     Computes the gyration radius, which corresponds to the average <r^2> weighted by the masses of\n
     atoms in the system.
