@@ -6,7 +6,7 @@ from scipy.spatial import ConvexHull, cKDTree
 from scipy.spatial.distance import pdist, squareform
 
 
-from snow.descriptors.utils import distance_matrix, hetero_distance_matrix
+from snow.descriptors.utils import distance_matrix, hetero_distance_matrix, _check_structure
 
 def pddf_calculator(index_frame, coords, bin_precision=None, bin_count=None):
     """
@@ -32,6 +32,7 @@ def pddf_calculator(index_frame, coords, bin_precision=None, bin_count=None):
         - ndarray: the number of atoms within a given distance for each bin
 
     """
+    _check_structure(coords=coords)
     n_atoms = np.shape(coords)[0]
     dist_mat, dist_max, dist_min = distance_matrix(
         index_frame=index_frame, coords=coords
@@ -84,11 +85,13 @@ def hetero_pddf_calculator(
     ValueError
         If input shapes are inconsistent or binning is ill-defined.
     """
+    _check_structure(coords=coords, elements=elements)
     n_atoms = np.shape(coords)[0]
     dist_mat = hetero_distance_matrix(
         index_frame=index_frame, elements=elements, coords=coords
     )
 
+    #retrieve only upper triangular to avoid double counting automatically
     triu_indices = np.triu_indices(n_atoms, k=1)
     distances = dist_mat[triu_indices]
 
@@ -144,6 +147,8 @@ def chemical_pddf_calculator(
         - ndarray: the number of atoms within a given distance for each bin
 
     """
+    _check_structure(coords=coords, elements=elements)
+
     unique_elements, n_elements = np.unique(elements, return_counts=True)
 
     pddf_dict = {}
@@ -216,6 +221,7 @@ def pddf_calculator_by_element(
         - ndarray: the number of atoms within a given distance for each bin
     """
     # Select only the indices of the atoms corresponding to the specified element
+    _check_structure(coords=coords, elements=elements)
 
     selected_indices = [i for i, el in enumerate(elements) if el == element]
     selected_coords = coords[selected_indices]
@@ -293,6 +299,8 @@ def rdf_calculator(
     ValueError
         _description_
     """
+    _check_structure(coords=coords)
+
     n_atoms = len(coords)
 
     # Determine binning parameters
@@ -377,6 +385,8 @@ def partial_rdf_calculator(
     ValueError
         Raised if the user does not specify either the bin_count or the bin_precision.
     """
+    _check_structure(coords=coords, elements=elements)
+
     unique_elements, n_elements = np.unique(elements, return_counts=True)
     rdf_dict = {}
     elements = np.array(elements)
