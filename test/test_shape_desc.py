@@ -16,7 +16,6 @@ def test_dh_100_flat():
     """
     el, pos = read_xyz("dh_100_test.xyz")
     rg, b, c, k = compute_gyration_descriptors(pos)
-git rm --cached test/ih_100_test.xyz
     assert 1 - k < 0.1
 
 
