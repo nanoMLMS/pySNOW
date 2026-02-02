@@ -19,7 +19,8 @@ def rotate_translate_system(index_frame: int, coords: np.ndarray, symmetry_axis:
     np.ndarray
         The transformed system of coordinates
     """
-    
+
+    symmetry_axis /= np.linalg.norm(symmetry_axis) 
     rotation_axis = np.cross(symmetry_axis, np.array([0, 0, 1]))
     
     #angle of rotation
@@ -29,7 +30,6 @@ def rotate_translate_system(index_frame: int, coords: np.ndarray, symmetry_axis:
     angle = np.arctan2(sin_theta, cos_theta)
     
     #normalizing the rot axis
-    print(np.linalg.norm(rotation_axis))
     rotation_axis = rotation_axis / np.linalg.norm(rotation_axis)
     
     rotation_matrix = np.array([[np.cos(angle) + rotation_axis[0]**2 * (1 - np.cos(angle)),
@@ -42,7 +42,7 @@ def rotate_translate_system(index_frame: int, coords: np.ndarray, symmetry_axis:
                                 rotation_axis[2] * rotation_axis[1] * (1 - np.cos(angle)) + rotation_axis[0] * np.sin(angle),
                                 np.cos(angle) + rotation_axis[2]**2 * (1 - np.cos(angle))]])
     rotated_coords = np.dot(rotation_matrix, coords.T).T
-    translation_vector = -rotated_coords[0]  # Porta l'atomo di riferimento all'origine
+    translation_vector = -rotated_coords[0]  # reference atom (the first one in the list) is moved to the origin
     translated_coords = rotated_coords + translation_vector
 
     return translated_coords
