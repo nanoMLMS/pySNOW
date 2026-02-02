@@ -60,7 +60,7 @@ def read_lammps_data(file_path: str) -> Tuple[np.ndarray, np.ndarray]:
     return elements, coordinates
 
         
-def read_order_lammps_dump(filename, style='atomic'):
+def read_order_lammps_dump(filename, style='atomic', scaled_coords=True):
     """
     Extract a movie ( Tuple[np.ndarray, np.ndarray] ) from a lammps dump file. Atoms are not written in a consistent \n
     order in dump files, so you generally need to reorder them. 
