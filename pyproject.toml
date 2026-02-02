@@ -5,9 +5,7 @@ readme = "README.md"
 dynamic = ["version"]
 keywords = ["snow", "molecular dynamics", "analysis", "atomistic", "nanoparticles"]
 
-[tool.setuptools_scm]
-version_scheme = "post-release"
-local_scheme = "no-local-version"
+
 
 authors = [
     { name = "Giacomo Becatti", email = "giacomo.becatti@unimi.it" },
@@ -32,6 +30,10 @@ dependencies = [
 tests = [
     "pytest"
 ]
+
+[tool.setuptools_scm]
+version_scheme = "post-release"
+local_scheme = "no-local-version"
 
 [build-system]
 requires = ["setuptools>=62", "wheel", "setuptools-scm>=8"]
