@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def align_axis(index_frame: int, coords: np.ndarray, symmetry_axis: np.ndarray) -> np.ndarray:
+def align_to_axis(index_frame: int, coords: np.ndarray, symmetry_axis: np.ndarray) -> np.ndarray:
     """ Rotates the system so that the provided symmetry_axis is aligned with the z=(0,0,1) axis
     and the first atom of the list of coordinates is set at the origin
 
