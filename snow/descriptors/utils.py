@@ -76,7 +76,8 @@ def sparse_adjacency_matrix(index_frame, coords, cutoff):
 
 
 def hetero_distance_matrix(index_frame, coords, elements):
-    """_summary_
+    """Computes the distance matrix for atoms with different chemical species (eg. if atom "i" is a gold atom and atom "j" a platinum atom then $M_{ij} = d_{ij}$,
+    if they are both gold atoms then $M_{ij} = 0$)
 
     Parameters
     ----------

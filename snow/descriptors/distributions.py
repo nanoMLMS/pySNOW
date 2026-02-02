@@ -54,34 +54,35 @@ def pddf_calculator(index_frame, coords, bin_precision=None, bin_count=None):
 
 
 def hetero_pddf_calculator(
-    index_frame, coords, elements, bin_precision=None, bin_count=None
+    index_frame: int, coords: np.ndarray, elements: np.ndarray, bin_precision: float | None = None, bin_count: int | None = None
 ):
-    """_summary_
+    """Computes the PDDF only for atoms with different chemical species.
 
     Parameters
     ----------
-    index_frame : _type_
-        _description_
-    coords : _type_
-        _description_
-    elements : _type_
-        _description_
-    bin_precision : _type_, optional
-        _description_, by default None
-    bin_count : _type_, optional
-        _description_, by default None
+    index_frame : int
+        Index of the frame relative to the snapshot, primarily for reference.
+    coords : ndarray
+        Array of the coordinates of the atoms forming the system.
+    elements: ndarray
+        Array of elements (must have same order for atoms as they appear in coords array)
+    bin_precision : float, optional
+        Specify a value if you want to compute the PDDF with a given bin precision (in Angstrom)
+    bin_count : int, optional
+        Specify a value if you want to compute the PDDF with a given number of bins
+
 
     Returns
     -------
-    _type_
-        _description_
+    r_centers : ndarray
+        Bin center positions.
+    dist_count : ndarray
+        Counts per bin.
 
     Raises
     ------
     ValueError
-        _description_
-    ValueError
-        _description_
+        If input shapes are inconsistent or binning is ill-defined.
     """
     n_atoms = np.shape(coords)[0]
     dist_mat = hetero_distance_matrix(
@@ -260,6 +261,10 @@ def rdf_calculator(
     box_volume=None,
 ) -> tuple[np.ndarray, np.ndarray]:
     """
+    Computes the Radial Distribution Function as defined in "Understanding Molecular Simulation" by Frankel and Smit, for each atom concentric shells with
+    a certain bin precision (or number of bins) are constructed and the density of atoms found in each shell is computed. 
+    
+    Note that technically we implemented a periodic version as well but it still is not wokring properly.
 
     Parameters
     ----------
