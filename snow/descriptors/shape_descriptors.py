@@ -122,7 +122,7 @@ def gyr_desc_from_tensor(gyration_tensor):
     return rg, b, c, k
 
 
-def gyr_desc(positions, masses=None, COM=True):
+def gyr_desc(index_frame: int, positions, masses=None, COM=True):
     """ 
     Computes general shape descriptors obtained from the gyration tensor \n
     (gyration radius, asphericity, acylindricity, relative shape anisotropy) directly from the provided atomic positions. \n
@@ -132,6 +132,8 @@ def gyr_desc(positions, masses=None, COM=True):
     
     Parameters
     ----------
+    index_frame (int):
+        Index of the frame in the trajectory (for reference only - not used now).
     positions : ndarray
         (n,3) Array of the coordinates of the atoms forming the system.
     masses : ndarray
@@ -211,13 +213,15 @@ def aspect_ratio_from_tensor(inertia_tensor):
 
 
 
-def aspect_ratio(positions, masses=None, COM=True):
+def aspect_ratio(index_frame: int, positions, masses=None, COM=True):
     """ 
     Computes the aspect ratio, a shape descriptor derived from the inertia tensor, for a given set of coordinates. \n
     This can be done in the center of mass reference system or in the raw provided coordinates
 
     Parameters
     ----------
+    index_frame (int):
+        Index of the frame in the trajectory (for reference only - not used now).
     positions : ndarray
         Nx3 Array of the coordinates of the atoms in the system.
     masses : ndarray
@@ -234,13 +238,15 @@ def aspect_ratio(positions, masses=None, COM=True):
 
     return aspect_ratio_from_tensor(inertia_tensor(positions, masses, COM))
 
-def gyr_rad(positions, masses=None):
+def gyr_rad(index_frame: int, positions, masses=None):
     """
     Computes the gyration radius, which corresponds to the average <r^2> weighted by the masses of\n
     atoms in the system.
 
     Parameters
     ----------
+    index_frame (int):
+        Index of the frame in the trajectory (for reference only - not used now).
     positions : ndarray
         Nx3 Array of the coordinates of the atoms in the system.
     masses : ndarray
