@@ -12,7 +12,7 @@
 # update: add masses as weights everywhere and default masses (all masses=1), add gyration radius also from the gyration tensor
 
 import numpy as np
-from snow import mass
+from snow.misc.constants import mass
 
 
 def center_of_mass(
