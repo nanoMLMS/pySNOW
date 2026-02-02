@@ -1,4 +1,4 @@
-from snow.lodispp.utils import kl_div
+from snow.descriptors.utils import kl_div
 import numpy as np
 
 dist1= np.array([1,2,3,4,5,6,7,8,9,19],dtype=float)
