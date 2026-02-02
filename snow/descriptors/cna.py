@@ -219,13 +219,14 @@ def write_cna(
             for i, p in enumerate(pair_list):
                 f.write(f"{p[0]}, {p[1]}, {cna[i]}\n")
 
-    if pattern == True:
-        with open(file_path + "pattern.csv", "a") as f:
+    if cna_unique == True:
+        with open(file_path + "cna_unique.csv", "a") as f:
             f.write(f"\n{frame}\n")
 
             for i, p in enumerate(perc):
                 f.write(
-                    f"{np.unique(cna, axis=0, return_counts=True)[0][i]}, {np.unique(cna, axis=0, return_counts=True)[1][i]},{p}\n"
+                    #f"{np.unique(cna, axis=0, return_counts=True)[0][i]}, {np.unique(cna, axis=0, return_counts=True)[1][i]},{p}\n"
+                    f"{p}, {np.unique(cna, axis=0, return_counts=True)[0][i]},\n" #percentage and signature
                 )
 
 

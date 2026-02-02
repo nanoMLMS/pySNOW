@@ -153,7 +153,7 @@ def write_xyz(filename, elements, coords, additional_data=None):
             xyz_file.write(atom_line + "\n")
 
 
-def write_movie_xyz(frame, filename, elements, coords, additional_data=None):
+def write_xyz_movie(frame, filename, elements, coords, additional_data=None):
     """
     Writes atomic data to an XYZ file in OVITO-compatible format.
 
