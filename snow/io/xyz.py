@@ -199,3 +199,48 @@ def write_xyz_movie(frame, filename, elements, coords, additional_data=None):
                 # Add the additional per-atom data
                 atom_line += ' ' + ' '.join([f"{additional_data[i, j]:.6f}" for j in range(additional_data.shape[1])])
             xyz_file.write(atom_line + "\n")
+
+
+def write_phantom_xyz(filename, coords, additional_data=None):
+    """
+    Writes atomic data to an XYZ file in OVITO-compatible format.
+
+    Parameters
+    ----------
+    filename: str
+        Name of the output .xyz file.
+    elements: ndarray
+        List of atomic symbols (e.g., ['Au', 'Au', ...]).
+    coords: ndarray)
+        Nx3 array of atomic coordinates.
+    additional_data: list or np.ndarray, optional
+        Additional per-atom data, such as coordination numbers.
+
+    Returns:
+        An xyz file containing the elements and coordinates of each atom and any additional per atom data (e.g. coordination number, agcn, strain...) 
+    """
+    n_atoms = len(coords)
+    elements=['X'] * n_atoms
+    
+    # Check if additional_data is provided and has the correct shape
+    if additional_data is not None:
+        additional_data = np.array(additional_data)
+        if additional_data.shape[0] != n_atoms:
+            raise ValueError(f"The number of rows in additional_data ({additional_data.shape[0]}) must match the number of atoms ({n_atoms}).")
+    
+    with open(filename, 'w') as xyz_file:
+        # Write header
+        xyz_file.write(f"{n_atoms}\n")
+        xyz_file.write("Generated XYZ file with optional properties\n")
+        
+        # Write atom data
+        for i in range(n_atoms):
+            atom_line = f"{elements[i]} {coords[i, 0]:.6f} {coords[i, 1]:.6f} {coords[i, 2]:.6f}"
+            if additional_data is not None:
+                
+                # Add the additional per-atom data
+                atom_line += ' ' + ' '.join([f"{additional_data[i, j]:.6f}" for j in range(additional_data.shape[1])])
+            xyz_file.write(atom_line + "\n")
+
+
+
