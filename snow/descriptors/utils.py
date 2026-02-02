@@ -354,3 +354,25 @@ def second_neighbours(
         snn_list.append(temp_snn)
 
     return snn_list
+
+
+
+def _check_structure(coords: np.ndarray, elements: np.ndarray | None = None, *, require_elements: bool = False):
+    """_summary_
+
+    Parameters
+    ----------
+    coords : np.ndarray
+        _description_
+    elements : np.ndarray | None, optional
+        _description_, by default None
+    require_elements : bool, optional
+        _description_, by default False
+    """
+    if not isinstance(coords, np.ndarray):
+        raise ValueError("Coordinates must be provided as np.ndarray")
+    
+    #check if coordinates have the right shape and dimensions
+    if coords.ndim != 2 or coords.shape[1] != 3:
+        raise ValueError(f"Coordinates array must have shape (N, 3), got {coords.shape}")
+    
