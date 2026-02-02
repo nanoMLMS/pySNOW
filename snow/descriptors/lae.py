@@ -1,6 +1,6 @@
 import numpy as np
 import os
-from snow.lodispp.utils import nearest_neighbours
+from snow.descriptors.utils import nearest_neighbours
 from snow.descriptors.coordination import agcn_calculator
     
 
