@@ -5,6 +5,8 @@ from scipy.sparse import coo_matrix
 from scipy.spatial import ConvexHull, cKDTree
 from scipy.spatial.distance import pdist, squareform
 
+rescale = (1 + np.sqrt(2)) / 2
+
 
 
 def distance_matrix(index_frame, coords):
