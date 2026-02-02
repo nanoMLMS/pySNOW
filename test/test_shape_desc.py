@@ -1,31 +1,37 @@
 from snow.descriptors.shape_descriptors import compute_gyration_descriptors
+from snow.io import read_xyz
 import numpy as np
-def test_shape_descriptors():
+def test_ih_100_spherical():
     """
-    Tests the calculation of gyration tensor derived shape descriptors. Does not test the aspect ratio yet
+    Test that the gyration tensor descriptors for a highly spherical cluster are all zero.
     """
-    from ase.cluster import Decahedron as dh, Icosahedron as ih, Octahedron as oh
-    from ase.build import bulk
+    el, pos = read_xyz("ih_100_test.xyz")  # very spherical
+    rg, b, c, k = compute_gyration_descriptors(pos)
+    assert np.allclose([b, c, k], [0, 0, 0])
 
-    pos = ih('Cu', 100).get_positions()    #this should be very spherical
-    b, c, k = compute_gyration_descriptors(pos)
 
-    assert(np.allclose( np.array([b,c,k]), np.array([0,0,0])))
+def test_dh_100_flat():
+    """
+    Test the descriptors for a slightly elongated/dh cluster.
+    """
+    el, pos = read_xyz("dh_100_test.xyz")
+    rg, b, c, k = compute_gyration_descriptors(pos)
+    assert c < 1e-10
+    assert 1 - k < 0.1
 
-    pos = dh('Cu', 3, 100, 0).get_positions() #this should be very cylindrical and elongated
-    b, c, k = compute_gyration_descriptors(pos)
 
-    assert(c<1e-10)
-    assert(1-k<0.1)
+def test_cube_translation_invariance():
+    """
+    Test that the descriptors are invariant under translation.
+    """
+    el, pos = read_xyz("cube_test.xyz")
+    rg, b1, c1, k1 = compute_gyration_descriptors(pos)
 
-    #test translations
-    at = bulk('Cu', 'fcc', 3.6)
-    cube = at.repeat([10,10,10])
-    pos = cube.get_positions()
-    b1, c1, k1 = compute_gyration_descriptors(pos)
-    pos+= 1000*np.ones(pos.shape)
-    b2, c2, k2 = compute_gyration_descriptors(pos)
-    assert(np.allclose( np.array([b1,c1,k1]), np.array([b2,c2,k2]) ))
+    # apply a large translation
+    pos += 1000 * np.ones(pos.shape)
+    rg, b2, c2, k2 = compute_gyration_descriptors(pos)
+
+    assert np.allclose([b1, c1, k1], [b2, c2, k2])
 
     #would be nice to find some non-cylindrical (and non prismical) clsuter to test acylindricity>>0
     #possibly add checks that b, c>0 and 0<k<1 always

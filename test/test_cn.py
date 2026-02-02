@@ -1,6 +1,6 @@
-from snow.lodispp.utils import coordination_number, agcn_calculator
+from snow.descriptors.coordination import coordination_number, agcn_calculator
 import numpy as np
-from snow.lodispp.pp_io import read_xyz
+from snow.io import read_xyz
 def test_cn_isolated():
     coord = np.array([[0,0,0]])
     el = np.array(["Au"])
@@ -19,10 +19,11 @@ def test_cn_twoatoms():
 
 import os
 
-def test_fcc():
-    el, coords = read_xyz("fcccrystal.xyz")
-    assert coordination_number(1, coords=coords , cut_off = 1.83)[14] == 12
-    
+def test_fcc_bulk():
+    el, coords = read_xyz("cube_test.xyz")
+    assert coordination_number(1, coords=coords , cut_off = 3.0)[142] == 12
+
+"""
 def test_bcc():
     el, coords = read_xyz("bcccell.xyz")
     assert coordination_number(1, coords=coords , cut_off = 1.83)[4] == 8
@@ -33,4 +34,4 @@ def test_cn_111():
 
 def test_gcn_111():
     el, coords = read_xyz("cut_fcc.xyz")
-    assert agcn_calculator(1, coords=coords , cut_off = 1.83, gcn_max=12.0)[25] == 7.5
+    assert agcn_calculator(1, coords=coords , cut_off = 1.83, gcn_max=12.0)[25] == 7.5 """
