@@ -2,7 +2,8 @@ import numpy as np
 
 
 def rotate_translate_system(index_frame: int, coords: np.ndarray, symmetry_axis: np.ndarray) -> np.ndarray:
-    """ ROtates the system around the origin along a given axis
+    """ Rotates the system so that the provided symmetry_axis is aligned with the z=(0,0,1) axis
+    and the first atom of the list of coordinates is set at the origin
 
     Parameters
     ----------
