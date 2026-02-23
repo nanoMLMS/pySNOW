@@ -108,7 +108,7 @@ def agcn_calculator(index_frame, coords, cut_off, gcn_max = 12.0, strained: bool
 
 
 
-def bridge_gcn(index_frame: int, coords: np.ndarray, cut_off: float, dbulk : list[float], thr_cn: int, gcn_max=18.0, phantom=False, strained: bool = False):
+def bridge_gcn(index_frame: int, coords: np.ndarray, cut_off: float, dbulk : list[float], thr_cn: int, gcn_max=18.0, phantom=True, strained: bool = False):
     """
     Identifies bridge absorption sites and computes the Generalized Coordination Number (GCN)
     for a site. The GCN is defined as the sum of the coordination numbers of the neighbors
