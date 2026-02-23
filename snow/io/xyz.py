@@ -244,3 +244,59 @@ def write_phantom_xyz(filename, coords, additional_data=None):
 
 
 
+
+
+def write_xyz_movie_with_str(frame, filename, elements, coords, additional_data=None):
+    """
+    Writes atomic data to an XYZ file in OVITO-compatible format.
+
+    Parameters
+    ----------
+    frame: int
+        Frame number.
+    filename: str
+        Name of the output .xyz file.
+    elements: list or ndarray
+        List of atomic symbols (e.g., ['Au', 'Au', ...]).
+    coords: ndarray
+        Nx3 array of atomic coordinates.
+    additional_data: list or np.ndarray, optional
+        Additional per-atom data, such as coordination numbers, site types, etc.
+        Can contain both numeric and string data.
+
+    Returns
+    -------
+    None
+    """
+
+    if frame == 0 and os.path.exists(filename):
+        os.remove(filename)
+
+    n_atoms = len(coords)
+
+    # Convert additional_data to array of objects if provided
+    if additional_data is not None:
+        additional_data = np.array(additional_data, dtype=object)
+        if additional_data.shape[0] != n_atoms:
+            raise ValueError(
+                f"The number of rows in additional_data ({additional_data.shape[0]}) "
+                f"must match the number of atoms ({n_atoms})."
+            )
+
+    with open(filename, 'a') as xyz_file:
+        # Write header
+        xyz_file.write(f"{n_atoms}\n")
+        xyz_file.write(f"Frame {frame}\n")
+
+        # Write atom data
+        for i in range(n_atoms):
+            atom_line = f"{elements[i]} {coords[i, 0]:.6f} {coords[i, 1]:.6f} {coords[i, 2]:.6f}"
+            if additional_data is not None:
+                for j in range(additional_data.shape[1]):
+                    val = additional_data[i, j]
+                    # Numeric values formatted with 6 decimals, strings as-is
+                    if isinstance(val, (int, float, np.number)):
+                        atom_line += f" {val:.6f}"
+                    else:
+                        atom_line += f" {val}"
+            xyz_file.write(atom_line + "\n")
