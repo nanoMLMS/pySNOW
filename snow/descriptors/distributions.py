@@ -11,67 +11,11 @@ from snow.descriptors.utils import distance_matrix, hetero_distance_matrix, _che
 import numpy as np
 import numpy as np
 
-def pddf_calculator_adjusted(index_frame, coords, bin_size):
-    """
-    Computes the pair distribution function (PDF) similarly to the Fortran routine.
-    
-    Parameters
-    ----------
-    index_frame : int
-        Index of the frame.
-    coords : ndarray
-        Coordinates of the atoms (natoms x 3).
-    bin_precision : float
-        Bin size (precision).
-    
-    Returns
-    -------
-    bin_edges : ndarray
-        Upper edge of each bin.
-    dist_count : ndarray
-        Number of occurrences in each bin.
-    """
-#    natoms = coords.shape[0]
-
-    # Compute full distance matrix
-#    diff = coords[:, np.newaxis, :] - coords[np.newaxis, :, :]
-#    distmat = np.linalg.norm(diff, axis=-1)
-    
-#    distmax = distmat.max()
-    
-    
-    _check_structure(coords=coords)
-    natoms = np.shape(coords)[0]
-    distmat, distmax, distmin = distance_matrix(
-        index_frame=index_frame, coords=coords
-    )
-    
-    
-    # Determine number of bins
-    nbins_real = distmax / bin_size
-    nbins_int = int(np.round(nbins_real))
-    
-    # Allocate histogram
-    dist_count = np.zeros(nbins_int + 1, dtype=int)
-    
-    # Count occurrences for each bin
-    for i in range(nbins_int + 1):
-        lower = bin_size * (i - 1)
-        upper = bin_size * i
-        dist_count[i] = np.sum((distmat >= lower) & (distmat < upper))
-    
-    # Generate bin edges
-    bin_edges = np.arange(nbins_int + 1) * bin_size
-    
-    return bin_edges, dist_count
-    
-
     
 def pddf_calculator(index_frame, coords, lattice, bin_size_lattice):
     """
     Computes the pair distance distribution function for a given set of coordinates of atoms. \n
-    The user can either provide a bin precision or the numer of bins depending on wheter they are striving for a specific precision in the bins
-    or on a specific number of bins for representation.
+    The user must provide the lattice size in \AA and the bin size in lattice units.
 
     Parameters
     ----------
@@ -79,10 +23,10 @@ def pddf_calculator(index_frame, coords, lattice, bin_size_lattice):
         Index of the frame relative to the snapshot, primarily for reference.
     coords : ndarray
         Array of the coordinates of the atoms forming the system.
-    bin_precision: float, optional
-        Specify a value if you want to compute the PDDF with a given bin precision (in Angstrom)
-    bin_count: int, optional
-        Specify a value if you want to compute the PDDF with a given number of bins
+    lattice: float,
+        Specify a value for the lattice parameter of your structure (in Angstrom) 
+    bin_size_lattice: int
+        Specify a value for the size of PDDF binning in units of the lattice parameter.
 
     Returns
     -------
