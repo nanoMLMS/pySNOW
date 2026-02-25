@@ -11,11 +11,14 @@ from snow.descriptors.utils import distance_matrix, hetero_distance_matrix, _che
 import numpy as np
 import numpy as np
 
+
+
+
     
 def pddf_calculator(index_frame, coords, lattice, bin_size_lattice):
     """
     Computes the pair distance distribution function for a given set of coordinates of atoms. \n
-    The user must provide the lattice size in \AA and the bin size in lattice units.
+    The user must provide the lattice size in Angstrom and the bin size in lattice units.
 
     Parameters
     ----------
@@ -45,16 +48,51 @@ def pddf_calculator(index_frame, coords, lattice, bin_size_lattice):
 
     triu_indeces = np.triu_indices(n_atoms, k=1)
     distances = dist_mat[triu_indeces]
-    print(dist_max)
 
     n_bins = int(np.ceil(dist_max / bin_precision))
 
-    print(n_bins)
     
     bins = np.linspace(0, dist_max, n_bins + 1)
     dist_count, _ = np.histogram(distances, bins=bins)
 
     return (bins[:-1] + bin_precision / 2)/lattice, dist_count
+    
+    
+def pddf_as_window_function(index_frame, coords, lattice, bin_size_lattice, d0):
+    """
+    Computes the WF order parameter as defined by Pavan et al. (2015)
+
+    Parameters
+    ----------
+    coords : ndarray
+        Atomic coordinates
+    lattice: float,
+        Specify a value for the Bulk lattice constant of your structure (in Angstrom) 
+    bin_size_lattice: int
+        Specify a value for the size of PDDF binning in units of the lattice parameter.
+    d0 : float
+        Characteristic distance of the window (Å)
+
+    Returns
+    -------
+    float
+        Window function order parameter
+    """
+
+    r0 = bin_size_lattice * lattice  # window width
+
+    n_atoms = coords.shape[0]
+    dist_mat, _, _ = distance_matrix(index_frame=0, coords=coords)
+
+    triu_indices = np.triu_indices(n_atoms, k=1)
+    rij = dist_mat[triu_indices]
+
+    x = (rij - d0) / r0
+
+    wf = np.sum((1 - x**6) / (1 - x**12))
+
+    return wf
+    
     
 
 def pddf_calculator_old(index_frame, coords, bin_precision=None, bin_count=None):
