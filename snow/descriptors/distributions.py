@@ -58,6 +58,78 @@ def pddf_calculator(index_frame, coords, lattice, bin_size_lattice):
     return (bins[:-1] + bin_precision / 2)/lattice, dist_count
     
     
+    import numpy as np
+
+def pddf_calculator_by_element(
+    index_frame,
+    coords,
+    elements,
+    element="Au",
+    lattice=None,
+    bin_size_lattice=1
+):
+    """
+    Computes the pair distance distribution function (PDDF) for a given set of coordinates,
+    considering only atoms of a specified chemical element. Uses histogram counting for efficiency.
+
+    Parameters
+    ----------
+    index_frame : int
+        Index of the frame relative to the snapshot, primarily for reference.
+    coords : ndarray
+        Array of the coordinates of the atoms forming the system.
+    elements : list
+        List of atomic species corresponding to each coordinate.
+    element: str, optional
+        The atomic species to consider (default is 'Au').
+    lattice: float
+        Lattice parameter (in Angstroms) to convert bin size to absolute units.
+    bin_size_in_lattice: int
+        Size of each bin in units of the lattice parameter.
+
+    Returns
+    -------
+    tuple
+        - ndarray: the midpoints of the bins (in lattice units)
+        - ndarray: the histogram counts of distances
+    """
+    if lattice is None:
+        raise ValueError("You must provide the lattice parameter to use bin_size_in_lattice.")
+
+    # Check structure and select only atoms of the given element
+    _check_structure(coords=coords, elements=elements)
+    selected_indices = [i for i, el in enumerate(elements) if el == element]
+    selected_coords = coords[selected_indices]
+
+    n_atoms = len(selected_indices)
+    if n_atoms < 2:
+        raise ValueError(
+            f"Not enough atoms of element '{element}' to compute PDDF."
+        )
+
+    # Compute distance matrix
+    dist_mat, dist_max, dist_min = distance_matrix(
+        index_frame=index_frame, coords=selected_coords
+    )
+
+    # Convert bin size to Angstroms
+    bin_precision = bin_size_lattice * lattice
+    n_bins = int(np.ceil(dist_max / bin_precision))
+
+    # Extract upper triangle (j < k)
+    triu_indices = np.triu_indices(n_atoms, k=1)
+    distances = dist_mat[triu_indices]
+
+    # Compute histogram
+    bins = np.linspace(0, dist_max, n_bins + 1)
+    dist_count, _ = np.histogram(distances, bins=bins)
+
+    # Bin midpoints in lattice units
+    bin_centers = (bins[:-1] + bins[1:]) / 2 / lattice
+
+    return bin_centers, dist_count
+    
+    
 def pddf_as_window_function(index_frame, coords, lattice, bin_size_lattice, d0):
     """
     Computes the WF order parameter as defined by Pavan et al. (2015)
@@ -275,7 +347,7 @@ def chemical_pddf_calculator(
     return pddf_dict
 
 
-def pddf_calculator_by_element(
+def pddf_calculator_by_element_old(
     index_frame,
     coords,
     elements,
