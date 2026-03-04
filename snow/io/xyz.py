@@ -112,6 +112,70 @@ def read_xyz_movie(file_path: str) -> Tuple[np.ndarray, np.ndarray]:
     return elements, coords
 
 
+
+
+def read_xyz_movie_extended(
+    file_path: str,
+    n_extra_cols: int = 0
+) -> Tuple:
+    """
+    Reads an XYZ trajectory with optional extra per-atom columns.
+
+    Parameters
+    ----------
+    file_path : str
+        Path to the xyz file
+    n_extra_cols : int
+        Number of extra columns after x y z to read
+
+    Returns
+    -------
+    Tuple
+        elements : list[str]
+        coords : np.ndarray (n_frames, n_atoms, 3)
+        extra_0 : np.ndarray (n_frames, n_atoms)
+        extra_1 : np.ndarray (n_frames, n_atoms)
+        ...
+    """
+
+    # Read number of atoms
+    with open(file_path, "r") as f:
+        n_atoms = int(f.readline().strip())
+
+    # Count frames
+    with open(file_path, "r") as f:
+        num_lines = sum(1 for _ in f)
+    n_frames = num_lines // (n_atoms + 2)
+
+    coords = np.zeros((n_frames, n_atoms, 3))
+    elements = []
+
+    # Allocate extra columns
+    extras = [
+        np.zeros((n_frames, n_atoms)) for _ in range(n_extra_cols)
+    ]
+
+    with open(file_path, "r") as f:
+        for frame in range(n_frames):
+            f.readline()  # atom count
+            f.readline()  # comment
+
+            for atom in range(n_atoms):
+                line = f.readline().split()
+
+                if frame == 0:
+                    elements.append(line[0])
+
+                coords[frame, atom, :] = map(float, line[1:4])
+
+                for i in range(n_extra_cols):
+                    extras[i][frame, atom] = float(line[4 + i])
+
+    return (elements, coords, *extras)
+
+
+
+
 def write_xyz(filename, elements, coords, additional_data=None):
     """
     Writes atomic data to an XYZ file in OVITO-compatible format.
