@@ -6,14 +6,11 @@
 # https://docs.lammps.org/compute_gyration_shape.html
 # https://doi.org/10.1002/adts.201900013
 
-# date: Jul 16th, 2025
-# author: gilberto.nardi@studenti.unimi.it
-
-# update: add masses as weights everywhere and default masses (all masses=1), add gyration radius also from the gyration tensor
+# date: Jul 16th, 2025 - Mar 9th, 2026
+# author: gilberto.nardi@unimi.it
 
 import numpy as np
 from snow.misc.constants import mass
-
 
 def center_of_mass(
     index_frame: int, coords: np.ndarray, elements
@@ -46,21 +43,15 @@ def geometric_com(index_frame: int, coords: np.ndarray):
     gcom = np.mean(coords, axis=0)
     return gcom
 
-def gyr_tensor(positions, masses=None, COM=True):
+def gyr_tensor(positions):
     """ 
     Computes the gyration tensor for a given set of coordinates. \n
-    This can be done in the center of mass reference system or in the raw provided coordinates.
-    In averages, positions are weighted by their mass. The default is: all masses are the same (np.ones(n))
+    This is done in the center of positions reference system.
 
     Parameters
     ----------
     positions : ndarray
         (n,3) Array of the coordinates of the atoms forming the system.
-    masses : ndarray
-        (n,) array of the masses of the atoms in the system. Default to np.ones(n)
-    COM : bool
-        if True, the calculation is performed in the center of mass reference system. Otherwise, it 
-        is performed with the raw coordinates provided by the user
 
     Returns
     -------
@@ -68,27 +59,21 @@ def gyr_tensor(positions, masses=None, COM=True):
         3x3 gyration tensor
     """
 
-    if masses is None:
-        masses = np.ones(positions.shape[0])
+    centered = positions - np.average(positions, axis=0)
 
-    if COM:
-        centered = positions - np.average(positions, axis=0, weights=masses)
-    else:
-        centered = positions
-    
-    Sxx = np.average(centered[:,0]*centered[:,0], weights=masses)
-    Syy = np.average(centered[:,1]*centered[:,1], weights=masses)
-    Szz = np.average(centered[:,2]*centered[:,2], weights=masses)
-    Sxy = np.average(centered[:,0]*centered[:,1], weights=masses)
-    Sxz = np.average(centered[:,0]*centered[:,2], weights=masses)
-    Syz = np.average(centered[:,1]*centered[:,2], weights=masses)
+    Sxx = np.average(centered[:,0]*centered[:,0])
+    Syy = np.average(centered[:,1]*centered[:,1])
+    Szz = np.average(centered[:,2]*centered[:,2])
+    Sxy = np.average(centered[:,0]*centered[:,1])
+    Sxz = np.average(centered[:,0]*centered[:,2])
+    Syz = np.average(centered[:,1]*centered[:,2])
         
     return np.array([[Sxx, Sxy, Sxz], [Sxy, Syy, Syz], [Sxz, Syz, Szz]])
 
 
 def gyr_desc_from_tensor(gyration_tensor):
     """ 
-    Computes general shape descriptors (gyration radius, asphericity, acylindricity, relative shape anisotropy) from the gyration tensor
+    Computes general shape descriptors (asphericity, acylindricity, relative shape anisotropy) from the gyration tensor
     
     Parameters
     ----------
@@ -97,8 +82,6 @@ def gyr_desc_from_tensor(gyration_tensor):
 
     Returns
     -------
-    float
-        gyration radius
     float
         asphericity
     float
@@ -114,21 +97,17 @@ def gyr_desc_from_tensor(gyration_tensor):
     l2 = eigenvalues[1]
     l3 = eigenvalues[2]
 
-    rg = np.sqrt(l1+l2+l3)  #gyration radius
     b = l3 - (l1 + l2)/2.   #asphericity
     c = l2 - l1             #acilindricity
     k = 3.*(l1*l1 + l2*l2 + l3*l3)/2./((l1 + l2 + l3)**2.) -0.5   #relative shape anisotropy
 
-    return rg, b, c, k
+    return b, c, k
 
 
-def gyr_desc(index_frame: int, positions, masses=None, COM=True):
+def gyr_desc(index_frame: int, positions):
     """ 
     Computes general shape descriptors obtained from the gyration tensor \n
     (gyration radius, asphericity, acylindricity, relative shape anisotropy) directly from the provided atomic positions. \n
-    The positions can be weighted by their masses, but if you are only interested in the characterization of \n
-    the shape, you can decide to use the default masses, whichs is np.ones(n) - equivalent to a non-weighted average when \n
-    computing the gyration tensor
     
     Parameters
     ----------
@@ -136,11 +115,6 @@ def gyr_desc(index_frame: int, positions, masses=None, COM=True):
         Index of the frame in the trajectory (for reference only - not used now).
     positions : ndarray
         (n,3) Array of the coordinates of the atoms forming the system.
-    masses : ndarray
-        (n,) array of the masses of the atoms in the system. Default to np.ones(n)
-    COM : bool
-        if True, the calculation is performed in the center of mass reference system. Otherwise, it 
-        is performed with the raw coordinates provided by the user
 
     Returns
     -------
@@ -152,7 +126,7 @@ def gyr_desc(index_frame: int, positions, masses=None, COM=True):
         relative shape anisotropy
     """
 
-    return gyr_desc_from_tensor(gyr_tensor(positions, masses, COM))
+    return gyr_desc_from_tensor(gyr_tensor(positions))
 
 
 
