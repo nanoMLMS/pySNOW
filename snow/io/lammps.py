@@ -60,7 +60,7 @@ def read_lammps_data(file_path: str) -> Tuple[np.ndarray, np.ndarray]:
     return elements, coordinates
 
         
-def read_order_lammps_dump(filename, style='atomic'):
+def read_order_lammps_dump(filename, style='atomic', scaled_coords=True):
     """
     Extract a movie ( Tuple[np.ndarray, np.ndarray] ) from a lammps dump file. Atoms are not written in a consistent \n
     order in dump files, so you generally need to reorder them. 
@@ -71,11 +71,15 @@ def read_order_lammps_dump(filename, style='atomic'):
     ----------
     filename : str
         filename for the lammps-dump file to extract atoms from.
+    scaled_coords: bool
+        bool to check if coordinates are scaled (written in terms of the box sizes length). Default to True, which is 
+        lammps' default. Probably this can be dealt with automatically by checking if all positions are between 0 and 1,
+        but not super general and robust
 
     Returns
     -------
     Tuple[np.ndarray, np.ndarray]
-        species and movie (positions) from the lammps dump with consistent ordering of atoms.
+        species ids and positions from the lammps dump with consistent ordering of atoms. Here, pos[i] is a Nx3 array with positions of the i-th frame and so on.
     """
 
     if style != "atomic":
@@ -139,7 +143,10 @@ def read_order_lammps_dump(filename, style='atomic'):
             parts = line.split()
             try:
                 curr_ids.append(int(parts[0]) - 1) #lammps has 1-based ids
-                curr_frame.append([float(parts[2])*xbox, float(parts[3])*ybox, float(parts[4])*zbox])
+                if scaled_coords:
+                    curr_frame.append([float(parts[2])*xbox, float(parts[3])*ybox, float(parts[4])*zbox])
+                else:
+                    curr_frame.append([float(parts[2]), float(parts[3]), float(parts[4])])
                 curr_species.append(int(parts[1]))
             except (ValueError, IndexError) as e:
                 raise ValueError(
