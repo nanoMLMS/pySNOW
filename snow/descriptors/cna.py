@@ -19,6 +19,196 @@ from snow.descriptors.utils import (
 )
 
 from snow.descriptors.coordination import coordination_number
+
+### start Sofia test
+def fortran_like_chain_length(neigh_common, neigh_list, a, b):
+    """
+    CNA t-signature (Honeycutt–Andersen), Fortran-equivalent.
+
+    Parameters
+    ----------
+    neigh_common : array-like
+        Common nearest neighbours of atoms a and b
+    neigh_list : dict or list
+        Neighbour list for each atom
+    a, b : int
+        Indices of the central atom pair
+    """
+
+    neigh_common = list(neigh_common)
+    n = len(neigh_common)
+    if n < 2:
+        return 0
+
+    pair = {a, b}
+
+    # adjacency restricted to common neighbours ONLY
+    adj = {
+        u: set(
+            v for v in neigh_list[u]
+            if v in neigh_common and v not in pair
+        )
+        for u in neigh_common
+    }
+
+    max_len = 0
+
+    def backtrack(path, used):
+        nonlocal max_len
+
+        # number of consecutive bonds
+        max_len = max(max_len, len(path) - 1)
+
+        # pruning
+        if len(path) + (n - len(used)) - 1 <= max_len:
+            return
+
+        last = path[-1]
+        for nxt in adj[last]:
+            if nxt not in used:
+                used.add(nxt)
+                backtrack(path + [nxt], used)
+                used.remove(nxt)
+
+    # try all starting points
+    for start in neigh_common:
+        backtrack([start], {start})
+
+    # check cycle closure ONLY if full chain
+    if max_len == n - 1:
+        for u in neigh_common:
+            if neigh_common[0] in adj[u]:
+                max_len = n
+                break
+
+    return max_len
+
+def calculate_cna_sofia(index_frame, coords, cut_off, return_pair=False):
+    """
+    Common Neighbour Analysis (Honeycutt–Andersen)
+
+    Returns
+    -------
+    n_pairs : int
+    cna : ndarray (Npairs, 3) with (r, s, t)
+    pairs : list of tuples (optional)
+    """
+
+    neigh_list = nearest_neighbours(index_frame, coords, cut_off)
+    pairs = pair_list(index_frame=index_frame, coords=coords, cut_off=cut_off)
+
+    r = np.zeros(len(pairs), dtype=int)
+    s = np.zeros(len(pairs), dtype=int)
+    t = np.zeros(len(pairs), dtype=int)
+
+    if return_pair:
+        ret_pair = []
+
+    for i, (a, b) in enumerate(pairs):
+
+        # common neighbours (exclude central pair explicitly)
+        neigh_common = np.intersect1d(neigh_list[a], neigh_list[b])
+        neigh_common = neigh_common[
+            (neigh_common != a) & (neigh_common != b)
+        ]
+
+        if return_pair:
+            ret_pair.append((a, b))
+
+        # r: number of common neighbours
+        r[i] = len(neigh_common)
+
+        # s: number of bonds between common neighbours
+        s_i = 0
+        for idx, j in enumerate(neigh_common):
+            for k in neigh_common[idx + 1:]:
+                if k in neigh_list[j]:
+                    s_i += 1
+        s[i] = s_i
+
+        # t: longest CNA chain (Fortran-like)
+        t[i] = fortran_like_chain_length(
+            neigh_common, neigh_list, a, b
+        )
+
+    cna = np.column_stack((r, s, t))
+
+    if return_pair:
+        return len(pairs), cna, ret_pair
+
+    return len(pairs), cna
+
+
+
+
+
+import numpy as np
+
+def cna_percentages_sofia(coords, cut_off, r_bulk_threshold=12):
+    """
+    CNA con percentuali, separando coppie bulk e surface.
+    
+    Parameters
+    ----------
+    coords : np.ndarray
+        (N,3) array con le coordinate atomiche
+    cut_off : float
+        Cutoff per nearest neighbours
+    r_bulk_threshold : int
+        Numero minimo di vicini per considerare un atomo "bulk"
+    
+    Returns
+    -------
+    dict
+        'total' : dict[signature tuple] -> percentuale
+        'bulk'  : dict[signature tuple] -> percentuale
+        'surface': dict[signature tuple] -> percentuale
+    """
+    # Frame dummy (0) perché calculate_cna_sofia richiede index_frame
+    frame = 0
+
+    # CNA totale
+    n_pairs, cna, pairs = calculate_cna_sofia(frame, coords, cut_off, return_pair=True)
+
+    # Signature uniche totali
+    unique_sigs, counts = np.unique(cna, axis=0, return_counts=True)
+    percentages_total = 100 * counts / n_pairs
+    total_dict = {tuple(sig): perc for sig, perc in zip(unique_sigs, percentages_total)}
+
+    # Ora dividiamo bulk vs surface
+    bulk_counts = {}
+    surface_counts = {}
+    
+    # Precalcolo numero di vicini per ogni atomo
+    neigh_list = nearest_neighbours(frame, coords, cut_off)
+    num_neigh = np.array([len(n) for n in neigh_list])
+
+    for sig, pair in zip(cna, pairs):
+        # Atomi coinvolti nella coppia
+        a, b = pair
+        # Se entrambi hanno num_neigh >= r_bulk_threshold → bulk
+        if num_neigh[a] >= r_bulk_threshold and num_neigh[b] >= r_bulk_threshold:
+            bulk_counts[tuple(sig)] = bulk_counts.get(tuple(sig), 0) + 1
+        else:
+            surface_counts[tuple(sig)] = surface_counts.get(tuple(sig), 0) + 1
+
+    # Trasformiamo in percentuali
+    n_bulk = sum(bulk_counts.values())
+    n_surface = sum(surface_counts.values())
+
+    bulk_dict = {sig: 100*cnt/n_bulk for sig, cnt in bulk_counts.items()} if n_bulk>0 else {}
+    surface_dict = {sig: 100*cnt/n_surface for sig, cnt in surface_counts.items()} if n_surface>0 else {}
+
+    return {
+        'total': total_dict,
+        'bulk': bulk_dict,
+        'surface': surface_dict
+    }
+
+
+
+
+### end Sofia test
 def longest_path_or_cycle(neigh_common, neigh_list):
 
     graph = {node: set() for node in neigh_common}
