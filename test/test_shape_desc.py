@@ -6,7 +6,7 @@ def test_ih_100_spherical():
     Test that the gyration tensor descriptors for a highly spherical cluster are all zero.
     """
     el, pos = read_xyz("ih_40_test.xyz")  # very spherical
-    b, c, k = gyr_desc(1, pos)
+    b, c, k = gyr_desc(pos)
     assert np.allclose([b, c, k], [0, 0, 0])
 
 
@@ -15,7 +15,7 @@ def test_dh_100_flat():
     Test the descriptors for a slightly elongated/dh cluster.
     """
     el, pos = read_xyz("dh_100_test.xyz")
-    b, c, k = gyr_desc(1, pos)
+    b, c, k = gyr_desc(pos)
     assert 1 - k < 0.1
 
 
