@@ -8,12 +8,6 @@ from scipy.spatial.distance import pdist, squareform
 
 from snow.descriptors.utils import distance_matrix, hetero_distance_matrix, _check_structure
 
-<<<<<<< Updated upstream
-
-
-=======
->>>>>>> Stashed changes
-
 
 
     
@@ -60,11 +54,7 @@ def pddf_calculator(index_frame, coords, lattice, bin_size_lattice):
 
     return (bins[:-1] + bin_precision / 2)/lattice, dist_count
     
-    
-<<<<<<< Updated upstream
 
-=======
->>>>>>> Stashed changes
 
 def pddf_calculator_by_element(
     index_frame,
