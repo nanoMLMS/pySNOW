@@ -15,6 +15,46 @@ import numpy as np
 from snow.misc.constants import mass
 
 
+
+def eccentricity(el, coords, round_step=0.05):
+    """
+    Calcola l'eccentricità (smallest/largest bounding box dimension) 
+    per ogni frame.
+    
+    coords: array (n_frames, n_atoms, 3)
+    el: non usato, solo per compatibilità
+    round_step: passo per arrotondamento opzionale
+    """
+    n_frames = coords.shape[0]
+    ratios = np.full(n_frames, np.nan)  # default NaN
+
+    for t in range(n_frames):
+        frame_coords = np.atleast_2d(coords[t])  # assicura array 2D
+
+        if frame_coords.shape[0] < 2:
+            # troppo pochi atomi per calcolare bounding box
+            continue
+
+        min_values = frame_coords.min(axis=0)
+        max_values = frame_coords.max(axis=0)
+
+        length_x = max_values[0] - min_values[0]
+        length_y = max_values[1] - min_values[1]
+        length_z = max_values[2] - min_values[2]
+
+        largest_dimension = max(length_x, length_y, length_z)
+        smallest_dimension = min(length_x, length_y, length_z)
+
+        ratio = smallest_dimension / largest_dimension
+
+        if round_step is not None:
+            ratio = round(ratio / round_step) * round_step
+
+        ratios[t] = ratio
+
+    return ratios
+    
+    
 def center_of_mass(
     index_frame: int, coords: np.ndarray, elements
 ) -> np.ndarray:
