@@ -6,64 +6,59 @@
 # https://docs.lammps.org/compute_gyration_shape.html
 # https://doi.org/10.1002/adts.201900013
 
-# date: Jul 16th, 2025 - Mar 9th, 2026
-# author: gilberto.nardi@unimi.it
-
 import numpy as np
 from snow.misc.constants import mass
 
 
-
-def eccentricity(el, coords, round_step=0.05):
+def eccentricity(coords, round_step=None):
     """
-    Calcola l'eccentricità (smallest/largest bounding box dimension) 
-    per ogni frame.
-    
-    coords: array (n_frames, n_atoms, 3)
-    el: non usato, solo per compatibilità
-    round_step: passo per arrotondamento opzionale
+    Compute the eccentricity (smallest/largest bounding box dimension), a measure of shape anisotropy.
+
+    Parameters:
+    -----------
+    coords: ndarray(n_atoms, 3) 
+        Coordinates of the atoms in your systems.
+    round_step: float
+        precision for rounding - optional, default to None
     """
-    n_frames = coords.shape[0]
-    ratios = np.full(n_frames, np.nan)  # default NaN
 
-    for t in range(n_frames):
-        frame_coords = np.atleast_2d(coords[t])  # assicura array 2D
+    frame_coords = np.atleast_2d(coords)  # ensures array 2D
 
-        if frame_coords.shape[0] < 2:
-            # troppo pochi atomi per calcolare bounding box
-            continue
+    if frame_coords.shape[0] < 2:
+        # too few atoms to compute the bounding box
+        return np.nan
 
-        min_values = frame_coords.min(axis=0)
-        max_values = frame_coords.max(axis=0)
+    min_values = frame_coords.min(axis=0)
+    max_values = frame_coords.max(axis=0)
 
-        length_x = max_values[0] - min_values[0]
-        length_y = max_values[1] - min_values[1]
-        length_z = max_values[2] - min_values[2]
+    length_x = max_values[0] - min_values[0]
+    length_y = max_values[1] - min_values[1]
+    length_z = max_values[2] - min_values[2]
 
-        largest_dimension = max(length_x, length_y, length_z)
-        smallest_dimension = min(length_x, length_y, length_z)
+    largest_dimension = max(length_x, length_y, length_z)
+    smallest_dimension = min(length_x, length_y, length_z)
 
-        ratio = smallest_dimension / largest_dimension
+    ratio = smallest_dimension / largest_dimension
 
-        if round_step is not None:
-            ratio = round(ratio / round_step) * round_step
+    if round_step is not None:
+        ratio = round(ratio / round_step) * round_step
 
-        ratios[t] = ratio
-
-    return ratios
+    return ratio
     
 
 
 def center_of_mass(
-    index_frame: int, coords: np.ndarray, elements
+         coords: np.ndarray, elements
 ) -> np.ndarray:
     """
     Calculate the center of mass for a given frame of coordinates.
 
     Parameters:
-        index_frame (int): Index of the frame in the trajectory.
-        coords (np.ndarray): Array of atomic coordinates of shape (frames, atoms, 3).
-        elements (list or np.ndarray): List of element symbols corresponding to the atoms.
+    -----------
+    coords : np.ndarray
+        Array of atomic coordinates of shape ( n_atoms, 3).
+    elements : list or np.ndarray
+        List of element symbols corresponding to the atoms, for weighted sum
 
     Returns:
         np.ndarray: The center of mass as a 3D vector.
@@ -81,7 +76,10 @@ def center_of_mass(
     return com
 
 
-def geometric_com(index_frame: int, coords: np.ndarray):
+def geometric_com(coords: np.ndarray):
+    """
+    Computes the average of the coordinates
+    """
     gcom = np.mean(coords, axis=0)
     return gcom
 
@@ -146,10 +144,10 @@ def gyr_desc_from_tensor(gyration_tensor):
     return b, c, k
 
 
-def gyr_desc(index_frame: int, positions):
+def gyr_desc(positions):
     """ 
     Computes general shape descriptors obtained from the gyration tensor \n
-    (gyration radius, asphericity, acylindricity, relative shape anisotropy) directly from the provided atomic positions. \n
+    (asphericity, acylindricity, relative shape anisotropy) directly from the provided atomic positions. \n
     
     Parameters
     ----------
@@ -229,19 +227,17 @@ def aspect_ratio_from_tensor(inertia_tensor):
 
 
 
-def aspect_ratio(index_frame: int, positions, masses=None, COM=True):
+def aspect_ratio(positions, masses=None, COM=True):
     """ 
     Computes the aspect ratio, a shape descriptor derived from the inertia tensor, for a given set of coordinates. \n
     This can be done in the center of mass reference system or in the raw provided coordinates
 
     Parameters
     ----------
-    index_frame (int):
-        Index of the frame in the trajectory (for reference only - not used now).
     positions : ndarray
         Nx3 Array of the coordinates of the atoms in the system.
     masses : ndarray
-        array of the masses of the atoms in the system. Default to np.ones(n)
+        array of the masses of the atoms in the system. Default to all equal masses.
     COM : bool
         if True, the calculation is performed in the center of mass reference system. Otherwise, it 
         is performed with the raw coordinates provided by the user
@@ -254,15 +250,13 @@ def aspect_ratio(index_frame: int, positions, masses=None, COM=True):
 
     return aspect_ratio_from_tensor(inertia_tensor(positions, masses, COM))
 
-def gyr_rad(index_frame: int, positions, masses=None):
+def gyr_rad(positions, masses=None):
     """
     Computes the gyration radius, which corresponds to the average <r^2> weighted by the masses of\n
     atoms in the system.
 
     Parameters
     ----------
-    index_frame (int):
-        Index of the frame in the trajectory (for reference only - not used now).
     positions : ndarray
         Nx3 Array of the coordinates of the atoms in the system.
     masses : ndarray
