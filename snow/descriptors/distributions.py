@@ -8,8 +8,11 @@ from scipy.spatial.distance import pdist, squareform
 
 from snow.descriptors.utils import distance_matrix, hetero_distance_matrix, _check_structure
 
+<<<<<<< Updated upstream
 
 
+=======
+>>>>>>> Stashed changes
 
 
 
@@ -41,6 +44,7 @@ def pddf_calculator(index_frame, coords, lattice, bin_size_lattice):
     bin_precision=bin_size_lattice*lattice #convert in \AA units the lattice dimension
     _check_structure(coords=coords)
     n_atoms = np.shape(coords)[0]
+    
     dist_mat, dist_max, dist_min = distance_matrix(
         index_frame=index_frame, coords=coords
     )
@@ -57,7 +61,10 @@ def pddf_calculator(index_frame, coords, lattice, bin_size_lattice):
     return (bins[:-1] + bin_precision / 2)/lattice, dist_count
     
     
+<<<<<<< Updated upstream
 
+=======
+>>>>>>> Stashed changes
 
 def pddf_calculator_by_element(
     index_frame,
@@ -152,7 +159,7 @@ def pddf_as_window_function(index_frame, coords, lattice, bin_size_lattice, d0):
 
     r0 = bin_size_lattice * lattice  # window width
 
-    n_atoms = coords.shape[0]
+    n_atoms = coords.shape[1]
     dist_mat, _, _ = distance_matrix(index_frame=0, coords=coords)
 
     triu_indices = np.triu_indices(n_atoms, k=1)
