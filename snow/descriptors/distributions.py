@@ -7,25 +7,29 @@ from scipy.spatial.distance import pdist, squareform
 
 
 from snow.descriptors.utils import distance_matrix, hetero_distance_matrix, _check_structure
-
-
+from snow.descriptors.shape import center_of_mass, geometric_com
 
     
-def pddf_calculator(index_frame, coords, lattice, bin_size_lattice):
+def pddf_calculator(coords, bin_width: float, use_lattice_units: bool, lattice=None):
     """
     Computes the pair distance distribution function for a given set of coordinates of atoms. \n
-    The user must provide the lattice size in Angstrom and the bin size in lattice units.
-
+    If use_lattice_units=True, bin_width should be provided in lattice units (alat) and the pddf 
+    is returned in lattice units.
+    If use_lattice=False, the bin width should be provided in the coordinates units.
     Parameters
     ----------
-    index_frame : int
-        Index of the frame relative to the snapshot, primarily for reference.
     coords : ndarray
         Array of the coordinates of the atoms forming the system.
+    bin_width: float
+        width of the bins to bin the distances in the system. It should be provided in lattice units if
+        use_lattice_units==True, and in the same units as coords if use_lattice==False
+    use_lattice_units: bool
+        If True, the PDDF is returned in units of the lattice consatnt (passed as the 'lattice' argument) and
+        the bin_width should be given in units of the lattice constant.
+        If False, the PPDF is returned in the units of coords, and the bin_width should be given in the same units
+        as coords.
     lattice: float,
-        Specify a value for the lattice parameter of your structure (in Angstrom) 
-    bin_size_lattice: int
-        Specify a value for the size of PDDF binning in units of the lattice parameter.
+        Specify a value for the lattice parameter of your structure in the same units as coords.
 
     Returns
     -------
@@ -34,35 +38,38 @@ def pddf_calculator(index_frame, coords, lattice, bin_size_lattice):
         - ndarray: the number of atoms within a given distance for each bin
 
     """
+
+    if use_lattice_units:
+
+        if lattice is None:
+            raise ValueError('If use_lattice_units==True, you should provide a value for the lattice constant to use')
+        
+        coords = coords/lattice #creates a copy instead of modifying in-place the array passed as argument
     
-    bin_precision=bin_size_lattice*lattice #convert in \AA units the lattice dimension
+    #bin_precision=bin_size_lattice*lattice #convert in \AA units the lattice dimension
     _check_structure(coords=coords)
     n_atoms = np.shape(coords)[0]
     
-    dist_mat, dist_max, dist_min = distance_matrix(
-        index_frame=index_frame, coords=coords
-    )
+    dist_mat, dist_max, dist_min = distance_matrix(coords=coords)
 
     triu_indeces = np.triu_indices(n_atoms, k=1)
     distances = dist_mat[triu_indeces]
 
-    n_bins = int(np.ceil(dist_max / bin_precision))
+    n_bins = int(np.ceil(dist_max / bin_width))
 
-    
-    bins = np.linspace(0, dist_max, n_bins + 1)
+    bins = np.linspace(0, n_bins*bin_width, n_bins + 1)
     dist_count, _ = np.histogram(distances, bins=bins)
 
-    return (bins[:-1] + bin_precision / 2)/lattice, dist_count
-
+    return (bins[:-1] + bin_width/2.), dist_count
 
 
 def pddf_calculator_by_element(
-    index_frame,
     coords,
     elements,
-    element="Au",
+    element,
+    bin_width,
+    use_lattice_units: bool,
     lattice=None,
-    bin_size_lattice=1
 ):
     """
     Computes the pair distance distribution function (PDDF) for a given set of coordinates,
@@ -70,18 +77,22 @@ def pddf_calculator_by_element(
 
     Parameters
     ----------
-    index_frame : int
-        Index of the frame relative to the snapshot, primarily for reference.
     coords : ndarray
         Array of the coordinates of the atoms forming the system.
     elements : list
         List of atomic species corresponding to each coordinate.
-    element: str, optional
-        The atomic species to consider (default is 'Au').
-    lattice: float
-        Lattice parameter (in Angstroms) to convert bin size to absolute units.
-    bin_size_in_lattice: int
-        Size of each bin in units of the lattice parameter.
+    element: str
+        The atomic species to consider.
+    bin_width: float
+        width of the bins to bin the distances in the system. It should be provided in lattice units if
+        use_lattice_units==True, and in the same units as coords if use_lattice==False
+    use_lattice_units: bool
+        If True, the PDDF is returned in units of the lattice consatnt (passed as the 'lattice' argument) and
+        the bin_width should be given in units of the lattice constant.
+        If False, the PPDF is returned in the units of coords, and the bin_width should be given in the same units
+        as coords.
+    lattice: float,
+        Specify a value for the lattice parameter of your structure in the same units as coords.
 
     Returns
     -------
@@ -89,8 +100,6 @@ def pddf_calculator_by_element(
         - ndarray: the midpoints of the bins (in lattice units)
         - ndarray: the histogram counts of distances
     """
-    if lattice is None:
-        raise ValueError("You must provide the lattice parameter to use bin_size_in_lattice.")
 
     # Check structure and select only atoms of the given element
     _check_structure(coords=coords, elements=elements)
@@ -98,35 +107,41 @@ def pddf_calculator_by_element(
     selected_coords = coords[selected_indices]
 
     n_atoms = len(selected_indices)
+
+    #some sanity checks
+    if use_lattice_units:
+
+        if lattice is None:
+            raise ValueError('If use_lattice_units==True, you should provide a value for the lattice constant to use')
+        
+        selected_coords /= lattice
+
     if n_atoms < 2:
         raise ValueError(
             f"Not enough atoms of element '{element}' to compute PDDF."
         )
 
     # Compute distance matrix
-    dist_mat, dist_max, dist_min = distance_matrix(
-        index_frame=index_frame, coords=selected_coords
-    )
+    dist_mat, dist_max, dist_min = distance_matrix(coords=selected_coords)
 
-    # Convert bin size to Angstroms
-    bin_precision = bin_size_lattice * lattice
-    n_bins = int(np.ceil(dist_max / bin_precision))
+    n_bins = int(np.ceil(dist_max / bin_width))
 
     # Extract upper triangle (j < k)
     triu_indices = np.triu_indices(n_atoms, k=1)
     distances = dist_mat[triu_indices]
 
     # Compute histogram
-    bins = np.linspace(0, dist_max, n_bins + 1)
+    bins = np.linspace(0, n_bins*bin_width, n_bins + 1)
     dist_count, _ = np.histogram(distances, bins=bins)
 
-    # Bin midpoints in lattice units
-    bin_centers = (bins[:-1] + bins[1:]) / 2 / lattice
+    # Bin midpoints
+    bin_centers = (bins[:-1] + bins[1:])/2.
 
     return bin_centers, dist_count
     
-    
-def pddf_as_window_function(index_frame, coords, lattice, bin_size_lattice, d0):
+
+#TODO
+def pddf_as_window_function(coords, lattice, bin_size_lattice, d0):
     """
     Computes the WF order parameter as defined by Pavan et al. (2015)
 
@@ -150,7 +165,7 @@ def pddf_as_window_function(index_frame, coords, lattice, bin_size_lattice, d0):
     r0 = bin_size_lattice * lattice  # window width
 
     n_atoms = coords.shape[1]
-    dist_mat, _, _ = distance_matrix(index_frame=0, coords=coords)
+    dist_mat, _, _ = distance_matrix(coords=coords)
 
     triu_indices = np.triu_indices(n_atoms, k=1)
     rij = dist_mat[triu_indices]
@@ -163,61 +178,55 @@ def pddf_as_window_function(index_frame, coords, lattice, bin_size_lattice, d0):
     
     
 
-def pddf_calculator_old(index_frame, coords, bin_precision=None, bin_count=None):
-    """
-    Computes the pair distance distribution function for a given set of coordinates of atoms. \n
-    The user can either provide a bin precision or the numer of bins depending on wheter they are striving for a specific precision in the bins
-    or on a specific number of bins for representation.
+# def pddf_calculator_old(coords, bin_precision=None, bin_count=None):
+#     """
+#     Computes the pair distance distribution function for a given set of coordinates of atoms. \n
+#     The user can either provide a bin precision or the numer of bins depending on wheter they are striving for a specific precision in the bins
+#     or on a specific number of bins for representation.
 
-    Parameters
-    ----------
-    index_frame : int
-        Index of the frame relative to the snapshot, primarily for reference.
-    coords : ndarray
-        Array of the coordinates of the atoms forming the system.
-    bin_precision: float, optional
-        Specify a value if you want to compute the PDDF with a given bin precision (in Angstrom)
-    bin_count: int, optional
-        Specify a value if you want to compute the PDDF with a given number of bins
+#     Parameters
+#     ----------
+#     coords : ndarray
+#         Array of the coordinates of the atoms forming the system.
+#     bin_precision: float, optional
+#         Specify a value if you want to compute the PDDF with a given bin precision (in Angstrom)
+#     bin_count: int, optional
+#         Specify a value if you want to compute the PDDF with a given number of bins
 
-    Returns
-    -------
-    tuple
-        - ndarray: the values of the interatomic distances for each bin
-        - ndarray: the number of atoms within a given distance for each bin
+#     Returns
+#     -------
+#     tuple
+#         - ndarray: the values of the interatomic distances for each bin
+#         - ndarray: the number of atoms within a given distance for each bin
 
-    """
-    _check_structure(coords=coords)
-    n_atoms = np.shape(coords)[0]
-    dist_mat, dist_max, dist_min = distance_matrix(
-        index_frame=index_frame, coords=coords
-    )
+#     """
+#     _check_structure(coords=coords)
+#     n_atoms = np.shape(coords)[0]
+#     dist_mat, dist_max, dist_min = distance_matrix(coords=coords)
 
-    triu_indeces = np.triu_indices(n_atoms, k=1)
-    distances = dist_mat[triu_indeces]
-    if bin_precision:
-        n_bins = int(np.ceil(dist_max / bin_precision))
-    elif bin_count:
-        n_bins = bin_count
-        bin_precision = dist_max / n_bins
-    else:
-        raise ValueError("You must specify either bin_precision or bin_count.")
+#     triu_indeces = np.triu_indices(n_atoms, k=1)
+#     distances = dist_mat[triu_indeces]
+#     if bin_precision:
+#         n_bins = int(np.ceil(dist_max / bin_precision))
+#     elif bin_count:
+#         n_bins = bin_count
+#         bin_precision = dist_max / n_bins
+#     else:
+#         raise ValueError("You must specify either bin_precision or bin_count.")
 
-    bins = np.linspace(0, dist_max, n_bins + 1)
-    dist_count, _ = np.histogram(distances, bins=bins)
+#     bins = np.linspace(0, dist_max, n_bins + 1)
+#     dist_count, _ = np.histogram(distances, bins=bins)
 
-    return bins[:-1] + bin_precision / 2, dist_count
+#     return bins[:-1] + bin_precision / 2, dist_count
 
 
 def hetero_pddf_calculator(
-    index_frame: int, coords: np.ndarray, elements: np.ndarray, bin_precision: float | None = None, bin_count: int | None = None
+    coords: np.ndarray, elements: np.ndarray, bin_precision: float | None = None, bin_count: int | None = None
 ):
     """Computes the PDDF only for atoms with different chemical species.
 
     Parameters
     ----------
-    index_frame : int
-        Index of the frame relative to the snapshot, primarily for reference.
     coords : ndarray
         Array of the coordinates of the atoms forming the system.
     elements: ndarray
@@ -240,10 +249,12 @@ def hetero_pddf_calculator(
     ValueError
         If input shapes are inconsistent or binning is ill-defined.
     """
+
     _check_structure(coords=coords, elements=elements)
     n_atoms = np.shape(coords)[0]
+
     dist_mat = hetero_distance_matrix(
-        index_frame=index_frame, elements=elements, coords=coords
+        elements=elements, coords=coords
     )
 
     #retrieve only upper triangular to avoid double counting automatically
@@ -274,26 +285,31 @@ def hetero_pddf_calculator(
     return bins[:-1] + bin_precision / 2, dist_count
 
 
-def chemical_pddf_calculator(
-    index_frame, coords, elements, bin_precision=None, bin_count=None
+def chemical_pddf_calculator( #update to new pddf style
+    coords, elements, bin_width: float, use_lattice_units: bool, lattice=None
 ):
     """
-    Computes the pair distance distribution function for a given set of coordinates of atoms. \n
+    Computes the chemical element-wise pair distance distribution function for a given set of coordinates of atoms. \n
     The user can either provide a bin precision or the numer of bins depending on wheter they are striving for a specific precision in the bins
     or on a specific number of bins for representation.
+    The function returns a dict witht the pddf for each chemical specie.
 
     Parameters
     ----------
-    index_frame : int
-        Index of the frame relative to the snapshot, primarily for reference.
     coords : ndarray
         Array of the coordinates of the atoms forming the system.
     elements: ndarray
-        Array of elements
-    bin_precision: float, optional
-        Specify a value if you want to compute the PDDF with a given bin precision (in Angstrom)
-    bin_count: int, optional
-        Specify a value if you want to compute the PDDF with a given number of bins
+        Array of chemical elements corresponding to the coords.
+    bin_width: float
+        width of the bins to bin the distances in the system. It should be provided in lattice units if
+        use_lattice_units==True, and in the same units as coords if use_lattice==False
+    use_lattice_units: bool
+        If True, the PDDF is returned in units of the lattice consatnt (passed as the 'lattice' argument) and
+        the bin_width should be given in units of the lattice constant.
+        If False, the PPDF is returned in the units of coords, and the bin_width should be given in the same units
+        as coords.
+    lattice: float,
+        Specify a value for the lattice parameter of your structure in the same units as coords.
 
     Returns
     -------
@@ -308,113 +324,90 @@ def chemical_pddf_calculator(
 
     pddf_dict = {}
     elements = np.array(elements)
-    if bin_count:
-        d_tot, pddf_tot = pddf_calculator(
-            index_frame=index_frame, coords=coords, bin_count=bin_count
-        )
-    elif bin_precision:
-        d_tot, pddf_tot = pddf_calculator(
-            index_frame=index_frame, coords=coords, bin_precision=bin_precision
-        )
+
+    d_tot, pddf_tot = pddf_calculator(coords, bin_width, use_lattice_units, lattice)
 
     pddf_dict["Tot"] = [d_tot, pddf_tot]
+
     for el in unique_elements:
 
         idx_el = np.where(elements == str(el))[0]
         coords_el = np.array(coords[idx_el])
 
-        if bin_count:
-            d_el, pddf_el = pddf_calculator(
-                index_frame=index_frame, coords=coords_el, bin_count=bin_count
-            )
-        elif bin_precision:
-            d_el, pddf_el = pddf_calculator(
-                index_frame=index_frame,
-                coords=coords_el,
-                bin_precision=bin_precision,
-            )
-        else:
-            raise ValueError(
-                "Either bin_count or bin_precision must be provided."
-            )
+        d_el, pddf_el = pddf_calculator(coords, bin_width, use_lattice_units, lattice)
 
         pddf_dict[el] = [d_el, pddf_el]
 
     return pddf_dict
 
 
-def pddf_calculator_by_element_old(
-    index_frame,
-    coords,
-    elements,
-    element="Au",
-    bin_precision=None,
-    bin_count=None,
-):
-    """
-    Computes the pair distance distribution function (PDDF) for a given set of coordinates,
-    considering only atoms of a specified chemical element.
+# def pddf_calculator_by_element_old(
+#     coords,
+#     elements,
+#     element,
+#     bin_precision=None,
+#     bin_count=None,
+# ):
+#     """
+#     Computes the pair distance distribution function (PDDF) for a given set of coordinates,
+#     considering only atoms of a specified chemical element.
 
-    Parameters
-    ----------
-    index_frame : int
-        Index of the frame relative to the snapshot, primarily for reference.
-    coords : ndarray
-        Array of the coordinates of the atoms forming the system.
-    elements : list
-        List of atomic species corresponding to each coordinate.
-    element: str, optional
-        The atomic species to consider (default is 'Au').
-    bin_precision: float, optional
-        Bin precision in Angstroms.
-    bin_count: int, optional
-        Number of bins.
-    Returns
-    -------
-    tuple
-        - ndarray: the values of the interatomic distances for each bin
-        - ndarray: the number of atoms within a given distance for each bin
-    """
-    # Select only the indices of the atoms corresponding to the specified element
-    _check_structure(coords=coords, elements=elements)
+#     Parameters
+#     ----------
+#     coords : ndarray
+#         Array of the coordinates of the atoms forming the system.
+#     elements : list
+#         List of atomic species corresponding to each coordinate.
 
-    selected_indices = [i for i, el in enumerate(elements) if el == element]
-    selected_coords = coords[selected_indices]
+#     bin_precision: float, optional
+#         Bin precision in Angstroms.
+#     bin_count: int, optional
+#         Number of bins.
+#     Returns
+#     -------
+#     tuple
+#         - ndarray: the values of the interatomic distances for each bin
+#         - ndarray: the number of atoms within a given distance for each bin
+#     """
+#     # Select only the indices of the atoms corresponding to the specified element
+#     _check_structure(coords=coords, elements=elements)
 
-    n_atoms = len(selected_indices)
-    if n_atoms < 2:
-        raise ValueError(
-            "Not enough atoms of the specified element to compute PDDF."
-        )
+#     selected_indices = [i for i, el in enumerate(elements) if el == element]
+#     selected_coords = coords[selected_indices]
 
-    dist_mat, dist_max, _ = distance_matrix(
-        index_frame=index_frame, coords=selected_coords
-    )
+#     n_atoms = len(selected_indices)
+#     if n_atoms < 2:
+#         raise ValueError(
+#             "Not enough atoms of the specified element to compute PDDF."
+#         )
 
-    if bin_precision:
-        n_bins = dist_max / bin_precision
-    else:
-        n_bins = bin_count
-        bin_precision = dist_max / n_bins
+#     dist_mat, dist_max, _ = distance_matrix(
+#         coords=selected_coords
+#     )
 
-    n_bins_int = int(n_bins)
-    dist_count = np.zeros(n_bins_int)
-    dist = np.zeros(n_bins_int)
+#     if bin_precision:
+#         n_bins = dist_max / bin_precision
+#     else:
+#         n_bins = bin_count
+#         bin_precision = dist_max / n_bins
 
-    for i in range(n_bins_int):
-        for j in range(n_atoms):
-            for k in range(n_atoms):
-                if j != k and (
-                    dist_mat[j, k] < bin_precision * i
-                    and dist_mat[j, k] >= (bin_precision * (i - 1))
-                ):
-                    dist_count[i] += 1
-        dist[i] = bin_precision * i
+#     n_bins_int = int(n_bins)
+#     dist_count = np.zeros(n_bins_int)
+#     dist = np.zeros(n_bins_int)
 
-    return dist, dist_count
+#     for i in range(n_bins_int):
+#         for j in range(n_atoms):
+#             for k in range(n_atoms):
+#                 if j != k and (
+#                     dist_mat[j, k] < bin_precision * i
+#                     and dist_mat[j, k] >= (bin_precision * (i - 1))
+#                 ):
+#                     dist_count[i] += 1
+#         dist[i] = bin_precision * i
+
+#     return dist, dist_count
 
 def rdf_calculator(
-    index_frame: int,
     coords: np.ndarray,
     cut_off: float,
     bin_count: int = None,
@@ -429,8 +422,6 @@ def rdf_calculator(
 
     Parameters
     ----------
-    index_frame : int
-        _description_
     elements : np.ndarray
         _description_
     coords : np.ndarray
@@ -499,7 +490,6 @@ def rdf_calculator(
 
 
 def partial_rdf_calculator(
-    index_frame: int,
     elements: np.ndarray,
     coords: np.ndarray,
     cut_off: int,
@@ -516,8 +506,6 @@ def partial_rdf_calculator(
 
     Parameters
     ----------
-    index_frame : int
-        _description_
     elements : np.ndarray
         _description_
     coords : np.ndarray
@@ -554,7 +542,6 @@ def partial_rdf_calculator(
 
         if bin_count:
             d_el, rdf_el = rdf_calculator(
-                index_frame=index_frame,
                 coords=coords_el,
                 cut_off=cut_off,
                 bin_count=bin_count,
@@ -562,7 +549,6 @@ def partial_rdf_calculator(
             )
         elif bin_precision:
             d_el, rdf_el = rdf_calculator(
-                index_frame=index_frame,
                 coords=coords_el,
                 cut_off=cut_off,
                 bin_precision=bin_precision,
@@ -575,10 +561,48 @@ def partial_rdf_calculator(
 
         rdf_dict[el] = [d_el, rdf_el]
     d_tot, rdf_tot = rdf_calculator(
-        index_frame=index_frame,
         coords=coords,
         cut_off=cut_off,
         bin_count=bin_count,
     )
     rdf_dict["Tot"] = [d_tot, rdf_tot]
     return rdf_dict
+
+def com_rdf_calculator(coords, bin_width, elements, com=None):
+    """
+    Compute the Radial Distribution Function: a distribution of all the distances wrt to the center
+    of mass of the system. The com can be provided as an argument or computed by the function
+
+    ----------
+    Parameters
+    coords: ndarray
+        coordinates of atoms in the system
+    bin_width: float
+        bin width for binning of the distribution
+    elements: ndarray, optional
+        chemical species of the atoms in the system used in the center of mass calculation. If None,
+        provide the com as an argument to the function
+    com: ndarray, optional
+        center of mass of the system. If None (default), it is computed
+    """
+
+    #compute com if not provided
+    if elements is None and com is None:
+        raise ValueError('Provide either the list of elements or the center of mass of your system as an argument to the RDF function')
+
+    if com is None:
+        com = center_of_mass(coords, elements)
+    
+    #obtain the list of distances of each atom to the com
+    com_dists = np.zeros(len(coords))
+    for i, pos in enumerate(coords):
+        com_dists[i] = np.linalg.norm(pos - com)
+    
+    dist_max = np.max(com_dists)
+
+    n_bins = int(np.ceil(dist_max / bin_width))
+
+    bins = np.linspace(0, n_bins*bin_width, n_bins + 1)
+    dist_count, _ = np.histogram(com_dists, bins=bins)
+
+    return (bins[:-1] + bin_width/2.), dist_count

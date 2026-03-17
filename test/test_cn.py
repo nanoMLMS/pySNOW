@@ -1,11 +1,12 @@
 from snow.descriptors.coordination import coordination_number, agcn_calculator
 import numpy as np
 from snow.io import read_xyz
+
 def test_cn_isolated():
     coord = np.array([[0,0,0]])
     el = np.array(["Au"])
     
-    assert coordination_number(1, coord,2.98) == 0
+    assert coordination_number(coord, 2.98) == 0
     
 def test_cn_twoatoms():
     coords = np.array([
@@ -14,8 +15,8 @@ def test_cn_twoatoms():
     ])
     
     els = np.array(["Au", "Au"])
-    assert coordination_number(1, coords=coords, cut_off = 3)[0] == 1
-    assert coordination_number(1, coords=coords, cut_off = 1.5)[1] == 0
+    assert coordination_number(coords=coords, cut_off = 3)[0] == 1
+    assert coordination_number(coords=coords, cut_off = 1.5)[1] == 0
 
 def test_cn_threeatoms():
     coords = np.array([
@@ -24,13 +25,13 @@ def test_cn_threeatoms():
         [0, -1, 0]
     ])
     els = np.array(["Au", "Au", "Au"])
-    assert coordination_number(1, coords=coords, cut_off = 3)[1] == 2
+    assert coordination_number(coords=coords, cut_off = 3)[1] == 2
 
 import os
 
 def test_fcc_bulk():
     el, coords = read_xyz("cube_test.xyz")
-    assert coordination_number(1, coords=coords , cut_off = 3.0)[142] == 12
+    assert coordination_number(coords=coords , cut_off = 3.0)[142] == 12
 
 """
 def test_bcc():
