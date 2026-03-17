@@ -48,7 +48,11 @@ def align_to_axis(index_frame: int, coords: np.ndarray, symmetry_axis: np.ndarra
 
     return translated_coords
     
-def center_com(index_frame : int, coords : np.ndarray, elements=None) -> np.ndarray:
+    
+    
+    
+    
+def tranlsate_in_center_com(index_frame : int, coords : np.ndarray, elements=None) -> np.ndarray:
     """
     Shifts the positions to the center of mass reference system (so that the center of mass is in the origin). 
     If elements are provided, a mass-weighted average of positions is performed, otherwise (elements=None), a simple
@@ -71,7 +75,7 @@ def center_com(index_frame : int, coords : np.ndarray, elements=None) -> np.ndar
     else:
         return coords - gcom(index_frame, coords)
 
-def rotate(coords, axis, angle):
+def rotate_ax_angle(coords, axis, angle):
     """
     Rotate coordinates around a given axis by a given angle.
 

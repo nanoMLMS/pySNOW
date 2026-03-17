@@ -53,7 +53,7 @@ def pddf_calculator(index_frame, coords, lattice, bin_size_lattice):
     dist_count, _ = np.histogram(distances, bins=bins)
 
     return (bins[:-1] + bin_precision / 2)/lattice, dist_count
-    
+
 
 
 def pddf_calculator_by_element(

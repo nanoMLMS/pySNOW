@@ -16,6 +16,7 @@ def cut_layers_from_frame(
     lattice_parameter: float,
     species_A: str,
     species_B: str,
+    cutting_axes = 'z'
 ):
     """
     Cuts a single frame into layers using z-coordinates.
@@ -36,8 +37,19 @@ def cut_layers_from_frame(
     elements = np.array(elements, dtype=str)  # ora è un array NumPy di stringhe
     elements = np.char.strip(elements)        # rimuove eventuali spazi bianchi
 
-
-    z = coords_frame[:, 2]
+    if cutting_axes == 'z':
+        z = coords_frame[:, 2]
+    
+    elif cutting_axes == 'x':
+        z = coords_frame[:, 0]
+        
+    elif cutting_axes == 'y':
+        z = coords_frame[:, 1]
+    
+    else:
+        print("provide a proper cutting axes")
+            
+    
     min_z = z.min()
     max_z = z.max()
     
