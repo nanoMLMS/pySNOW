@@ -38,3 +38,7 @@ local_scheme = "no-local-version"
 [build-system]
 requires = ["setuptools>=62", "wheel", "setuptools-scm>=8"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["snow*"]
+exclude = ["tutorial*", "test*"]
