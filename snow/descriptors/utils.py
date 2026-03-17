@@ -9,12 +9,11 @@ rescale = (1 + np.sqrt(2)) / 2
 
 
 
-def distance_matrix(index_frame, coords):
+def distance_matrix(coords):
     """
     Computes distance between atoms and saves them in a matrix of distances
 
     Parameters:
-        index_frame (int): index of the current frame if it is a movie, mostrly for reference
         coords (array): array of the 3d coordinates
 
     Returns:
@@ -30,24 +29,22 @@ def distance_matrix(index_frame, coords):
     return dist_mat, dist_max, dist_min
 
 
-def adjacency_matrix(index_frame, coords, cutoff):
+def adjacency_matrix(coords, cutoff):
     """
     Computes the adjacency matrix Ad_ij, where the entry ij is 1 if distance r_ij<=cutoff, else is 0
     """
-    dist_mat = distance_matrix(index_frame, coords)[0]
+    dist_mat = distance_matrix(coords)[0]
     adj_matrix = dist_mat <= cutoff
     return adj_matrix
 
 
-def sparse_adjacency_matrix(index_frame, coords, cutoff):
+def sparse_adjacency_matrix(coords, cutoff):
     """
     Create a sparse adjacency matrix where entries are 1 if the distance between points
     is less than or equal to the cutoff.
 
     Parameters
     ----------
-    index_frame : int
-        Number of the frame if a movie.
     coords: ndarray
         Array with the XYZ coordinates of the atoms, shape (n_atoms, 3).
     cut_off : float
@@ -76,29 +73,24 @@ def sparse_adjacency_matrix(index_frame, coords, cutoff):
     return adjacency_matrix
 
 
-
-def hetero_distance_matrix(index_frame, coords, elements):
+def hetero_distance_matrix(coords, elements):
     """Computes the distance matrix for atoms with different chemical species (eg. if atom "i" is a gold atom and atom "j" a platinum atom then $M_{ij} = d_{ij}$,
     if they are both gold atoms then $M_{ij} = 0$)
 
     Parameters
     ----------
-    index_frame : _type_
-        _description_
-    coords : _type_
-        _description_
-    elements : _type_
-        _description_
+    coords : ndarray
+        positions of the atoms in the system
+    elements : ndarray
+        array of chemcial species of the atoms in the system
 
     Returns
     -------
-    _type_
-        _description_
+    ndarray
+        
     """
     n_atoms = np.shape(coords)[0]
-    dist_mat, dist_max, dist_min = distance_matrix(
-        index_frame=index_frame, coords=coords
-    )
+    dist_mat, dist_max, dist_min = distance_matrix(coords=coords)
 
     triu_indices = np.triu_indices(n_atoms, k=1)
     id_i, id_j = triu_indices
@@ -112,8 +104,77 @@ def hetero_distance_matrix(index_frame, coords, elements):
 
     return dist_mat
 
+def distance_matrix_pbc(positions, cell):
+    """
+    Compute pairwise distance matrix under periodic boundary conditions.
+
+    Parameters
+    ----------
+    positions : (N,3) array-like
+        Cartesian coordinates.
+    cell : (3,3) array-like
+        Simulation cell matrix (rows = lattice vectors).
+
+    Returns
+    -------
+    dmat : (N,N) ndarray
+        Pairwise distance matrix using minimum image convention.
+    """
+    pos = np.asarray(positions)
+    cell = np.asarray(cell)
+
+    inv_cell = np.linalg.inv(cell)
+
+    # fractional coordinates
+    frac = pos @ inv_cell
+
+    # pairwise fractional displacements
+    df = frac[:, None, :] - frac[None, :, :]
+
+    # minimum image convention
+    df -= np.round(df)
+
+    # back to Cartesian
+    dr = df @ cell
+
+    # distances
+    dmat = np.linalg.norm(dr, axis=-1)
+
+    return dmat
+
+def nn_pbc(coords, box, cut_off):
+    """
+    nearest neighbour calculation with KDTree can only be done with rectangular boxes. This function allows to get nearest neighbours in PBC
+    with any kind of box, given the box as ((a1, a2, a3), (b1, b2, b3), (c1, c2, c3))
+    
+    Parameters
+    ----------
+    coords : ndarray
+        XYZ coordinates of atoms, shape (n_atoms, 3).
+    box : ndarray
+        Simulation cell matrix with shape (3, 3), where rows are lattice vectors.
+    cut_off : float
+        Cutoff distance for finding neighbors (in Å).
+
+    Returns
+    -------
+    list of lists
+        Each sublist contains the indices of neighboring atoms for the corresponding atom.
+    """
+
+    dmat   = distance_matrix_pbc(coords, box)
+    ad_mat = dmat < cut_off
+    np.fill_diagonal(ad_mat, False)
+
+    # Convert adjacency matrix to list of neighbor lists
+    neigh = []
+    for i in range(ad_mat.shape[0]):
+        neighbors = np.where(ad_mat[i])[0].tolist()
+        neigh.append(neighbors)
+    
+    return neigh
+
 def nearest_neighbours(
-    index_frame: int,
     coords: np.ndarray,
     cut_off: float = None,
     pbc: bool = False,
@@ -124,8 +185,6 @@ def nearest_neighbours(
 
     Parameters
     ----------
-    index_frame : int
-        Number of the frame if a movie.
     coords : ndarray
         XYZ coordinates of atoms, shape (n_atoms, 3).
     cut_off : float, optional
@@ -179,15 +238,7 @@ def nearest_neighbours(
 
     return neigh
 
-
-
-
-import numpy as np
-from scipy.spatial import cKDTree
-
-
 def pair_list(
-    index_frame: int,
     coords: np.ndarray,
     cut_off: float = None,
     pbc: bool = False,
@@ -198,8 +249,6 @@ def pair_list(
 
     Parameters
     ----------
-    index_frame : int
-        Index of the frame if a movie (not used in the current version but can be useful for dynamic systems).
     coords : np.ndarray
         Array with the XYZ coordinates of the atoms, shape (n_atoms, 3).
     cut_off : float, optional
@@ -271,8 +320,6 @@ def kl_div(func1: np.array, func2: np.array) -> float:
     return kldiv
 
 
-
-
 def apply_pbc(coords, box_size):
     """
     Apply periodic boundary conditions to atom coordinates.
@@ -318,19 +365,14 @@ def bounding_box(points):
     )
 
 
-
-
-
 def second_neighbours(
-    index_frame: int, coords: np.ndarray, cutoff: float
+        coords: np.ndarray, cutoff: float
 ) -> list:
     """Generates a list of lists of atomic indeces for each atom corresponding to aotoms that are neighbours of first neighbours
     excluding those which are already first neighbours.
 
     Parameters
     ----------
-    index_frame : int
-        Index of the frame if a movie (not used in the current version but can be useful for dynamic systems).
     coords : np.ndarray
         Array with the XYZ coordinates of the atoms, shape (n_atoms, 3).
     cutoff : float
@@ -342,7 +384,7 @@ def second_neighbours(
         List of lists containing indeces of second neighbours for each atom
     """
     neigh = nearest_neighbours(
-        index_frame=index_frame, coords=coords, cut_off=cutoff
+        coords=coords, cut_off=cutoff
     )
     snn_list = []
     n_atoms = np.shape(coords)[0]
@@ -356,7 +398,6 @@ def second_neighbours(
         snn_list.append(temp_snn)
 
     return snn_list
-
 
 
 def _check_structure(coords: np.ndarray, elements: np.ndarray | None = None, *, require_elements: bool = False):

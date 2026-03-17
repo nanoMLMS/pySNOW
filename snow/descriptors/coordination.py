@@ -1,15 +1,13 @@
 import numpy as np
 from snow.descriptors.utils import pair_list, nearest_neighbours
 
-def coordination_number(index_frame, coords, cut_off, neigh_list=False):
+def coordination_number(coords, cut_off, neigh_list=False):
     """
     Computes the coordination number (number of nearest neighbours within a cutoff) for each atom in the system,
     optionally it also returns the neighbour list
 
     Parameters
     ----------
-    index_frame : int
-        Index of the frame relative to the snapshot, primarily for reference.
     coords : ndarray
         Array of the coordinates of the atoms forming the system.
     cut_off : float
@@ -27,7 +25,7 @@ def coordination_number(index_frame, coords, cut_off, neigh_list=False):
         - ndarray: the coordination numbers of each atom
     """
     neigh = nearest_neighbours(
-        index_frame=index_frame, coords=coords, cut_off=cut_off
+        coords=coords, cut_off=cut_off
     )
     n_atoms = np.shape(coords)[0]
     coord_numb = np.zeros(n_atoms)
@@ -50,15 +48,13 @@ def progress_bar(current, total, length=50):
     return
 
 
-def agcn_calculator(index_frame, coords, cut_off, gcn_max = 12.0, strained: bool = False, **kwargs):
+def agcn_calculator(coords, cut_off, gcn_max = 12.0, strained: bool = False, **kwargs):
     """
     Calculates the atop Generalized Coordination Number (GCN) for a site. The GCN is defined as the sum of the coordination numbers of the neighbors
     of each atom divided by the maximum typical coordination number in the specific system (gcn_max).
 
     Parameters
     ----------
-    - index_frame : int
-        Index of the frame relative to the snapshot, primarily for reference.
     - coords : ndarray
         Array of the coordinates of the atoms forming the system.
     - cut_off : float
@@ -77,7 +73,7 @@ def agcn_calculator(index_frame, coords, cut_off, gcn_max = 12.0, strained: bool
     -------
     - ndarray: Values of the atop GCN.
     """
-    neigh_list, coord_numbers = coordination_number(index_frame, coords, cut_off, neigh_list=True)
+    neigh_list, coord_numbers = coordination_number(coords, cut_off, neigh_list=True)
     n_atoms = len(coord_numbers)
     agcn = np.zeros(n_atoms)
     sites=[]
@@ -104,11 +100,11 @@ def agcn_calculator(index_frame, coords, cut_off, gcn_max = 12.0, strained: bool
         else:
             agcn_i = sum(coord_numbers[neigh] for neigh in atom_neighbors)# - coord_numbers[i]
             agcn[i]=(agcn_i / gcn_max)
-    return sites,agcn
+    return sites, agcn
 
 
 
-def bridge_gcn(index_frame: int, coords: np.ndarray, cut_off: float, dbulk : list[float], thr_cn: int, gcn_max=18.0, phantom=True, strained: bool = False):
+def bridge_gcn(coords: np.ndarray, cut_off: float, dbulk : list[float], thr_cn: int, gcn_max=18.0, phantom=True, strained: bool = False):
     """
     Identifies bridge absorption sites and computes the Generalized Coordination Number (GCN)
     for a site. The GCN is defined as the sum of the coordination numbers of the neighbors
@@ -116,8 +112,6 @@ def bridge_gcn(index_frame: int, coords: np.ndarray, cut_off: float, dbulk : lis
 
     Parameters
     ----------
-    - index_frame : int
-        Index of the frame relative to the snapshot, primarily for reference.
     - coords : ndarray
         Array of the coordinates of the atoms forming the system.
     - cut_off : float
@@ -131,7 +125,7 @@ def bridge_gcn(index_frame: int, coords: np.ndarray, cut_off: float, dbulk : lis
     Returns
     -------
     If phantom is True:
-def three_hollow_gcn(index_frame: int, coords: np.ndarray, cut_off: float, thr_cn : int , gcn_max : float =18.0, phantom : bool =False) -> list:
+def three_hollow_gcn(coords: np.ndarray, cut_off: float, thr_cn : int , gcn_max : float =18.0, phantom : bool =False) -> list:
         tuple
             - ndarray: Coordinates of the midpoints.
             - list: List of pairs.
@@ -141,8 +135,8 @@ def three_hollow_gcn(index_frame: int, coords: np.ndarray, cut_off: float, thr_c
             - list: List of pairs.
             - ndarray: Values of the bridge GCN.
     """
-    pairs = pair_list(index_frame=index_frame, coords=coords, cut_off=cut_off)
-    neigh_list, coord_numb = coordination_number(index_frame=index_frame, coords=coords, cut_off=cut_off, neigh_list=True)
+    pairs = pair_list(coords=coords, cut_off=cut_off)
+    neigh_list, coord_numb = coordination_number(coords=coords, cut_off=cut_off, neigh_list=True)
     #b_gcn = np.zeros(len(pairs))
     b_gcn=[]
     sites=[]
@@ -179,14 +173,12 @@ def three_hollow_gcn(index_frame: int, coords: np.ndarray, cut_off: float, thr_c
 
     
 
-def three_hollow_gcn(index_frame: int, coords: np.ndarray, cut_off: float, thr_cn: int, dbulk: list[float],
+def three_hollow_gcn(coords: np.ndarray, cut_off: float, thr_cn: int, dbulk: list[float],
                      gcn_max: float = 22.0, strained: bool = False) -> list:
     """
     Finds the location of three-hollow sites and returns their location and GCN
     Parameters
     ----------
-        index_frame : int
-            Number of the frame if a movie.
         coords: ndarray
             Array with the XYZ coordinates of the atoms, shape (n_atoms, 3).
         cut_off : float
@@ -209,9 +201,9 @@ def three_hollow_gcn(index_frame: int, coords: np.ndarray, cut_off: float, thr_c
     triplets = []
     sites = []
     th_gcn = []
-    pairs = pair_list(index_frame=index_frame, coords=coords, cut_off=cut_off)
+    pairs = pair_list(coords=coords, cut_off=cut_off)
     # neighbor list and coordination number not compatible!
-    neigh_list, coord_numb = coordination_number(index_frame=index_frame, coords=coords, cut_off=cut_off,
+    neigh_list, coord_numb = coordination_number(coords=coords, cut_off=cut_off,
                                                  neigh_list=True)
     for i, p in enumerate(pairs):
         progress_bar(i, len(pairs) - 1, 50)
@@ -253,14 +245,12 @@ def three_hollow_gcn(index_frame: int, coords: np.ndarray, cut_off: float, thr_c
     return sites, th_gcn
 
 
-def four_hollow_gcn(index_frame: int, coords: np.ndarray, cut_off: float, thr_cn: int, dbulk: list[float],
+def four_hollow_gcn(coords: np.ndarray, cut_off: float, thr_cn: int, dbulk: list[float],
                     gcn_max: float = 26.0, strained: bool = False) -> list:
     """
     Finds the location of four-hollow sites and returns their location and GCN
     Parameters
     ----------
-        index_frame : int
-            Number of the frame if a movie.
         coords: ndarray
             Array with the XYZ coordinates of the atoms, shape (n_atoms, 3).
         cut_off : float
@@ -281,11 +271,11 @@ def four_hollow_gcn(index_frame: int, coords: np.ndarray, cut_off: float, thr_cn
     fours = []
     sites = []
     fh_gcn = []
-    pairs = pair_list(index_frame=index_frame, coords=coords, cut_off=cut_off)
+    pairs = pair_list(coords=coords, cut_off=cut_off)
     # neighbor list and coordination number not compatible!
-    neigh_list, coord_numb = coordination_number(index_frame=index_frame, coords=coords, cut_off=cut_off,
+    neigh_list, coord_numb = coordination_number(coords=coords, cut_off=cut_off,
                                                  neigh_list=True)
-    snb, _ = coordination_number(index_frame=index_frame, coords=coords, cut_off=cut_off * 1.3, neigh_list=True)
+    snb, _ = coordination_number(coords=coords, cut_off=cut_off * 1.3, neigh_list=True)
     current = 0
     for j in range(len(pairs)):
         for k in range(j):
