@@ -2,6 +2,11 @@
 # CSV I/O
 # ============================================================
 
+import numpy as np
+import matplotlib.pyplot as plt
+import os
+import csv
+
 def save_layer_info_to_csv(
     coords: np.ndarray,
     elements: np.ndarray,
