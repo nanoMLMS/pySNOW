@@ -138,12 +138,6 @@ def calculate_cna_sofia(coords, cut_off, return_pair=False):
 
     return len(pairs), cna
 
-
-
-
-
-import numpy as np
-
 def cna_percentages_sofia(coords, cut_off, r_bulk_threshold=12):
     """
     CNA con percentuali, separando coppie bulk e surface.
@@ -205,9 +199,6 @@ def cna_percentages_sofia(coords, cut_off, r_bulk_threshold=12):
         'surface': surface_dict
     }
 
-
-
-
 ### end Sofia test
 def longest_path_or_cycle(neigh_common, neigh_list):
 
@@ -247,31 +238,37 @@ def longest_path_or_cycle(neigh_common, neigh_list):
 
 
 def calculate_cna(
-    coords, cut_off, return_pair=False
+    coords, cut_off, return_pair=False, pbc=False, box=None
 ) -> tuple[int, np.ndarray]:
     """_summary_
 
     Parameters
     ----------
-        _description_
     coords : ndarray
         3xNatoms array containing the coordainates of each atom
     cut_off : float
         cutoff radius for the determination of nearest neaighbours
     return_pair : bool, optional
         Wether to return an ordered list of the inideces of the atoms forming a given pair, by default False
+    pbc : bool
+        whether to use pbc or not
+    box : ndarray
+        if you want pbc, you need to provide the simulation box.
 
     Returns
     -------
     tuple[int, np.ndarray, list]
         The number of pairs, the cna signatures [r, s, t] for each pair and the ordered list of pairs (if return_pair == True)
     tuple[int, np.ndarray]
-        The number of pairs, the cna signatures [r, s, t] for each pair
+        The number of pairs, the cna signatures [r, s, t] for each pair if return_pair==False
     """
 
-    neigh_list = nearest_neighbours(coords, cut_off)
-
-    pairs = pair_list(coords=coords, cut_off=cut_off)
+    neigh_list = nearest_neighbours(
+        coords=coords, cut_off=cut_off, pbc=pbc, box=box
+    )
+    pairs = pair_list(
+        coords=coords, cut_off=cut_off, pbc=pbc, box=box
+    )
 
     r = np.zeros(len(pairs))
     s = np.zeros(len(pairs))
@@ -308,7 +305,7 @@ def calculate_cna(
 
 
 def calculate_cna_fast(
-    coords, cut_off=None, return_pair=False, pbc=False,display_progress=False
+    coords, cut_off=None, return_pair=False, pbc=False, box=None, display_progress=False
 ):
     """
     Faster version of calculate_cna that precomputes neighbor sets.
@@ -323,8 +320,12 @@ def calculate_cna_fast(
         cutoff radius for the determination of nearest neighbors
     return_pair : bool, optional
         Whether to return an ordered list of the indices of the atoms forming a given pair, by default False
+    pbc : bool
+        whether to use pbc or not
+    box : ndarray
+        if you want pbc, you need to provide the simulation box.
     display_progress: bool
-        Wheter to display a progress bar
+        Wheter to display a progress bar - needs the tqdm library
 
     Returns
     -------
@@ -339,10 +340,10 @@ def calculate_cna_fast(
         r_i = np.zeros(len(coords))
 
     neigh_list = nearest_neighbours(
-        coords=coords, cut_off=cut_off, pbc=pbc
+        coords=coords, cut_off=cut_off, pbc=pbc, box=box
     )
     pairs = pair_list(
-        coords=coords, cut_off=cut_off, pbc=pbc
+        coords=coords, cut_off=cut_off, pbc=pbc, box=box
     )
 
     # Precompute neighbor sets for fast membership tests
@@ -423,6 +424,7 @@ def cna_peratom(
     coords: np.ndarray,
     cut_off: float = None,
     pbc: bool = False,
+    box: np.ndarray = None
 ):
     """
     Optimized per-atom CNA calculation by precomputing a mapping from atom indices
@@ -435,6 +437,10 @@ def cna_peratom(
         Array containing the coordinates of each atom.
     cut_off : float
         Cutoff radius for nearest-neighbor determination.
+    pbc : bool
+        Whether to use or not periodic boundary conditions
+    box : np.ndarray
+        Simulation box. Only needed if you enable PBC
 
     Returns
     -------
@@ -449,6 +455,7 @@ def cna_peratom(
         cut_off=cut_off,
         return_pair=True,
         pbc=pbc,
+        box = box
     )
     num_atoms = len(coords)
 
@@ -475,21 +482,12 @@ def cna_peratom(
     return cna_atom
 
 
-
-
-
-    
-    
-import numpy as np
-from tqdm import tqdm
-
-
 def cnap_peratom(
     coords: np.ndarray,
     cut_off: float = None,
     pbc: bool = False,
-    display_progress: bool = False,
-) -> np.ndarray:
+    box: np.ndarray = None,
+    display_progress: bool = False,) -> np.ndarray:
     """
     Computes the CNA patterns per atom and assigns an integer structure ID
     (see README for mapping).
@@ -502,7 +500,9 @@ def cnap_peratom(
     cut_off : float
         Cutoff radius for neighbor determination
     pbc : bool
-        Whether to use periodic boundary conditions
+        Whether to use or not periodic boundary conditions
+    box : np.ndarray
+        Simulation box. Only needed if you enable PBC
     display_progress: bool
         Wheter to display a progress bar
 
@@ -512,7 +512,7 @@ def cnap_peratom(
         Array of integer structure IDs per atom
     """
     # Compute CNA info
-    cna = cna_peratom(1, coords, cut_off, pbc=pbc)
+    cna = cna_peratom(coords, cut_off, pbc=pbc, box=box)
     n_atoms = len(coords)
     cna_atom = np.zeros(n_atoms, dtype=int)
 
