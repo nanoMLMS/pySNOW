@@ -58,7 +58,7 @@ def iq_from_dist_mat(species: list ,q : float ,dist_mat : np.ndarray):
     iq = np.dot(factors,ds)
     return iq
 
-def iq_pddf(element_i: str,element_j : str,q :float,
+def iq_from_pddf(element_i: str,element_j : str,q :float,
             dists:list ,counts:list ,nat:int =0):
     """
     Computes thes SAXS spectrum from a PDDF.
@@ -86,10 +86,10 @@ def iq_pddf(element_i: str,element_j : str,q :float,
 
     """
     fi = thomson(element_i,q)
-    fj = fi if element_j == element_i else thomson(element_j)
-    intensity = nat
+    fj = fi if element_j == element_i else thomson(element_j,q)
+    intensity = 0.0
     for dist,count in zip(dists,counts):
-        intensity += count * np.sinc(q*dist/np.pi)
+        intensity += 2* count * np.sinc(q*dist/np.pi)
     intensity *=  fi*fj
     if element_i == element_j:
         intensity += nat * fi**2

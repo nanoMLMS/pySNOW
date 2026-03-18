@@ -63,13 +63,14 @@ def pddf_calculator(coords, bin_width: float, use_lattice_units: bool, lattice=N
     return (bins[:-1] + bin_width/2.), dist_count
 
 
-def pddf_calculator_by_element(
-    coords,
-    elements,
-    element,
-    bin_width,
-    use_lattice_units: bool,
-    lattice=None,
+def pddf_calculator_by_elements(
+        coords: np.ndarray,
+        species: list,
+        elements: list,
+        bin_width: float,
+        use_lattice_units: bool,
+        lattice=None,
+        cutoff : float = None,
 ):
     """
     Computes the pair distance distribution function (PDDF) for a given set of coordinates,
@@ -79,10 +80,10 @@ def pddf_calculator_by_element(
     ----------
     coords : ndarray
         Array of the coordinates of the atoms forming the system.
-    elements : list
+    species : list[str]
         List of atomic species corresponding to each coordinate.
-    element: str
-        The atomic species to consider.
+    elements: list[str]
+        The elements of which to consider the pairs
     bin_width: float
         width of the bins to bin the distances in the system. It should be provided in lattice units if
         use_lattice_units==True, and in the same units as coords if use_lattice==False
@@ -93,6 +94,8 @@ def pddf_calculator_by_element(
         as coords.
     lattice: float,
         Specify a value for the lattice parameter of your structure in the same units as coords.
+    cutoff: float,
+        If specified, only 
 
     Returns
     -------
@@ -101,43 +104,87 @@ def pddf_calculator_by_element(
         - ndarray: the histogram counts of distances
     """
 
-    # Check structure and select only atoms of the given element
-    _check_structure(coords=coords, elements=elements)
-    selected_indices = [i for i, el in enumerate(elements) if el == element]
-    selected_coords = coords[selected_indices]
-
-    n_atoms = len(selected_indices)
 
     #some sanity checks
     if use_lattice_units:
 
+        coords /= lattice
+
         if lattice is None:
             raise ValueError('If use_lattice_units==True, you should provide a value for the lattice constant to use')
+
+    if elements[0] == elements[1]:
+        #Specialized distance matrix method
         
-        selected_coords /= lattice
+        element = elements[0]
+        # Check structure and select only atoms of the given element
+        #_check_structure(coords=coords, species=species)
+        selected_indices = [i for i, el in enumerate(species) if el == element]
+        selected_coords = coords[selected_indices]
 
-    if n_atoms < 2:
-        raise ValueError(
-            f"Not enough atoms of element '{element}' to compute PDDF."
-        )
+        n_atoms = len(selected_indices)
 
-    # Compute distance matrix
-    dist_mat, dist_max, dist_min = distance_matrix(coords=selected_coords)
+        if n_atoms < 2:
+            raise ValueError(
+                f"Not enough atoms of element '{element}' to compute PDDF."
+            )
 
-    n_bins = int(np.ceil(dist_max / bin_width))
+        # Compute distance matrix
+        dist_mat, dist_max, dist_min = distance_matrix(coords=selected_coords)
+        if cutoff:
+            n_bins = int(np.ceil(cutoff/ bin_width))
+        else:
+            n_bins = int(np.ceil(dist_max / bin_width))
 
-    # Extract upper triangle (j < k)
-    triu_indices = np.triu_indices(n_atoms, k=1)
-    distances = dist_mat[triu_indices]
+        # Extract upper triangle (j < k)
+        triu_indices = np.triu_indices(n_atoms, k=1)
+        distances = dist_mat[triu_indices]
 
-    # Compute histogram
-    bins = np.linspace(0, n_bins*bin_width, n_bins + 1)
-    dist_count, _ = np.histogram(distances, bins=bins)
+        # Compute histogram
+        bins = np.linspace(0, n_bins*bin_width, n_bins + 1)
+        dist_count, _ = np.histogram(distances, bins=bins)
 
-    # Bin midpoints
-    bin_centers = (bins[:-1] + bins[1:])/2.
+        # Bin midpoints
+        bin_centers = (bins[:-1] + bins[1:])/2.
 
-    return bin_centers, dist_count
+        return bin_centers, dist_count
+    else:
+        # Heteroelemental
+        # Only take distances of given pair
+        dist_mat,_,_ = distance_matrix(coords)
+
+        #The Mask will zero distances that are not the ones we are looking for
+        mask = np.zeros((len(coords),len(coords)))
+        for i in range(len(coords)):
+            for j in range(len(coords)):
+                elements_ij = [species[i],species[j]]
+                #Now check that the pair is of the two elements, no matter the order
+                if (elements[0] in elements_ij) and (elements[1] in elements_ij):
+                    mask[i,j] = 1
+
+        dist_mat *= mask
+        dist_max = np.max(dist_mat)
+
+        if cutoff:
+            n_bins = int(np.ceil(cutoff/ bin_width))
+        else:
+            n_bins = int(np.ceil(dist_max / bin_width))
+        # Extract upper triangle (j < k)
+        triu_indices = np.triu_indices(len(coords), k=0)
+        distances = dist_mat[triu_indices]
+
+        # Compute histogram
+        bins = np.linspace(0, n_bins*bin_width, n_bins + 1)
+        dist_count, _ = np.histogram(distances[distances > 0], bins=bins)
+
+        # Bin midpoints
+        bin_centers = (bins[:-1] + bins[1:])/2.
+
+        return bin_centers, dist_count
+    return
+
+        
+
     
 
 #TODO
@@ -568,7 +615,10 @@ def partial_rdf_calculator(
     rdf_dict["Tot"] = [d_tot, rdf_tot]
     return rdf_dict
 
-def com_rdf_calculator(coords, bin_width, elements, com=None):
+def com_rdf_calculator(coords :np.ndarray, 
+                       bin_width :float, 
+                       com=None, 
+                       elements:list = None):
     """
     Compute the Radial Distribution Function: a distribution of all the distances wrt to the center
     of mass of the system. The com can be provided as an argument or computed by the function
