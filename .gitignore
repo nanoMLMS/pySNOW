@@ -1,2 +1,3 @@
 *.pot
 *.DS_Store
+build/
