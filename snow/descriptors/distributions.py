@@ -7,7 +7,7 @@ from scipy.spatial.distance import pdist, squareform
 
 
 from snow.descriptors.utils import distance_matrix, hetero_distance_matrix, _check_structure
-from snow.descriptors.shape import center_of_mass, geometric_com
+from snow.descriptors.shape_descriptors import center_of_mass, geometric_com
 
     
 def pddf_calculator(coords, bin_width: float, use_lattice_units: bool, lattice=None):
