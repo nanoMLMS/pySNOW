@@ -58,7 +58,7 @@ def iq_from_dist_mat(species: list ,q : float ,dist_mat : np.ndarray):
     iq = np.dot(factors,ds)
     return iq
 
-def iq_pddf(element_i: str,element_j : str,q :float,
+def iq_from_pddf(element_i: str,element_j : str,q :float,
             dists:list ,counts:list ,nat:int =0):
     """
     Computes thes SAXS spectrum from a PDDF.
