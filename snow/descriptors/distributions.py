@@ -161,8 +161,6 @@ def pddf_calculator_by_elements(
                 #Now check that the pair is of the two elements, no matter the order
                 if (elements[0] in elements_ij) and (elements[1] in elements_ij):
                     mask[i,j] = 1
-                else:
-                    mask[i,j] = 0
 
         dist_mat *= mask
         dist_max = np.max(dist_mat)
@@ -172,7 +170,7 @@ def pddf_calculator_by_elements(
         else:
             n_bins = int(np.ceil(dist_max / bin_width))
         # Extract upper triangle (j < k)
-        triu_indices = np.triu_indices(len(coords), k=1)
+        triu_indices = np.triu_indices(len(coords), k=0)
         distances = dist_mat[triu_indices]
 
         # Compute histogram
