@@ -1,4 +1,3 @@
-
 from typing import Tuple
 import numpy as np
 import os
@@ -6,7 +5,7 @@ import inspect
 
 
 
-def read_xyz_movie_extended(file_path: str, n_extra_cols: int = 0) -> Tuple:
+def read_xyz_movie_extended_old(file_path: str, n_extra_cols: int = 0) -> Tuple:
     """
     Reads an XYZ trajectory with optional extra per-atom columns.
 
@@ -60,7 +59,7 @@ def read_xyz_movie_extended(file_path: str, n_extra_cols: int = 0) -> Tuple:
     
     
 
-def read_xyz(file_path: str) -> Tuple[np.ndarray, np.ndarray]:
+def read_xyz_old(file_path: str) -> Tuple[np.ndarray, np.ndarray]:
     """Reads the elements and coordinates of atoms from an xyz file at a given location
 
     Parameters
@@ -124,11 +123,11 @@ def read_xyz(file_path: str) -> Tuple[np.ndarray, np.ndarray]:
 
 
 
-def read_xyz_movie(file_path: str) -> Tuple[np.ndarray, np.ndarray]:
+def read_xyz_movie_old(file_path: str) -> Tuple[np.ndarray, np.ndarray]:
     """Obtains the coordinates and elements for each frame of an xyz trajectory (for now it only supports trajectories
     where the number of atoms and chemical composition is fixed through the whole trajectory).
 
-    Note that it only creates a singe array for the elements rather than a per-frame array.
+    Note that it only creates a single array for the elements rather than a per-frame array.
 
     Parameters
     ----------
@@ -167,9 +166,100 @@ def read_xyz_movie(file_path: str) -> Tuple[np.ndarray, np.ndarray]:
     return elements, coords
 
 
+def read_xyz_movie(file_path: str, extra_cols_indexes: list = None) -> Tuple[list, np.ndarray]:
+    """
+    Obtains the coordinates and elements for each frame of an xyz trajectory.
 
+    Parameters
+    ----------
+    file_path : str
+        Path to the xyz file with the structure
+    extra_frames_indexes : str
+        index for the extra columns of per-atom data to be extracted from the .xyz file. Consider that the first three 'indexes'
+        are element and three cartesian coordinates and are returned by deafult from the function.
+        Example: if your .xyz file has per-atom information like " El pos1 pos2 pos3 force1 force2 force3 charge ",
+        you can get the extra columns force1, force2, charge by passing extra_cols_indexes=[4, 5, 7].
+        For now only float values parsing is supported.
 
+    Returns
+    -------
+    Tuple[np.ndarray, np.ndarray]
+        list of lists of chemical symbols and a list of (n_atoms, 3) arrays for the coordinates
+    """
+    
+    el_list = []
+    coords_list = []
 
+    if extra_cols_indexes is not None:
+        n_extra_cols = len(extra_cols_indexes)
+        extra_cols_list = []
+
+    with open(file_path, "r") as file:
+
+        conf_line_iter = 0
+
+        for line in file:
+            
+            conf_line_iter +=1
+
+            #beginning frame
+            if conf_line_iter == 1:
+                n_atoms = int(line.strip())
+
+                elements   = []
+                coords     = np.zeros((n_atoms, 3))
+                if extra_cols_indexes is not None:
+                    extra_cols = np.zeros((n_atoms, n_extra_cols))
+
+            elif conf_line_iter == 2:
+                #skip the comment/general information line
+                pass
+                #continue 
+
+            elif conf_line_iter >2 and conf_line_iter <= n_atoms+2: 
+                #read elements and positions
+                parts = line.strip().split()
+
+                if len(parts)<4:
+                    print(f'warning this line should have at least 4 values in it but has {len(parts)}')
+                
+                elements.append(parts[0])
+
+                atom_index = int(conf_line_iter-3)
+
+                coords[ atom_index, 0] = float(parts[1])
+                coords[ atom_index, 1] = float(parts[2])
+                coords[ atom_index, 2] = float(parts[3])
+
+                if extra_cols_indexes is not None:
+                    for i, index in enumerate(extra_cols_indexes):
+                        extra_cols[atom_index, i] = float(parts[index])
+
+                #frame is over
+                if conf_line_iter == n_atoms+2:
+                    el_list.append(elements)
+                    coords_list.append(coords)
+                    conf_line_iter = 0
+                    if extra_cols_indexes is not None:
+                        extra_cols_list.append(extra_cols)
+
+    if extra_cols_indexes is not None:
+        return el_list, coords_list, extra_cols_list
+
+    return el_list, coords_list
+
+def read_xyz(file, extra_cols_indexes=None):
+    """
+    wrapper of read_xyz_movie to read single-frame movies - mostyl for compatibility
+    """
+
+    if extra_cols_indexes is not None:
+        el, coords, extra_cols = read_xyz_movie(file, extra_cols_indexes)
+        return el[0], coords[0], extra_cols[0]
+    
+    else:
+        el, coords = read_xyz_movie(file)
+        return el[0], coords[0]
 
 
 def write_xyz(filename, elements, coords, additional_data=None):
