@@ -4,8 +4,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-"DA SISTEMARE"
-
 # ============================================================
 # Layer analysis (numpy-based)
 # ============================================================

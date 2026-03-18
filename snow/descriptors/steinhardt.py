@@ -9,14 +9,12 @@ except ImportError:
     def tqdm(iterable, **kwargs):
         return iterable
 
-def peratom_steinhardt(index_frame: int, coords: np.ndarray, l: list, cut_off: float):
+def peratom_steinhardt(coords: np.ndarray, l: list, cut_off: float):
     """
     Calculate per-atom Steinhardt order parameters for a given frame of atomic coordinates.
 
     Parameters
     ----------
-        index_frame: int
-            Index of the current frame (for logging or reference).
         coords: ndarray
             Atomic coordinates, shape (n_atoms, 3).
         l: int
@@ -32,7 +30,7 @@ def peratom_steinhardt(index_frame: int, coords: np.ndarray, l: list, cut_off: f
     n_atoms = coords.shape[0]
     #tree = cKDTree(coords)
     print(cut_off)
-    neigh_list = nearest_neighbours(index_frame=index_frame, coords=coords, cut_off=cut_off)
+    neigh_list = nearest_neighbours(coords=coords, cut_off=cut_off)
     
 
     # Array to store Q_l for each atom

@@ -1,12 +1,11 @@
 from scipy.spatial import cKDTree
 import numpy as np
 
-def strain_mono(index_frame: int, coords: np.ndarray, dist_0: float, cut_off: float, neigh_list: list = None, coordination: np.ndarray = None):
+def strain_mono(coords: np.ndarray, dist_0: float, cut_off: float, neigh_list: list = None, coordination: np.ndarray = None):
     """
     Computes the strain for each atom based on neighbor distances.
 
     Parameters:
-        index_frame (int): Frame index (unused in this implementation but included for compatibility).
         coords (np.ndarray): Nx3 array of atomic coordinates.
         dist_0 (float): Reference distance for strain calculation.
         cut_off (float): Cutoff radius for neighbor search.

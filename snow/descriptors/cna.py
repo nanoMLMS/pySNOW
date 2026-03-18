@@ -83,7 +83,7 @@ def fortran_like_chain_length(neigh_common, neigh_list, a, b):
 
     return max_len
 
-def calculate_cna_sofia(index_frame, coords, cut_off, return_pair=False):
+def calculate_cna_sofia(coords, cut_off, return_pair=False):
     """
     Common Neighbour Analysis (Honeycutt–Andersen)
 
@@ -94,8 +94,8 @@ def calculate_cna_sofia(index_frame, coords, cut_off, return_pair=False):
     pairs : list of tuples (optional)
     """
 
-    neigh_list = nearest_neighbours(index_frame, coords, cut_off)
-    pairs = pair_list(index_frame=index_frame, coords=coords, cut_off=cut_off)
+    neigh_list = nearest_neighbours(coords, cut_off)
+    pairs = pair_list(coords=coords, cut_off=cut_off)
 
     r = np.zeros(len(pairs), dtype=int)
     s = np.zeros(len(pairs), dtype=int)
@@ -247,13 +247,12 @@ def longest_path_or_cycle(neigh_common, neigh_list):
 
 
 def calculate_cna(
-    index_frame, coords, cut_off, return_pair=False
+    coords, cut_off, return_pair=False
 ) -> tuple[int, np.ndarray]:
     """_summary_
 
     Parameters
     ----------
-    index_frame : int
         _description_
     coords : ndarray
         3xNatoms array containing the coordainates of each atom
@@ -270,9 +269,9 @@ def calculate_cna(
         The number of pairs, the cna signatures [r, s, t] for each pair
     """
 
-    neigh_list = nearest_neighbours(index_frame, coords, cut_off)
+    neigh_list = nearest_neighbours(coords, cut_off)
 
-    pairs = pair_list(index_frame=index_frame, coords=coords, cut_off=cut_off)
+    pairs = pair_list(coords=coords, cut_off=cut_off)
 
     r = np.zeros(len(pairs))
     s = np.zeros(len(pairs))
@@ -309,14 +308,14 @@ def calculate_cna(
 
 
 def calculate_cna_fast(
-    index_frame, coords, cut_off=None, return_pair=False, pbc=False,display_progress=False
+    coords, cut_off=None, return_pair=False, pbc=False,display_progress=False
 ):
     """
     Faster version of calculate_cna that precomputes neighbor sets.
 
     Parameters
     ----------
-    index_frame : int
+    
         _description_
     coords : ndarray
         3xNatoms array containing the coordinates of each atom
@@ -340,10 +339,10 @@ def calculate_cna_fast(
         r_i = np.zeros(len(coords))
 
     neigh_list = nearest_neighbours(
-        index_frame=index_frame, coords=coords, cut_off=cut_off, pbc=pbc
+        coords=coords, cut_off=cut_off, pbc=pbc
     )
     pairs = pair_list(
-        index_frame=index_frame, coords=coords, cut_off=cut_off, pbc=pbc
+        coords=coords, cut_off=cut_off, pbc=pbc
     )
 
     # Precompute neighbor sets for fast membership tests
@@ -421,7 +420,6 @@ def write_cna(
 
 
 def cna_peratom(
-    index_frame: int,
     coords: np.ndarray,
     cut_off: float = None,
     pbc: bool = False,
@@ -432,7 +430,6 @@ def cna_peratom(
 
     Parameters
     ----------
-    index_frame : int
         _description_
     coords : np.ndarray
         Array containing the coordinates of each atom.
@@ -448,7 +445,6 @@ def cna_peratom(
     # Compute CNA signatures and the corresponding pair list
 
     _, cna, pair_list = calculate_cna_fast(
-        index_frame=index_frame,
         coords=coords,
         cut_off=cut_off,
         return_pair=True,
@@ -489,7 +485,6 @@ from tqdm import tqdm
 
 
 def cnap_peratom(
-    index_frame: int,
     coords: np.ndarray,
     cut_off: float = None,
     pbc: bool = False,
@@ -501,7 +496,6 @@ def cnap_peratom(
 
     Parameters
     ----------
-    index_frame : int
         Frame index (unused here but kept for compatibility)
     coords : np.ndarray
         (N, 3) array with atomic coordinates
