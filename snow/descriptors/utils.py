@@ -395,7 +395,7 @@ def bounding_box(points):
 
 
 def second_neighbours(
-        coords: np.ndarray, cutoff: float
+        coords: np.ndarray, cutoff: float, pbc: bool = False, box = None
 ) -> list:
     """Generates a list of lists of atomic indeces for each atom corresponding to aotoms that are neighbours of first neighbours
     excluding those which are already first neighbours.
@@ -413,7 +413,7 @@ def second_neighbours(
         List of lists containing indeces of second neighbours for each atom
     """
     neigh = nearest_neighbours(
-        coords=coords, cut_off=cutoff
+        coords=coords, cut_off=cutoff, pbc=pbc, box=box
     )
     snn_list = []
     n_atoms = np.shape(coords)[0]
@@ -427,6 +427,67 @@ def second_neighbours(
         snn_list.append(temp_snn)
 
     return snn_list
+
+def get_coords_by_element(el, coords, chosen_element):
+    """
+    Returns the coordinates (and the chemical element array, for convenience) filtered for a selected chemical specie.
+    It can deal with both single frame and 'movie'-style coords objects in list or np.ndarray format
+
+    Parameters
+    ----------
+    el: np.ndarray or list of np.ndarrays
+        chemical elements of the atoms corresponding to the positions in coords 
+    cooords: np.ndarray or list of np.ndarrays
+        positions of the atoms in the system
+    chosen_element: str
+        element you want to select in your system to get the coordinates of those atoms.
+    
+    Returns
+    -------
+    Tuple
+        el, coords of atoms of the selected element (either (list, np.ndarray) or (list of list, list of np.ndarray) 
+        depending on if the input was a single frame or a movie)
+        
+    """
+
+    if type(coords) == list or ( type(coords) == np.ndarray and len(coords.shape) > 2): #movie-style
+        
+        selected_coords = []
+        return_elements = []
+
+        #read over frames
+        for frame_el, frame_coords in zip(el, coords):
+
+            selected_from_frame = []
+
+            #check on each atom
+            for atoms_el, atoms_coords in zip(frame_el, frame_coords):
+                if atoms_el == chosen_element:
+                    selected_from_frame.append(atoms_coords)
+        
+            #prepare el list and convert to np.ndarray before adding to final list
+            return_elements.append( [chosen_element]*len(selected_from_frame) )
+            selected_coords.append( np.asarray(selected_from_frame) )
+            
+    
+    elif type(coords) == np.ndarray and len(coords.shape) == 2: #single-frame
+
+        selected_coords = []
+
+        #check on each atoms
+        for atoms_el, atoms_coords in zip(el, coords):
+            if atoms_el == chosen_element:
+                selected_coords.append(atoms_coords)
+        
+        #prepare el list and convert to np.ndarray
+        return_elements = [chosen_element]*len(selected_coords)
+        selected_coords = np.asarray(selected_coords)
+        
+    else:
+        raise ValueError('Unknown format for coords array.')    
+
+    return return_elements, selected_coords
+
 
 
 def _check_structure(coords: np.ndarray, elements: np.ndarray | None = None, *, require_elements: bool = False):
