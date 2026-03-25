@@ -2,6 +2,6 @@
 *.DS_Store
 build/
 .ipynb_checkpoints/
-snow/__pycache__/
-snow/*/__pycache__/
+*/__pycache__/
+*/*/__pycache__/
 __pycache__/
