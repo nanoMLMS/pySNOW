@@ -1,7 +1,9 @@
 import numpy as np
 from snow.descriptors.utils import pair_list, nearest_neighbours
 
-def coordination_number(coords, cut_off, neigh_list=False):
+#dbulk for strained is supposed to be a list, but might need to be a singel float. What about alloys?
+
+def coordination_number(coords, cut_off, neigh_list=False, pbc=False, box=None):
     """
     Computes the coordination number (number of nearest neighbours within a cutoff) for each atom in the system,
     optionally it also returns the neighbour list
@@ -14,8 +16,12 @@ def coordination_number(coords, cut_off, neigh_list=False):
         The cutoff distance for determining nearest neighbors.
     neigh_list : bool, optional
         Option to return the neighbour list as well as the coordination number of each atom (defualt is False)
+    pbc : bool, optional
+        Whether to apply periodic boundary conditions. Defaults to False.
+    box : np.ndarray, optional
+        Simulation box size (either [Lx, Ly, Lz] or [[xmin, xmax], [ymin, ymax], [zmin, zmax]] or 3 cell vectors (shape (3,3) - slower)).
 
-    Returns
+    Return
     -------
     If neigh_list is True:
         tuple
@@ -25,7 +31,7 @@ def coordination_number(coords, cut_off, neigh_list=False):
         - ndarray: the coordination numbers of each atom
     """
     neigh = nearest_neighbours(
-        coords=coords, cut_off=cut_off
+        coords=coords, cut_off=cut_off, pbc=pbc, box=box
     )
     n_atoms = np.shape(coords)[0]
     coord_numb = np.zeros(n_atoms)
@@ -48,7 +54,7 @@ def progress_bar(current, total, length=50):
     return
 
 
-def agcn_calculator(coords, cut_off, gcn_max = 12.0, strained: bool = False, **kwargs):
+def agcn_calculator(coords, cut_off, gcn_max = 12.0, strained: bool = False, pbc: bool = False, box = None, **kwargs):
     """
     Calculates the atop Generalized Coordination Number (GCN) for a site. The GCN is defined as the sum of the coordination numbers of the neighbors
     of each atom divided by the maximum typical coordination number in the specific system (gcn_max).
@@ -63,6 +69,10 @@ def agcn_calculator(coords, cut_off, gcn_max = 12.0, strained: bool = False, **k
         Maximum typical coordination number in the specific system (default is 18.0).
     -strained : bool, optional
         iF True computes the strained aGCN (default is False).
+    pbc : bool, optional
+        Whether to apply periodic boundary conditions. Defaults to False.
+    box : np.ndarray, optional
+        Simulation box size (either [Lx, Ly, Lz] or [[xmin, xmax], [ymin, ymax], [zmin, zmax]] or 3 cell vectors (shape (3,3) - slower)).
     kwargs:
         thr_cn: int, optional
             An atom is considered in the surface if its CN < thr_cn
@@ -73,7 +83,7 @@ def agcn_calculator(coords, cut_off, gcn_max = 12.0, strained: bool = False, **k
     -------
     - ndarray: Values of the atop GCN.
     """
-    neigh_list, coord_numbers = coordination_number(coords, cut_off, neigh_list=True)
+    neigh_list, coord_numbers = coordination_number(coords, cut_off, neigh_list=True, pbc=pbc, box=box)
     n_atoms = len(coord_numbers)
     agcn = np.zeros(n_atoms)
     sites=[]
@@ -100,11 +110,13 @@ def agcn_calculator(coords, cut_off, gcn_max = 12.0, strained: bool = False, **k
         else:
             agcn_i = sum(coord_numbers[neigh] for neigh in atom_neighbors)# - coord_numbers[i]
             agcn[i]=(agcn_i / gcn_max)
+            
     return sites, agcn
 
 
 
-def bridge_gcn(coords: np.ndarray, cut_off: float, dbulk : list[float], thr_cn: int, gcn_max=18.0, phantom=True, strained: bool = False):
+def bridge_gcn(coords: np.ndarray, cut_off: float, thr_cn: int, dbulk : list[float] = None, gcn_max=18.0,
+                phantom=True, strained: bool = False, pbc: bool = False, box = None):
     """
     Identifies bridge absorption sites and computes the Generalized Coordination Number (GCN)
     for a site. The GCN is defined as the sum of the coordination numbers of the neighbors
@@ -121,11 +133,17 @@ def bridge_gcn(coords: np.ndarray, cut_off: float, dbulk : list[float], thr_cn: 
     - phantom : bool, optional
         If True, also returns the coordinates of the midpoints between pairs for
         representation and testing (default is False).
+    thr_cn : int
+        An atom is considered in the surface if its CN < thr_cn
+    pbc : bool, optional
+        Whether to apply periodic boundary conditions. Defaults to False.
+    box : np.ndarray, optional
+        Simulation box size (either [Lx, Ly, Lz] or [[xmin, xmax], [ymin, ymax], [zmin, zmax]] or 3 cell vectors (shape (3,3) - slower)).
+
 
     Returns
     -------
     If phantom is True:
-def three_hollow_gcn(coords: np.ndarray, cut_off: float, thr_cn : int , gcn_max : float =18.0, phantom : bool =False) -> list:
         tuple
             - ndarray: Coordinates of the midpoints.
             - list: List of pairs.
@@ -135,8 +153,14 @@ def three_hollow_gcn(coords: np.ndarray, cut_off: float, thr_cn : int , gcn_max 
             - list: List of pairs.
             - ndarray: Values of the bridge GCN.
     """
-    pairs = pair_list(coords=coords, cut_off=cut_off)
-    neigh_list, coord_numb = coordination_number(coords=coords, cut_off=cut_off, neigh_list=True)
+
+    #sanity check
+    if strained and dbulk is None:
+        raise ValueError('Please provide lattice constants (dbulk) to compute the strained edition of this function!')
+
+
+    pairs = pair_list(coords=coords, cut_off=cut_off, pbc=pbc, box=box)
+    neigh_list, coord_numb = coordination_number(coords=coords, cut_off=cut_off, neigh_list=True, pbc=pbc, box=box)
     #b_gcn = np.zeros(len(pairs))
     b_gcn=[]
     sites=[]
@@ -166,29 +190,36 @@ def three_hollow_gcn(coords: np.ndarray, cut_off: float, thr_cn : int , gcn_max 
             pos_2 = coords[p[1]]
             sites.append((pos_1 + pos_2) / 2)
     if phantom:
-        return sites, b_gcn
+        return sites, pairs, b_gcn
     else:
-        return b_gcn
+        return pairs, b_gcn
 
 
     
 
-def three_hollow_gcn(coords: np.ndarray, cut_off: float, thr_cn: int, dbulk: list[float],
-                     gcn_max: float = 22.0, strained: bool = False) -> list:
+def three_hollow_gcn(coords: np.ndarray, cut_off: float, thr_cn: int, dbulk: list[float] = None,
+                     gcn_max: float = 22.0, strained: bool = False, pbc: bool = None, box = None) -> list:
     """
     Finds the location of three-hollow sites and returns their location and GCN
     Parameters
     ----------
-        coords: ndarray
-            Array with the XYZ coordinates of the atoms, shape (n_atoms, 3).
-        cut_off : float
-            Cutoff distance for finding neighbors in angstrom.
-        thr_cn : int
-            An atom is considered in the surface if its CN < thr_cn
-        gcn_max:
-            GCN max in the formula for computing the GCN
-        strained:
-        dbulk
+    coords: ndarray
+        Array with the XYZ coordinates of the atoms, shape (n_atoms, 3).
+    cut_off : float
+        Cutoff distance for finding neighbors in angstrom.
+    thr_cn : int
+        An atom is considered in the surface if its CN < thr_cn
+    gcn_max:
+        GCN max in the formula for computing the GCN
+    strained:
+        -
+    dbulk:
+        -
+    pbc : bool, optional
+        Whether to apply periodic boundary conditions. Defaults to False.
+    box : np.ndarray, optional
+        Simulation box size (either [Lx, Ly, Lz] or [[xmin, xmax], [ymin, ymax], [zmin, zmax]] or 3 cell vectors (shape (3,3) - slower)).
+
 
     Returns
     -------
@@ -198,13 +229,18 @@ def three_hollow_gcn(coords: np.ndarray, cut_off: float, thr_cn: int, dbulk: lis
             GCN of the three hollow sites
 
     """
+
+    #sanity check
+    if strained and dbulk is None:
+        raise ValueError('Please provide lattice constants (dbulk) to compute the strained edition of this function!')
+
+
     triplets = []
     sites = []
     th_gcn = []
-    pairs = pair_list(coords=coords, cut_off=cut_off)
+    pairs = pair_list(coords=coords, cut_off=cut_off, pbc=pbc, box=box)
     # neighbor list and coordination number not compatible!
-    neigh_list, coord_numb = coordination_number(coords=coords, cut_off=cut_off,
-                                                 neigh_list=True)
+    neigh_list, coord_numb = coordination_number(coords=coords, cut_off=cut_off, neigh_list=True, pbc=pbc, box=box)
     for i, p in enumerate(pairs):
         progress_bar(i, len(pairs) - 1, 50)
         # we check that both are at the surface
@@ -245,8 +281,8 @@ def three_hollow_gcn(coords: np.ndarray, cut_off: float, thr_cn: int, dbulk: lis
     return sites, th_gcn
 
 
-def four_hollow_gcn(coords: np.ndarray, cut_off: float, thr_cn: int, dbulk: list[float],
-                    gcn_max: float = 26.0, strained: bool = False) -> list:
+def four_hollow_gcn(coords: np.ndarray, cut_off: float, thr_cn: int, dbulk: list[float] = None,
+                    gcn_max: float = 26.0, strained: bool = False, pbc: bool = False, box = None) -> list:
     """
     Finds the location of four-hollow sites and returns their location and GCN
     Parameters
@@ -259,6 +295,12 @@ def four_hollow_gcn(coords: np.ndarray, cut_off: float, thr_cn: int, dbulk: list
             An atom is considered in the surface if its CN < thr_cn
         gcn_max:
             GCN max in the formula for computing the GCN
+        pbc : bool, optional
+            Whether to apply periodic boundary conditions. Defaults to False.
+        box : np.ndarray, optional
+            Simulation box size (either [Lx, Ly, Lz] or [[xmin, xmax], [ymin, ymax], [zmin, zmax]] or 3 cell
+            vectors (shape (3,3) - slower)).
+
 
     Returns
     -------
@@ -268,14 +310,20 @@ def four_hollow_gcn(coords: np.ndarray, cut_off: float, thr_cn: int, dbulk: list
             GCN of the four hollow sites
 
     """
+
+    #sanity check
+    if strained and dbulk is None:
+        raise ValueError('Please provide lattice constants (dbulk) to compute the strained edition of this function!')
+
+
     fours = []
     sites = []
     fh_gcn = []
-    pairs = pair_list(coords=coords, cut_off=cut_off)
+    pairs = pair_list(coords=coords, cut_off=cut_off, pbc=pbc, box=box)
     # neighbor list and coordination number not compatible!
-    neigh_list, coord_numb = coordination_number(coords=coords, cut_off=cut_off,
-                                                 neigh_list=True)
-    snb, _ = coordination_number(coords=coords, cut_off=cut_off * 1.3, neigh_list=True)
+    neigh_list, coord_numb = coordination_number(coords=coords, cut_off=cut_off, 
+                                                 neigh_list=True, pbc=pbc, box=box)
+    snb, _ = coordination_number(coords=coords, cut_off=cut_off * 1.3, neigh_list=True, pbc=pbc, box=box)
     current = 0
     for j in range(len(pairs)):
         for k in range(j):

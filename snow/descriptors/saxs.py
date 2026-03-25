@@ -30,15 +30,13 @@ def thomson(element: str ,q : float):
         f += a*np.exp(-b*(q/4/np.pi)**2)
     return f
 
-def iq_from_dist_mat(element_i: str,element_j : str,q : float ,dist_mat : np.ndarray):
+def iq_from_dist_mat(species: list ,q : float ,dist_mat : np.ndarray):
     """
     Computes the SAXS spectrum for a set of points from its distance matrix.
         Parameters
     ----------
-    element_i : str
-        Name of the chemical species of atoms i
-    element_j : str
-        Name of the chemical species of atoms j
+    species : list[strings]
+        The list with species of the atoms
     q : float
         Magnitude of exchanged momentum
     dist_mat : float
@@ -49,16 +47,18 @@ def iq_from_dist_mat(element_i: str,element_j : str,q : float ,dist_mat : np.nda
     iq : float 
         Intensity of SAXS for the considered system, at given exchanged momentum
     """
-    fi = thomson(element_i,q)
-    fj = fi if element_j == element_i else thomson(element_j)
-    intensity = 0.0
+    iq = 0.0
+    factors = np.zeros((len(species),len(species)))
+    for i in range(len(species)):
+        for j in range(len(species)):
+            factors[i,j] = thomson(species[i],q)*thomson(species[j],q)
     ds = dist_mat.flatten()
-    for d in ds:
-        intensity += np.sinc(d*q/np.pi)
-    iq = intensity * fi*fj
+    factors = factors.flatten()
+    ds = [np.sinc(d*q/np.pi) for d in ds]
+    iq = np.dot(factors,ds)
     return iq
 
-def iq_pddf(element_i: str,element_j : str,q :float,
+def iq_from_pddf(element_i: str,element_j : str,q :float,
             dists:list ,counts:list ,nat:int =0):
     """
     Computes thes SAXS spectrum from a PDDF.
@@ -86,10 +86,10 @@ def iq_pddf(element_i: str,element_j : str,q :float,
 
     """
     fi = thomson(element_i,q)
-    fj = fi if element_j == element_i else thomson(element_j)
-    intensity = nat
+    fj = fi if element_j == element_i else thomson(element_j,q)
+    intensity = 0.0
     for dist,count in zip(dists,counts):
-        intensity += count * np.sinc(q*dist/np.pi)
+        intensity += 2* count * np.sinc(q*dist/np.pi)
     intensity *=  fi*fj
     if element_i == element_j:
         intensity += nat * fi**2

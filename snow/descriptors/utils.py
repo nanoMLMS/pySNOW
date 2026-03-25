@@ -106,7 +106,8 @@ def hetero_distance_matrix(coords, elements):
 
 def distance_matrix_pbc(positions, cell):
     """
-    Compute pairwise distance matrix under periodic boundary conditions.
+    Compute pairwise distance matrix under periodic boundary conditions. This method is slower but works with any cell
+    provided as a (3,3) array (3 axes defining the cell). 
 
     Parameters
     ----------
@@ -140,7 +141,7 @@ def distance_matrix_pbc(positions, cell):
     # distances
     dmat = np.linalg.norm(dr, axis=-1)
 
-    return dmat
+    return dmat, np.max(dmat), np.min(dmat) #for compatibility also return max & min distance
 
 def nn_pbc(coords, box, cut_off):
     """
@@ -162,7 +163,7 @@ def nn_pbc(coords, box, cut_off):
         Each sublist contains the indices of neighboring atoms for the corresponding atom.
     """
 
-    dmat   = distance_matrix_pbc(coords, box)
+    dmat   = distance_matrix_pbc(coords, box)[0]
     ad_mat = dmat < cut_off
     np.fill_diagonal(ad_mat, False)
 
@@ -192,7 +193,7 @@ def nearest_neighbours(
     pbc : bool, optional
         Whether to apply periodic boundary conditions (default: False).
     box : ndarray, optional
-        Simulation box size in the form (3,) for orthorhombic boxes or (3,2) for lower and upper bounds.
+        Simulation box size in the form (3,) for orthorhombic boxes or (3,2) for lower and upper bounds or (3,3) if you pass box vectors (slower).
 
     Returns
     -------
@@ -210,8 +211,11 @@ def nearest_neighbours(
             box_size = box[:, 1] - box[:, 0]
         elif box.shape == (3,):  # Direct box lengths
             box_size = box
+        elif box.shape == (3,3):
+            #use slower but more robust function
+            return nn_pbc(coords, box, cut_off)
         else:
-            raise ValueError("Box must be of shape (3,) or (3,2)")
+            raise ValueError("Box must be of shape (3,) or (3,2) or (3,3)")
 
         # Create KD-tree with periodic boundaries
         neigh_tree = cKDTree(coords, boxsize=box_size)
@@ -238,6 +242,28 @@ def nearest_neighbours(
 
     return neigh
 
+def pairs_from_neighbor_list(neigh_list):
+    """
+    Convert neighbor list to unique pair list.
+    
+    Parameters
+    ----------
+    neigh_list : list of lists
+        For each atom i, a list of its neighbors
+        
+    Returns
+    -------
+    list of tuples
+        Unique pairs
+    """
+    pairs = set()
+    for i, neighbors in enumerate(neigh_list):
+        for j in neighbors:
+            if i < j:  # Only add if i < j to avoid duplicates
+                pairs.add((i, j))
+    
+    return list(pairs)
+
 def pair_list(
     coords: np.ndarray,
     cut_off: float = None,
@@ -256,7 +282,7 @@ def pair_list(
     pbc : bool, optional
         Whether to apply periodic boundary conditions. Defaults to False.
     box : np.ndarray, optional
-        Simulation box size (either [Lx, Ly, Lz] or [[xmin, xmax], [ymin, ymax], [zmin, zmax]]).
+        Simulation box size (either [Lx, Ly, Lz] or [[xmin, xmax], [ymin, ymax], [zmin, zmax]] or 3 cell vectors (shape (3,3) - slower)).
 
     Returns
     -------
@@ -274,8 +300,11 @@ def pair_list(
             box_size = box[:, 1] - box[:, 0]
         elif box.shape == (3,):  # Direct box lengths
             box_size = box
+        elif box.shape == (3,3):
+            neighbours_list = nn_pbc(coords, box, cut_off)
+            return pairs_from_neighbor_list(neighbours_list)
         else:
-            raise ValueError("Box must be of shape (3,) or (3,2)")
+            raise ValueError("Box must be of shape (3,) or (3,2) or (3,3)")
 
         # Create KD-tree with periodic boundaries
         neigh_tree = cKDTree(coords, boxsize=box_size)
@@ -366,7 +395,7 @@ def bounding_box(points):
 
 
 def second_neighbours(
-        coords: np.ndarray, cutoff: float
+        coords: np.ndarray, cutoff: float, pbc: bool = False, box = None
 ) -> list:
     """Generates a list of lists of atomic indeces for each atom corresponding to aotoms that are neighbours of first neighbours
     excluding those which are already first neighbours.
@@ -384,7 +413,7 @@ def second_neighbours(
         List of lists containing indeces of second neighbours for each atom
     """
     neigh = nearest_neighbours(
-        coords=coords, cut_off=cutoff
+        coords=coords, cut_off=cutoff, pbc=pbc, box=box
     )
     snn_list = []
     n_atoms = np.shape(coords)[0]
@@ -398,6 +427,67 @@ def second_neighbours(
         snn_list.append(temp_snn)
 
     return snn_list
+
+def get_coords_by_element(el, coords, chosen_element):
+    """
+    Returns the coordinates (and the chemical element array, for convenience) filtered for a selected chemical specie.
+    It can deal with both single frame and 'movie'-style coords objects in list or np.ndarray format
+
+    Parameters
+    ----------
+    el: np.ndarray or list of np.ndarrays
+        chemical elements of the atoms corresponding to the positions in coords 
+    cooords: np.ndarray or list of np.ndarrays
+        positions of the atoms in the system
+    chosen_element: str
+        element you want to select in your system to get the coordinates of those atoms.
+    
+    Returns
+    -------
+    Tuple
+        el, coords of atoms of the selected element (either (list, np.ndarray) or (list of list, list of np.ndarray) 
+        depending on if the input was a single frame or a movie)
+        
+    """
+
+    if type(coords) == list or ( type(coords) == np.ndarray and len(coords.shape) > 2): #movie-style
+        
+        selected_coords = []
+        return_elements = []
+
+        #read over frames
+        for frame_el, frame_coords in zip(el, coords):
+
+            selected_from_frame = []
+
+            #check on each atom
+            for atoms_el, atoms_coords in zip(frame_el, frame_coords):
+                if atoms_el == chosen_element:
+                    selected_from_frame.append(atoms_coords)
+        
+            #prepare el list and convert to np.ndarray before adding to final list
+            return_elements.append( [chosen_element]*len(selected_from_frame) )
+            selected_coords.append( np.asarray(selected_from_frame) )
+            
+    
+    elif type(coords) == np.ndarray and len(coords.shape) == 2: #single-frame
+
+        selected_coords = []
+
+        #check on each atoms
+        for atoms_el, atoms_coords in zip(el, coords):
+            if atoms_el == chosen_element:
+                selected_coords.append(atoms_coords)
+        
+        #prepare el list and convert to np.ndarray
+        return_elements = [chosen_element]*len(selected_coords)
+        selected_coords = np.asarray(selected_coords)
+        
+    else:
+        raise ValueError('Unknown format for coords array.')    
+
+    return return_elements, selected_coords
+
 
 
 def _check_structure(coords: np.ndarray, elements: np.ndarray | None = None, *, require_elements: bool = False):
