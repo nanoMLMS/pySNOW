@@ -494,7 +494,6 @@ def cnap_peratom(
 
     Parameters
     ----------
-        Frame index (unused here but kept for compatibility)
     coords : np.ndarray
         (N, 3) array with atomic coordinates
     cut_off : float
