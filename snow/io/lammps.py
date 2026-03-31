@@ -60,17 +60,23 @@ def read_lammps_data(file_path: str) -> Tuple[np.ndarray, np.ndarray]:
     return elements, coordinates
 
         
-def read_order_lammps_dump(filename, style='atomic', scaled_coords=True):
+def read_order_lammps_dump(filename, id_index: int = 0, type_index: int = 1, coords_indexes: list = [2,3,4], scaled_coords=True):
     """
     Extract a movie ( Tuple[np.ndarray, np.ndarray] ) from a lammps dump file. Atoms are not written in a consistent \n
     order in dump files, so you generally need to reorder them. 
-    WARNING: this only works with standard atomic style dumps, where (at least the first) columns in the dump file \n
-    are: id type xs ys zs
+    You can choose the columns to get the information about id, type, and coords from the lammps dump file. Default is 
+    to 'atomic' style, which has the shape 'id type xs ys zs'.
 
     Parameters
     ----------
     filename : str
         filename for the lammps-dump file to extract atoms from.
+    id_index: int
+        index of the column that contains ids of your atoms in the lammps dump -  default to 0
+    type_index: int
+        index of the column that contains the type of atoms in the dump (in lammps these are mapped to numbers)
+    coords_indexes: list of ints
+        list of indexes of the columns that contain the positions of your atoms - default to [1,2,3]
     scaled_coords: bool
         bool to check if coordinates are scaled (written in terms of the box sizes length). Default to True, which is 
         lammps' default. Probably this can be dealt with automatically by checking if all positions are between 0 and 1,
@@ -81,9 +87,6 @@ def read_order_lammps_dump(filename, style='atomic', scaled_coords=True):
     Tuple[np.ndarray, np.ndarray]
         species ids and positions from the lammps dump with consistent ordering of atoms. Here, pos[i] is a Nx3 array with positions of the i-th frame and so on.
     """
-
-    if style != "atomic":
-        raise NotImplementedError("Only dump style 'atomic' is currently supported")
 
     try:
         with open(filename, 'r') as f:
@@ -142,12 +145,12 @@ def read_order_lammps_dump(filename, style='atomic', scaled_coords=True):
 
             parts = line.split()
             try:
-                curr_ids.append(int(parts[0]) - 1) #lammps has 1-based ids
+                curr_ids.append(int(parts[id_index]) - 1) #lammps has 1-based ids
                 if scaled_coords:
-                    curr_frame.append([float(parts[2])*xbox, float(parts[3])*ybox, float(parts[4])*zbox])
+                    curr_frame.append([float(parts[coords_indexes[0]])*xbox, float(parts[coords_indexes[1]])*ybox, float(parts[coords_indexes[2]])*zbox])
                 else:
-                    curr_frame.append([float(parts[2]), float(parts[3]), float(parts[4])])
-                curr_species.append(int(parts[1]))
+                    curr_frame.append([float(parts[coords_indexes[0]]), float(parts[coords_indexes[1]]), float(parts[coords_indexes[2]])])
+                curr_species.append(int(parts[type_index]))
             except (ValueError, IndexError) as e:
                 raise ValueError(
                     f"Malformed atom line at line {i}: {line.strip()}"

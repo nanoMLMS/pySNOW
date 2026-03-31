@@ -3,169 +3,6 @@ import numpy as np
 import os
 import inspect
 
-
-
-def read_xyz_movie_extended_old(file_path: str, n_extra_cols: int = 0) -> Tuple:
-    """
-    Reads an XYZ trajectory with optional extra per-atom columns.
-
-    Parameters
-    ----------
-    file_path : str
-        Path to the xyz file
-    n_extra_cols : int
-        Number of extra columns after x y z to read
-
-    Returns
-    -------
-    Tuple
-        elements : list[str]
-        coords : np.ndarray (n_frames, n_atoms, 3)
-        extra_0 : np.ndarray (n_frames, n_atoms)
-        extra_1 : np.ndarray (n_frames, n_atoms)
-        ...
-    """
-
-    with open(file_path, "r") as f:
-        n_atoms = int(f.readline().strip())
-
-    with open(file_path, "r") as f:
-        num_lines = sum(1 for _ in f)
-    n_frames = num_lines // (n_atoms + 2)
-
-    coords = np.zeros((n_frames, n_atoms, 3))
-    elements = []
-
-    extras = [np.zeros((n_frames, n_atoms)) for _ in range(n_extra_cols)]
-
-    with open(file_path, "r") as f:
-        for frame in range(n_frames):
-            f.readline()  # atom count
-            f.readline()  # comment
-
-            for atom in range(n_atoms):
-                line = f.readline().split()
-
-                if frame == 0:
-                    elements.append(line[0])
-
-                # FIX QUI
-                coords[frame, atom, :] = np.asarray(line[1:4], dtype=float)
-
-                for i in range(n_extra_cols):
-                    extras[i][frame, atom] = float(line[4 + i])
-
-    return (elements, coords, *extras)
-    
-    
-
-def read_xyz_old(file_path: str) -> Tuple[np.ndarray, np.ndarray]:
-    """Reads the elements and coordinates of atoms from an xyz file at a given location
-
-    Parameters
-    ----------
-    file_path : str
-        Path to the xyz file with the structure
-
-    Returns
-    -------
-    Tuple[np.ndarray, np.ndarray]
-        Elements and coordinates array of the system
-
-    Raises
-    ------
-    FileNotFoundError
-        No file was found at the given location
-    ValueError
-        Some error while reading the file
-    Exception
-        Unexpected errors along the way
-    """
-    try:
-        # Get the path of the calling script
-        caller_frame = inspect.stack()[1]  # Get the caller's frame
-        caller_script = caller_frame.filename  # Get the caller's script path
-        
-        # Get the directory where the calling script is located
-        script_dir = os.path.dirname(os.path.realpath(caller_script))
-        
-        # Construct the full path to the file
-        filepath = os.path.join(script_dir, file_path)
-
-        # Open the file
-        with open(filepath, "r") as xyz_file:
-            # Number of atoms
-            n_atoms = int(xyz_file.readline().strip())
-
-            # Skip the comment line
-            _ = xyz_file.readline().strip()
-
-            # Initialize containers
-            elements = []
-            coordinates = np.zeros((n_atoms, 3))
-
-            # Read the data
-            for i in range(n_atoms):
-                line = xyz_file.readline().split()
-                elements.append(line[0])  # Append element symbol
-                coordinates[i, :] = list(map(float, line[1:4]))  # Convert coordinates to float
-
-        return elements, coordinates
-
-    except FileNotFoundError:
-        raise FileNotFoundError(f"The file '{file_path}' does not exist.")
-    except ValueError as e:
-        raise ValueError(f"Error reading '{file_path}': {e}")
-    except Exception as e:
-        raise Exception(f"An unexpected error occurred: {e}")
-
-
-
-
-
-def read_xyz_movie_old(file_path: str) -> Tuple[np.ndarray, np.ndarray]:
-    """Obtains the coordinates and elements for each frame of an xyz trajectory (for now it only supports trajectories
-    where the number of atoms and chemical composition is fixed through the whole trajectory).
-
-    Note that it only creates a single array for the elements rather than a per-frame array.
-
-    Parameters
-    ----------
-    file_path : str
-        Path to the xyz file with the structure
-
-
-    Returns
-    -------
-    Tuple[np.ndarray, np.ndarray]
-        Elements array and a (n_frames x 3 x n_atoms) array for the coordinates
-    """
-    
-    
-    with open(file_path, "r") as xyz_file:
-        # Read the total number of atoms from the first line
-        n_atoms = int(xyz_file.readline().strip())
-        
-    num_lines = sum(1 for _ in open(file_path))
-    n_frames = num_lines // (n_atoms + 2)
-
-    coords = np.zeros((n_frames, n_atoms, 3))
-    elements = []
-
-    with open(file_path, "r") as xyz_file:
-        for frame in range(n_frames):
-            _ = xyz_file.readline().strip()  # Skip atom count line
-            _ = xyz_file.readline().strip()  # Skip comment line
-            
-            for atom in range(n_atoms):
-                line = xyz_file.readline().split()
-                if frame == 0:  # Store elements only once
-                    elements.append(line[0])
-                coords[frame, atom, :] = list(map(float, line[1:4]))
-
-    return elements, coords
-
-
 def read_xyz_movie(file_path: str, extra_cols_indexes: list = None) -> Tuple[list, np.ndarray]:
     """
     Obtains the coordinates and elements for each frame of an xyz trajectory.
@@ -262,9 +99,10 @@ def read_xyz(file, extra_cols_indexes=None):
         return el[0], coords[0]
 
 
-def write_xyz(filename, elements, coords, additional_data=None):
+def write_xyz(filename, elements, coords, additional_data=None, box=None, mode='w'):
     """
-    Writes atomic data to an XYZ file in OVITO-compatible format.
+    Writes atomic data to an XYZ file in OVITO-compatible format. Currently only accepting numbers
+    as additional data.
 
     Parameters
     ----------
@@ -276,11 +114,26 @@ def write_xyz(filename, elements, coords, additional_data=None):
         Nx3 array of atomic coordinates.
     additional_data: list or np.ndarray, optional
         Additional per-atom data, such as coordination numbers.
+    box: np.ndarray
+        a box to be written to file
+    mode: str
+        mode for writing ('a'->append,  'w'->(over)write)
 
     Returns:
-        An xyz file containing the elements and coordinates of each atom and any additional per atom data (e.g. coordination number, agcn, strain...) 
+        None
     """
+
     n_atoms = len(elements)
+
+    #some controls to cast data in the right shape (convert to shape==(n_atoms, 1) if possible)
+    if type(additional_data) == np.ndarray and additional_data.shape == (n_atoms, ):
+        additional_data = additional_data[:,None]
+    elif type(additional_data) == list:
+        additional_data = np.array(additional_data)[:,None]
+    elif type(additional_data) == np.ndarray or additional_data is None:
+        pass
+    else:
+        raise ValueError('Please provide additional data as either a list or a np.ndarray')
     
     # Check if additional_data is provided and has the correct shape
     if additional_data is not None:
@@ -288,9 +141,29 @@ def write_xyz(filename, elements, coords, additional_data=None):
         if additional_data.shape[0] != n_atoms:
             raise ValueError(f"The number of rows in additional_data ({additional_data.shape[0]}) must match the number of atoms ({n_atoms}).")
     
-    with open(filename, 'w') as xyz_file:
+    with open(filename, mode) as xyz_file:
         # Write header
         xyz_file.write(f"{n_atoms}\n")
+
+        #write general info line
+        if box is not None:
+            xyz_file.write('Lattice="')
+            #suppose box is shape=(3,3)
+            if box.shape == (3,3):
+                for i in range(3):
+                    for j in range(3):
+                        xyz_file.write(f'{box[i,j]} ')
+            elif box.shape == (3,1):
+                xyz_file.write(f'{box[0,0]} 0.0 0.0 ')
+                xyz_file.write(f'0.0 {box[1,0]} 0.0 ')
+                xyz_file.write(f'0.0 0.0 {box[2,0]}')
+            elif box.shape == (3,2):
+                xyz_file.write(f'{box[0,0]} {box[0,1]} 0.0 ')
+                xyz_file.write(f'{box[1,0]} {box[1,1]} 0.0 ')
+                xyz_file.write(f'{box[2,0]} {box[2,1]} 0.0')  
+            else:
+                raise Exception('only implemented style for boxes are np.ndarrays with shape (3,3) or (3,2) or (3,1).')       
+            xyz_file.write('" - ')
         xyz_file.write("Generated XYZ file with optional properties\n")
         
         # Write atom data
@@ -303,7 +176,40 @@ def write_xyz(filename, elements, coords, additional_data=None):
             xyz_file.write(atom_line + "\n")
 
 
-def write_xyz_movie(frame, filename, elements, coords, additional_data=None):
+def write_xyz_movie(filename, elements_list, coords_list, additional_data_list=None, box_list=None):
+    """
+    Writes an xyz movie by reiterating the usage of write_xyz function.
+    
+    Parameters
+    ----------
+    filename: str
+        Name of the output .xyz file.
+    elements: ndarray
+        List of atomic symbols (e.g., ['Au', 'Au', ...]).
+    coords: ndarray)
+        Nx3 array of atomic coordinates.
+    additional_data: list or np.ndarray, optional
+        Additional per-atom data, such as coordination numbers.
+    box: np.ndarray
+        a box to be written to file
+
+    Returns:
+        None
+    """
+
+    if additional_data_list is None:
+        additional_data_list = [None] * len(elements_list)
+    if box_list is None:
+        box_list = [None] * len(elements_list)
+
+    for iframe, (els, coords, add_data, box) in enumerate( zip(elements_list, coords_list, additional_data_list, box_list) ):
+        if iframe == 0:
+            write_xyz(filename, els, coords, add_data, box=box, mode='w')
+        else:
+            write_xyz(filename, els, coords, add_data, box=box, mode='a')
+
+
+def write_xyz_movie_old(frame, filename, elements, coords, additional_data=None):
     """
     Writes atomic data to an XYZ file in OVITO-compatible format.
 
@@ -391,9 +297,6 @@ def write_phantom_xyz(filename, coords, additional_data=None):
                 # Add the additional per-atom data
                 atom_line += ' ' + ' '.join([f"{additional_data[i, j]:.6f}" for j in range(additional_data.shape[1])])
             xyz_file.write(atom_line + "\n")
-
-
-
 
 
 def write_xyz_movie_with_str(frame, filename, elements, coords, additional_data=None):
