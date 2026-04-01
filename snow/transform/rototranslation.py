@@ -2,14 +2,12 @@ import numpy as np
 from snow.descriptors.shape_descriptors import center_of_mass as com, geometric_com as gcom
 
 
-def align_to_axis(index_frame: int, coords: np.ndarray, symmetry_axis: np.ndarray) -> np.ndarray:
+def align_to_axis(coords: np.ndarray, symmetry_axis: np.ndarray) -> np.ndarray:
     """ Rotates the system so that the provided symmetry_axis is aligned with the z=(0,0,1) axis
     and the first atom of the list of coordinates is set at the origin
 
     Parameters
     ----------
-    index_frame : int
-        Index of the frame if going through a trajectory, mostly for reference
     coords : np.ndarray
         Array of the atomic coordinates
     symmetry_axis : np.ndarray
@@ -21,6 +19,7 @@ def align_to_axis(index_frame: int, coords: np.ndarray, symmetry_axis: np.ndarra
         The transformed system of coordinates
     """
 
+    symmetry_axis = np.asarray(symmetry_axis, dtype=float)
     symmetry_axis /= np.linalg.norm(symmetry_axis) 
     rotation_axis = np.cross(symmetry_axis, np.array([0, 0, 1]))
     
@@ -52,7 +51,7 @@ def align_to_axis(index_frame: int, coords: np.ndarray, symmetry_axis: np.ndarra
     
     
     
-def tranlsate_in_center_com(index_frame : int, coords : np.ndarray, elements=None) -> np.ndarray:
+def tranlsate_in_center_com(coords : np.ndarray, elements=None) -> np.ndarray:
     """
     Shifts the positions to the center of mass reference system (so that the center of mass is in the origin). 
     If elements are provided, a mass-weighted average of positions is performed, otherwise (elements=None), a simple
@@ -68,12 +67,13 @@ def tranlsate_in_center_com(index_frame : int, coords : np.ndarray, elements=Non
         np.ndarray: shifted coords
     """
 
-    coords = np.asarray(coords)
+    #check type
+    coords = np.asarray(coords, dtype = float)
 
     if elements is not None:
-        return coords - com(index_frame, coords, elements)
+        return coords - com(coords, elements)
     else:
-        return coords - gcom(index_frame, coords)
+        return coords - gcom(coords)
 
 def rotate_ax_angle(coords, axis, angle):
     """
@@ -94,8 +94,8 @@ def rotate_ax_angle(coords, axis, angle):
         Rotated coordinates, same shape as input.
     """
     coords = np.asarray(coords, dtype=float)
-
     axis = np.asarray(axis, dtype=float)
+
     n = np.linalg.norm(axis)
     if n == 0:
         raise ValueError("Rotation axis must be non-zero.")
