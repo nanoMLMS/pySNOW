@@ -108,7 +108,7 @@ def pddf_calculator_by_elements(
     #some sanity checks
     if use_lattice_units:
 
-        coords /= lattice
+        coords = coords / lattice
 
         if lattice is None:
             raise ValueError('If use_lattice_units==True, you should provide a value for the lattice constant to use')
