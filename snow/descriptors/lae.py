@@ -4,7 +4,7 @@ from snow.descriptors.utils import nearest_neighbours
 from snow.descriptors.coordination import agcn_calculator
     
 
-def LAE_xyz(coords: np.ndarray, elements, cut_off):
+def LAE(coords: np.ndarray, elements, cut_off):
     # Trova i vicini più prossimi per ogni atomo
     """
     Calculates the local atomic environment (LAE) of an atom in a structure.
