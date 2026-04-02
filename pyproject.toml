@@ -10,7 +10,8 @@ keywords = ["snow", "molecular dynamics", "analysis", "atomistic", "nanoparticle
 authors = [
     { name = "Giacomo Becatti", email = "giacomo.becatti@unimi.it" },
     { name = "Sofia Zinzani", email = "sofia.zinzani@unimi.it" },
-    { name = "Davide Alimonti", email = "davide.alimonti@unimi.it" }
+    { name = "Davide Alimonti", email = "davide.alimonti@unimi.it" },
+    { name = "Gilberto Nardi", email = "gilberto.nardi@unimi.it" }
 ]
 
 classifiers = [
