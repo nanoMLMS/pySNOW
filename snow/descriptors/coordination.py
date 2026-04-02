@@ -111,6 +111,8 @@ def agcn_calculator(coords, cut_off, gcn_max = 12.0, strained: bool = False, pbc
             agcn_i = sum(coord_numbers[neigh] for neigh in atom_neighbors)# - coord_numbers[i]
             agcn[i]=(agcn_i / gcn_max)
             
+    sites = np.asarray(sites)
+
     return sites, agcn
 
 
@@ -128,13 +130,13 @@ def bridge_gcn(coords: np.ndarray, cut_off: float, thr_cn: int, dbulk : list[flo
         Array of the coordinates of the atoms forming the system.
     - cut_off : float
         The cutoff distance for determining nearest neighbors.
+    thr_cn : int
+        An atom is considered in the surface if its CN < thr_cn
     - gcn_max : float, optional
         Maximum typical coordination number in the specific system (default is 18.0).
     - phantom : bool, optional
         If True, also returns the coordinates of the midpoints between pairs for
-        representation and testing (default is False).
-    thr_cn : int
-        An atom is considered in the surface if its CN < thr_cn
+        representation and testing (default is True).
     pbc : bool, optional
         Whether to apply periodic boundary conditions. Defaults to False.
     box : np.ndarray, optional
@@ -189,6 +191,7 @@ def bridge_gcn(coords: np.ndarray, cut_off: float, thr_cn: int, dbulk : list[flo
             pos_1 = coords[p[0]]
             pos_2 = coords[p[1]]
             sites.append((pos_1 + pos_2) / 2)
+
     if phantom:
         return sites, pairs, b_gcn
     else:
@@ -305,7 +308,7 @@ def four_hollow_gcn(coords: np.ndarray, cut_off: float, thr_cn: int, dbulk: list
     Returns
     -------
         sites : list
-            Midpoint of triplets that form a four hollow site
+            Midpoint of fourplets that form a four hollow site
         th_gcn: list
             GCN of the four hollow sites
 
