@@ -1,8 +1,17 @@
 import numpy as np
 from snow.descriptors.shape_descriptors import center_of_mass as com, geometric_com as gcom
 
+def find_ax_two_points(coord_pt_1, coord_pt_2):
 
-def align_to_axis(coords: np.ndarray, symmetry_axis: np.ndarray) -> np.ndarray:
+    x_ax = coord_pt_2[0] - coord_pt_1[0]
+    y_ax = coord_pt_2[1] - coord_pt_1[1]
+    z_ax = coord_pt_2[2] - coord_pt_2[2]
+    
+    ax_connecting = np.asarray([x_ax, y_ax, z_ax])
+    
+    return ax_connecting
+
+def align_axis_to_z_and_trasl_com_in_origin(coords: np.ndarray, symmetry_axis: np.ndarray) -> np.ndarray:
     """ Rotates the system so that the provided symmetry_axis is aligned with the z=(0,0,1) axis
     and the first atom of the list of coordinates is set at the origin
 
@@ -75,7 +84,7 @@ def tranlsate_in_center_com(coords : np.ndarray, elements=None) -> np.ndarray:
     else:
         return coords - gcom(coords)
 
-def rotate_ax_angle(coords, axis, angle):
+def rotate_of_a_angle_arond_given_ax(coords, axis, angle):
     """
     Rotate coordinates around a given axis by a given angle.
 

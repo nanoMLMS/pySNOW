@@ -8,6 +8,7 @@ from scipy.spatial.distance import pdist, squareform
 
 from snow.descriptors.utils import distance_matrix, hetero_distance_matrix, _check_structure
 from snow.descriptors.shape_descriptors import center_of_mass, geometric_com
+from snow.transform.rototranslation import align_axis_to_z_and_trasl_com_in_origin
 
     
 def pddf_calculator(coords, bin_width: float, use_lattice_units: bool, lattice=None):
@@ -318,10 +319,10 @@ def com_rdf_calculator(coords :np.ndarray,
 def cut_layers(
     elements: np.ndarray,
     coords_frame: np.ndarray,
-    lattice_parameter: float,
+    layer_height: float,
     species_A: str,
     species_B: str,
-    cutting_axes = 'z'
+    cutting_axes = ('z')
 ):
     """
     Cuts a single frame into layers using z-coordinates.
@@ -342,6 +343,8 @@ def cut_layers(
     elements = np.array(elements, dtype=str)  # ora è un array NumPy di stringhe
     elements = np.char.strip(elements)        # rimuove eventuali spazi bianchi
 
+
+
     if cutting_axes == 'z':
         z = coords_frame[:, 2]
     
@@ -359,15 +362,15 @@ def cut_layers(
     max_z = z.max()
     
 
-    n_layers = int((max_z - min_z) / lattice_parameter) + 1
+    n_layers = int((max_z - min_z) / layer_height) + 1
 
     layer_info = []
 
     for i in range(n_layers):
     
 
-        z_min = min_z + i * lattice_parameter
-        z_max = min_z + (i + 1) * lattice_parameter
+        z_min = min_z + i * layer_height
+        z_max = min_z + (i + 1) * layer_height
 
         mask = (z >= z_min) & (z < z_max)
         
