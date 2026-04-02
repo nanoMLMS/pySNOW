@@ -1,66 +1,17 @@
 import numpy as np
 from snow.descriptors.shape_descriptors import center_of_mass as com, geometric_com as gcom
 
-def find_ax_two_points(coord_pt_1, coord_pt_2):
+def ax_from_two_points(coord_pt_1, coord_pt_2):
 
     x_ax = coord_pt_2[0] - coord_pt_1[0]
     y_ax = coord_pt_2[1] - coord_pt_1[1]
-    z_ax = coord_pt_2[2] - coord_pt_2[2]
+    z_ax = coord_pt_2[2] - coord_pt_1[2]
     
     ax_connecting = np.asarray([x_ax, y_ax, z_ax])
     
     return ax_connecting
 
-def align_axis_to_z_and_trasl_com_in_origin(coords: np.ndarray, symmetry_axis: np.ndarray) -> np.ndarray:
-    """ Rotates the system so that the provided symmetry_axis is aligned with the z=(0,0,1) axis
-    and the first atom of the list of coordinates is set at the origin
-
-    Parameters
-    ----------
-    coords : np.ndarray
-        Array of the atomic coordinates
-    symmetry_axis : np.ndarray
-        Symmetry axis along which structure will be aligned
-
-    Returns
-    -------
-    np.ndarray
-        The transformed system of coordinates
-    """
-
-    symmetry_axis = np.asarray(symmetry_axis, dtype=float)
-    symmetry_axis /= np.linalg.norm(symmetry_axis) 
-    rotation_axis = np.cross(symmetry_axis, np.array([0, 0, 1]))
-    
-    #angle of rotation
-    cos_theta = np.dot(symmetry_axis, np.array([0, 0, 1]))
-    sin_theta = np.linalg.norm(rotation_axis)
-    
-    angle = np.arctan2(sin_theta, cos_theta)
-    
-    #normalizing the rot axis
-    rotation_axis = rotation_axis / np.linalg.norm(rotation_axis)
-    
-    rotation_matrix = np.array([[np.cos(angle) + rotation_axis[0]**2 * (1 - np.cos(angle)),
-                                rotation_axis[0] * rotation_axis[1] * (1 - np.cos(angle)) - rotation_axis[2] * np.sin(angle),
-                                rotation_axis[0] * rotation_axis[2] * (1 - np.cos(angle)) + rotation_axis[1] * np.sin(angle)],
-                               [rotation_axis[1] * rotation_axis[0] * (1 - np.cos(angle)) + rotation_axis[2] * np.sin(angle),
-                                np.cos(angle) + rotation_axis[1]**2 * (1 - np.cos(angle)),
-                                rotation_axis[1] * rotation_axis[2] * (1 - np.cos(angle)) - rotation_axis[0] * np.sin(angle)],
-                               [rotation_axis[2] * rotation_axis[0] * (1 - np.cos(angle)) - rotation_axis[1] * np.sin(angle),
-                                rotation_axis[2] * rotation_axis[1] * (1 - np.cos(angle)) + rotation_axis[0] * np.sin(angle),
-                                np.cos(angle) + rotation_axis[2]**2 * (1 - np.cos(angle))]])
-    rotated_coords = np.dot(rotation_matrix, coords.T).T
-    translation_vector = -rotated_coords[0]  # reference atom (the first one in the list) is moved to the origin
-    translated_coords = rotated_coords + translation_vector
-
-    return translated_coords
-    
-    
-    
-    
-    
-def tranlsate_in_center_com(coords : np.ndarray, elements=None) -> np.ndarray:
+def translate_com_to_origin(coords : np.ndarray, elements=None) -> np.ndarray:
     """
     Shifts the positions to the center of mass reference system (so that the center of mass is in the origin). 
     If elements are provided, a mass-weighted average of positions is performed, otherwise (elements=None), a simple
@@ -84,7 +35,7 @@ def tranlsate_in_center_com(coords : np.ndarray, elements=None) -> np.ndarray:
     else:
         return coords - gcom(coords)
 
-def rotate_of_a_angle_arond_given_ax(coords, axis, angle):
+def rotate_around_ax(coords, axis, angle):
     """
     Rotate coordinates around a given axis by a given angle.
 
@@ -124,3 +75,42 @@ def rotate_of_a_angle_arond_given_ax(coords, axis, angle):
 
     # Apply rotation (works for shape (N,3) or (...,3))
     return coords @ R.T
+
+
+def align_axis_to_z(coords: np.ndarray, axis: np.ndarray) -> np.ndarray:
+    """ 
+    Rotates the system so that the provided symmetry_axis is aligned with the z=(0,0,1) axis
+
+    Parameters
+    ----------
+    coords : np.ndarray
+        Array of the atomic coordinates
+    axis : np.ndarray
+        axis to become the new z-axis of the coordinates
+
+    Returns
+    -------
+    np.ndarray
+        The transformed system of coordinates
+    """
+
+    #two possibly bad cases
+    if np.allclose(axis, [0., 0., 1.]):
+        return coords
+    elif np.allclose(axis, [0., 0., -1.]):
+        return rotate_around_ax(coords, [1., 0., 0.], np.pi)
+
+    axis = np.asarray(axis, dtype = float)
+    axis /= np.linalg.norm(axis) 
+    rotation_axis = np.cross(axis, np.array([0, 0, 1]))
+    
+    #angle of rotation
+    cos_theta = np.dot(axis, np.array([0, 0, 1]))
+    sin_theta = np.linalg.norm(rotation_axis)
+    
+    angle = np.arctan2(sin_theta, cos_theta)
+    
+    #normalizing the rot axis
+    rotation_axis = rotation_axis / np.linalg.norm(rotation_axis)
+
+    return rotate_around_ax(coords, rotation_axis, angle)
