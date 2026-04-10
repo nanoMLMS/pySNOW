@@ -2,9 +2,6 @@ from collections import Counter
 
 import numpy as np
 
-from snow.descriptors.gcn import *
-from snow.lodispp.pp_io import *
-
 
 def prepare_data(data_list):
     return Counter([round(val, 2) for val in data_list if val != 0])
