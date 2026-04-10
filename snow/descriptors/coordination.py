@@ -1,7 +1,8 @@
 import numpy as np
-from snow.descriptors.utils import pair_list, nearest_neighbours
+from snow.descriptors.utils import pair_list, nearest_neighbours, pbc_distance
 
-#dbulk for strained is supposed to be a list, but might need to be a singel float. What about alloys?
+#possible update: modify phantom arguments so that the default return is sites, gcn
+#and with a bool option you can also get the ids of atoms for a pair, triplet, or fourplet
 
 def coordination_number(coords, cut_off, neigh_list=False, pbc=False, box=None):
     """
@@ -54,34 +55,35 @@ def progress_bar(current, total, length=50):
     return
 
 
-def agcn_calculator(coords, cut_off, gcn_max = 12.0, strained: bool = False, pbc: bool = False, box = None, **kwargs):
+def agcn_calculator(coords, cut_off, cn_max = 12.0, strained: bool = False, pbc: bool = False, box = None, **kwargs):
     """
     Calculates the atop Generalized Coordination Number (GCN) for a site. The GCN is defined as the sum of the coordination numbers of the neighbors
-    of each atom divided by the maximum typical coordination number in the specific system (gcn_max).
+    of each atom divided by the maximum typical coordination number in the specific system (cn_max).
 
     Parameters
     ----------
-    - coords : ndarray
+    coords : ndarray
         Array of the coordinates of the atoms forming the system.
-    - cut_off : float
+    cut_off : float
         The cutoff distance for determining nearest neighbors.
-    - gcn_max : float, optional
-        Maximum typical coordination number in the specific system (default is 18.0).
-    -strained : bool, optional
-        iF True computes the strained aGCN (default is False).
+    cn_max : float, optional
+        Maximum coordination number in the specific system (default is 12.0, ok for fcc materials).
+    strained : bool, optional
+        if True, computes the strained aGCN (default is False).
     pbc : bool, optional
         Whether to apply periodic boundary conditions. Defaults to False.
     box : np.ndarray, optional
         Simulation box size (either [Lx, Ly, Lz] or [[xmin, xmax], [ymin, ymax], [zmin, zmax]] or 3 cell vectors (shape (3,3) - slower)).
     kwargs:
         thr_cn: int, optional
-            An atom is considered in the surface if its CN < thr_cn
+            a threshold coordination number value. If provided, only atoms with coordination < thr_cn are considered for the GCN calculation
+            (e.g. useful if you only want to consider surface atoms in your calculation)
         dbulk: float, optional
-            Bulk distance for strained aGCN (default is 0), has to be provided if strained is True
+            Bulk distance for strained aGCN (default is None), has to be provided if strained is True
 
     Returns
     -------
-    - ndarray: Values of the atop GCN.
+    ndarray: Values of the atop GCN.
     """
     neigh_list, coord_numbers = coordination_number(coords, cut_off, neigh_list=True, pbc=pbc, box=box)
     n_atoms = len(coord_numbers)
@@ -89,7 +91,10 @@ def agcn_calculator(coords, cut_off, gcn_max = 12.0, strained: bool = False, pbc
     sites=[]
 
     thr_cn = kwargs.get('thr_cn', None)
-    dbulk = kwargs.get('dbulk', 0)
+    dbulk = kwargs.get('dbulk', None)
+
+    if strained and dbulk is None:
+        raise ValueError('Please provide bulk nn distance (dbulk) to compute the strained edition of this function!')
 
     for i, atom_neighbors in enumerate(neigh_list):
         if thr_cn is not None and coord_numbers[i] >= thr_cn:
@@ -99,26 +104,28 @@ def agcn_calculator(coords, cut_off, gcn_max = 12.0, strained: bool = False, pbc
             sgcn=0
             for nb in neigh_list[i]:
                 for nnb in neigh_list[nb]:
-                    d_nb_nnb= np.linalg.norm(coords[nb] - coords[nnb])
+                    if pbc:
+                        d_nb_nnb = pbc_distance(coords[nb], coords[nnb], box)
+                    else:
+                        d_nb_nnb= np.linalg.norm(coords[nb] - coords[nnb])
                     sgcn += dbulk/d_nb_nnb
-            self_sgcn=0
-            for nb in neigh_list[i]:
-                break
-                d_nb_nnb= np.linalg.norm(coords[nb] - coords[i])
-                self_sgcn += dbulk/d_nb_nnb
-            agcn[i]=((sgcn-self_sgcn)/gcn_max)
+#            self_sgcn=0
+#            for nb in neigh_list[i]:
+#                break
+#                d_nb_nnb= np.linalg.norm(coords[nb] - coords[i])
+#                self_sgcn += dbulk/d_nb_nnb
+#            agcn[i]=((sgcn-self_sgcn)/cn_max)
+            agcn[i] = sgcn/cn_max
         else:
             agcn_i = sum(coord_numbers[neigh] for neigh in atom_neighbors)# - coord_numbers[i]
-            agcn[i]=(agcn_i / gcn_max)
+            agcn[i]=(agcn_i / cn_max)
             
-    sites = np.asarray(sites)
-
     return sites, agcn
 
 
 
-def bridge_gcn(coords: np.ndarray, cut_off: float, thr_cn: int, dbulk : list[float] = None, gcn_max=18.0,
-                phantom=True, strained: bool = False, pbc: bool = False, box = None):
+def bridge_gcn(coords: np.ndarray, cut_off: float, thr_cn: int, dbulk : float = None, cn_max = 18.0,
+                phantom=True, strained: bool = False, pbc: bool = False, box = None)-> tuple:
     """
     Identifies bridge absorption sites and computes the Generalized Coordination Number (GCN)
     for a site. The GCN is defined as the sum of the coordination numbers of the neighbors
@@ -126,22 +133,24 @@ def bridge_gcn(coords: np.ndarray, cut_off: float, thr_cn: int, dbulk : list[flo
 
     Parameters
     ----------
-    - coords : ndarray
+    coords : ndarray
         Array of the coordinates of the atoms forming the system.
-    - cut_off : float
+    cut_off : float
         The cutoff distance for determining nearest neighbors.
-    thr_cn : int
-        An atom is considered in the surface if its CN < thr_cn
-    - gcn_max : float, optional
+    cn_max : float, optional
         Maximum typical coordination number in the specific system (default is 18.0).
-    - phantom : bool, optional
-        If True, also returns the coordinates of the midpoints between pairs for
-        representation and testing (default is True).
+    phantom : bool, optional
+        If True, also returns the coordinates of the midpoints between pairs ('phantom' atoms indicating the bridge sites)
+        for representation and testing (default is False).
+    thr_cn : int
+        a threshold coordination number value. If provided, only atoms with coordination < thr_cn are considered for the GCN calculation
+        (e.g. useful if you only want to consider surface atoms in your calculation)
+    dbulk: float, optional
+        Bulk distance for strained aGCN (default is None), has to be provided if strained is True
     pbc : bool, optional
         Whether to apply periodic boundary conditions. Defaults to False.
     box : np.ndarray, optional
         Simulation box size (either [Lx, Ly, Lz] or [[xmin, xmax], [ymin, ymax], [zmin, zmax]] or 3 cell vectors (shape (3,3) - slower)).
-
 
     Returns
     -------
@@ -158,7 +167,7 @@ def bridge_gcn(coords: np.ndarray, cut_off: float, thr_cn: int, dbulk : list[flo
 
     #sanity check
     if strained and dbulk is None:
-        raise ValueError('Please provide lattice constants (dbulk) to compute the strained edition of this function!')
+        raise ValueError('Please provide bulk nn distance (dbulk) to compute the strained edition of this function!')
 
 
     pairs = pair_list(coords=coords, cut_off=cut_off, pbc=pbc, box=box)
@@ -176,22 +185,27 @@ def bridge_gcn(coords: np.ndarray, cut_off: float, thr_cn: int, dbulk : list[flo
             sgcn = 0
             for nb in neigh_unique_12:
                 for nnb in neigh_list[nb]:
-                    d_nb_nnb= np.linalg.norm(coords[nb] - coords[nnb])
+                    if pbc:
+                        d_nb_nnb = pbc_distance(coords[nb], coords[nnb], box)
+                    else:
+                        d_nb_nnb= np.linalg.norm(coords[nb] - coords[nnb])
                     sgcn += dbulk/d_nb_nnb
             self_sgcn=0
             for nb in p :
                 for nnb in neigh_list[nb]:
-                    d_nb_nnb= np.linalg.norm(coords[nb] - coords[nnb])
+                    if pbc:
+                        d_nb_nnb = pbc_distance(coords[nb], coords[nnb], box)
+                    else:
+                        d_nb_nnb= np.linalg.norm(coords[nb] - coords[nnb])
                     self_sgcn += dbulk/d_nb_nnb
-            b_gcn.append((sgcn-self_sgcn)/gcn_max)
+            b_gcn.append((sgcn-self_sgcn)/cn_max)
         else:
             b_gcn_i = sum(coord_numb[neigh] for neigh in neigh_unique_12) - (coord_numb[p[0]] + coord_numb[p[1]])
-            b_gcn.append(b_gcn_i / gcn_max)
+            b_gcn.append(b_gcn_i / cn_max)
         if phantom:
             pos_1 = coords[p[0]]
             pos_2 = coords[p[1]]
             sites.append((pos_1 + pos_2) / 2)
-
     if phantom:
         return sites, pairs, b_gcn
     else:
@@ -200,29 +214,29 @@ def bridge_gcn(coords: np.ndarray, cut_off: float, thr_cn: int, dbulk : list[flo
 
     
 
-def three_hollow_gcn(coords: np.ndarray, cut_off: float, thr_cn: int, dbulk: list[float] = None,
-                     gcn_max: float = 22.0, strained: bool = False, pbc: bool = None, box = None) -> list:
+def three_hollow_gcn(coords: np.ndarray, cut_off: float, thr_cn: int, dbulk: float = None,
+                     cn_max: float = 22.0, strained: bool = False, pbc: bool = None, box = None) -> tuple:
     """
     Finds the location of three-hollow sites and returns their location and GCN
     Parameters
     ----------
-    coords: ndarray
+    coords: np.ndarray
         Array with the XYZ coordinates of the atoms, shape (n_atoms, 3).
     cut_off : float
         Cutoff distance for finding neighbors in angstrom.
     thr_cn : int
-        An atom is considered in the surface if its CN < thr_cn
-    gcn_max:
-        GCN max in the formula for computing the GCN
-    strained:
-        -
-    dbulk:
-        -
+        a threshold coordination number value. If provided, only atoms with coordination < thr_cn are considered for the GCN calculation
+        (e.g. useful if you only want to consider surface atoms in your calculation)
+    dbulk: float, optional
+        Bulk distance for strained aGCN (default is None), has to be provided if strained is True
+    cn_max: float
+        Maximum typical coordination number in the specific system (default is 22.0 - ok for FCC materials).
+    strained : bool, optional
+        if True, computes the strained aGCN (default is False).
     pbc : bool, optional
         Whether to apply periodic boundary conditions. Defaults to False.
     box : np.ndarray, optional
         Simulation box size (either [Lx, Ly, Lz] or [[xmin, xmax], [ymin, ymax], [zmin, zmax]] or 3 cell vectors (shape (3,3) - slower)).
-
 
     Returns
     -------
@@ -235,8 +249,7 @@ def three_hollow_gcn(coords: np.ndarray, cut_off: float, thr_cn: int, dbulk: lis
 
     #sanity check
     if strained and dbulk is None:
-        raise ValueError('Please provide lattice constants (dbulk) to compute the strained edition of this function!')
-
+        raise ValueError('Please provide bulk nn distance (dbulk) to compute the strained edition of this function!')
 
     triplets = []
     sites = []
@@ -267,48 +280,58 @@ def three_hollow_gcn(coords: np.ndarray, cut_off: float, thr_cn: int, dbulk: lis
                         sgcn = 0
                         for nb in neigh_unique_triplet:
                             for nnb in neigh_list[nb]:
-                                d_nb_nnb = np.linalg.norm(coords[nb] - coords[nnb])
+                                if pbc:
+                                    d_nb_nnb = pbc_distance(coords[nb], coords[nnb], box)
+                                else:
+                                    d_nb_nnb= np.linalg.norm(coords[nb] - coords[nnb])
                                 sgcn += dbulk / d_nb_nnb
                         self_sgcn = 0
                         for nb in new_triplet:
                             for nnb in neigh_list[nb]:
-                                d_nb_nnb = np.linalg.norm(coords[nb] - coords[nnb])
+                                if pbc:
+                                    d_nb_nnb = pbc_distance(coords[nb], coords[nnb], box)
+                                else:
+                                    d_nb_nnb= np.linalg.norm(coords[nb] - coords[nnb])
                                 self_sgcn += dbulk / d_nb_nnb
-                        th_gcn.append((sgcn - self_sgcn) / gcn_max)
+                        th_gcn.append((sgcn - self_sgcn) / cn_max)
                     else:
                         th_gcn_i = sum(coord_numb[neigh] for neigh in neigh_unique_triplet) - sum(
                             coord_numb[neigh] for neigh in new_triplet)
-                        th_gcn.append(th_gcn_i / gcn_max)
+                        th_gcn.append(th_gcn_i / cn_max)
 
     print("\nDone three hollow")
     return sites, th_gcn
 
 
-def four_hollow_gcn(coords: np.ndarray, cut_off: float, thr_cn: int, dbulk: list[float] = None,
-                    gcn_max: float = 26.0, strained: bool = False, pbc: bool = False, box = None) -> list:
+def four_hollow_gcn(coords: np.ndarray, cut_off: float, thr_cn: int, dbulk: float = None,
+                    cn_max: float = 26.0, strained: bool = False, pbc: bool = False, box = None) -> tuple:
     """
     Finds the location of four-hollow sites and returns their location and GCN
     Parameters
     ----------
-        coords: ndarray
-            Array with the XYZ coordinates of the atoms, shape (n_atoms, 3).
-        cut_off : float
-            Cutoff distance for finding neighbors in angstrom.
-        thr_cn : int
-            An atom is considered in the surface if its CN < thr_cn
-        gcn_max:
-            GCN max in the formula for computing the GCN
-        pbc : bool, optional
-            Whether to apply periodic boundary conditions. Defaults to False.
-        box : np.ndarray, optional
-            Simulation box size (either [Lx, Ly, Lz] or [[xmin, xmax], [ymin, ymax], [zmin, zmax]] or 3 cell
-            vectors (shape (3,3) - slower)).
+    coords: np.ndarray
+        Array with the XYZ coordinates of the atoms, shape (n_atoms, 3).
+    cut_off : float
+        Cutoff distance for finding neighbors in angstrom.
+    thr_cn : int
+        a threshold coordination number value. If provided, only atoms with coordination < thr_cn are considered for the GCN calculation
+        (e.g. useful if you only want to consider surface atoms in your calculation)
+    dbulk: float, optional
+        Bulk distance for strained aGCN (default is None), has to be provided if strained is True
+    cn_max: float
+        Maximum typical coordination number in the specific system (default is 26.0 - ok for FCC materials).
+    strained : bool, optional
+        if True, computes the strained aGCN (default is False).
+    pbc : bool, optional
+        Whether to apply periodic boundary conditions. Defaults to False.
+    box : np.ndarray, optional
+        Simulation box size (either [Lx, Ly, Lz] or [[xmin, xmax], [ymin, ymax], [zmin, zmax]] or 3 cell vectors (shape (3,3) - slower)).
 
 
     Returns
     -------
         sites : list
-            Midpoint of fourplets that form a four hollow site
+            Midpoint of triplets that form a four hollow site
         th_gcn: list
             GCN of the four hollow sites
 
@@ -316,7 +339,7 @@ def four_hollow_gcn(coords: np.ndarray, cut_off: float, thr_cn: int, dbulk: list
 
     #sanity check
     if strained and dbulk is None:
-        raise ValueError('Please provide lattice constants (dbulk) to compute the strained edition of this function!')
+        raise ValueError('Please provide bulk nn distance (dbulk) to compute the strained edition of this function!')
 
 
     fours = []
@@ -361,19 +384,24 @@ def four_hollow_gcn(coords: np.ndarray, cut_off: float, thr_cn: int, dbulk: list
                         sgcn = 0
                         for nb in neigh_unique_four:
                             for nnb in neigh_list[nb]:
-                                d_nb_nnb = np.linalg.norm(coords[nb] - coords[nnb])
+                                if pbc:
+                                    d_nb_nnb = pbc_distance(coords[nb], coords[nnb], box)
+                                else:
+                                    d_nb_nnb= np.linalg.norm(coords[nb] - coords[nnb])
                                 sgcn += dbulk / d_nb_nnb
                         self_sgcn = 0
                         for nb in new_fours:
                             for nnb in neigh_list[nb]:
-                                d_nb_nnb = np.linalg.norm(coords[nb] - coords[nnb])
+                                if pbc:
+                                    d_nb_nnb = pbc_distance(coords[nb], coords[nnb], box)
+                                else:
+                                    d_nb_nnb= np.linalg.norm(coords[nb] - coords[nnb])
                                 self_sgcn += dbulk / d_nb_nnb
-                        fh_gcn.append((sgcn - self_sgcn) / gcn_max)
+                        fh_gcn.append((sgcn - self_sgcn) / cn_max)
                     else:
                         fh_gcn_i = sum(coord_numb[neigh] for neigh in neigh_unique_four) - sum(
                             coord_numb[neigh] for neigh in new_fours)
-                        fh_gcn.append(fh_gcn_i / gcn_max)
-    # for f in fours[:5]:
-    # print(coord_numb[f[0]],coord_numb[f[1]],coord_numb[f[2]],coord_numb[f[3]])
+                        fh_gcn.append(fh_gcn_i / cn_max)
+
     print("\nDone four hollow")
     return sites, fh_gcn

@@ -508,4 +508,37 @@ def _check_structure(coords: np.ndarray, elements: np.ndarray | None = None, *, 
     #check if coordinates have the right shape and dimensions
     if coords.ndim != 2 or coords.shape[1] != 3:
         raise ValueError(f"Coordinates array must have shape (N, 3), got {coords.shape}")
-    
+
+def pbc_distance(p1, p2, box):
+    """
+    Computes the minimum image distance between two points under periodic boundary conditions.
+
+    Parameters
+    ----------
+    p1 : np.ndarray
+        Position of the first point.
+    p2 : np.ndarray
+        Position of the second point.
+    box : np.ndarray
+        Cell vectors as a (3,3) array (rows are vectors a, b, c) or (3,) array (xmax, ymax, zmax).
+
+    Returns
+    -------
+    float
+        Minimum image distance between p1 and p2.
+    """
+
+    if type(box) == list and len(box)==3 or type(box)==np.ndarray and (box.shape==(3,) or box.shape==(3,1)):
+        box = np.asarray([[box[0],0.,0.], [0., box[1], 0.], [0., 0., box[2]] ])
+
+    diff    = p1-p2
+    inv_box = np.linalg.inv(box)
+
+    # fractional coordinates
+    frac = diff @ inv_box
+
+    # wrap to [-0.5, 0.5]
+    frac -= np.round(frac)
+    # back to cartesian
+    diff_mic = frac @ box
+    return np.linalg.norm(diff_mic)
