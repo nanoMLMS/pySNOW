@@ -8,7 +8,7 @@ from scipy.spatial.distance import pdist, squareform
 
 from snow.descriptors.utils import distance_matrix, hetero_distance_matrix, _check_structure
 from snow.descriptors.shape_descriptors import center_of_mass, geometric_com
-from snow.transform.rototranslation import align_axis_to_z_and_trasl_com_in_origin
+from snow.transform.rototranslation import align_axis_to_z
 
     
 def pddf_calculator(coords, bin_width: float, use_lattice_units: bool, lattice=None):
@@ -313,72 +313,99 @@ def com_rdf_calculator(coords :np.ndarray,
     return (bins[:-1] + bin_width/2.), dist_count
 
 
-
-
-
 def cut_layers(
     elements: np.ndarray,
     coords_frame: np.ndarray,
     layer_height: float,
-    species_A: str,
-    species_B: str,
-    cutting_axes = ('z')
+    cutting_ax = 'z',
+    species_A: str = None,
+    species_B: str = None,
+    
 ):
     """
     Cuts a single frame into layers using z-coordinates.
 
     Parameters
     ----------
-    coords_frame : np.ndarray
-        Shape (n_atoms, 3)
     elements : np.ndarray
-        Shape (n_atoms,)
+        chemical symbols of the atoms provided - Shape (n_atoms,)
+    coords_frame : np.ndarray
+        coordinates of the atoms provided - Shape (n_atoms, 3)
+    cutting_ax : str or np.ndarray
+        either 'x', 'y', 'z', or a (3, ) np.ndarray such as (1,1,0)
+    species_A: str (optional)
+        chemical specie 1 to filter the coords and get a chemical specie-wise count of atoms per layer
+    species_B: str (optional)
+        chemical specie 2 to filter the coords and get a chemical specie-wise count of atoms per layer
         
     Return
     _________
-    returns as a tuple for each layer:
-    # layer, #tot of atoms in that layer, #atoms species A in that layer, #atoms species B in the layer.
+    layer_number: np.ndarray
+        the layer number (or id)
+    layer_ntot:
+        the number of atoms per layer
+    layer_na:
+        the number of atoms per layers of species 'species_A'
+    layer_nb:
+        the number of atoms per layers of species 'species_B'
     """
 
-    elements = np.array(elements, dtype=str)  # ora è un array NumPy di stringhe
-    elements = np.char.strip(elements)        # rimuove eventuali spazi bianchi
+    if cutting_ax == 'x':
+        cutting_ax = np.asarray([1.,0.,0.])
+    elif cutting_ax == 'y':
+        cutting_ax = np.asarray([0.,1.,0.])
+    elif cutting_ax == 'z':
+        cutting_ax = np.asarray([0.,0.,1.])
 
-
-
-    if cutting_axes == 'z':
-        z = coords_frame[:, 2]
-    
-    elif cutting_axes == 'x':
-        z = coords_frame[:, 0]
-        
-    elif cutting_axes == 'y':
-        z = coords_frame[:, 1]
-    
-    else:
-        print("provide a proper cutting axes")
+    elements = np.array(elements, dtype=str)  # dtype+np.ndarray conversion
+    elements = np.char.strip(elements)        # remove whitespaces
             
+    #align selected axis to z
+    if not np.array_equal(cutting_ax, np.array([0., 0., 1.])):
+        cc = align_axis_to_z(coords_frame, axis=cutting_ax)
+    else:
+        cc = coords_frame
+
+    z = cc[:,2]
     
     min_z = z.min()
     max_z = z.max()
     
-
     n_layers = int((max_z - min_z) / layer_height) + 1
 
-    layer_info = []
+    layer_number = np.zeros(n_layers, dtype=int) #or layer bin center?
+    layer_ntot   = np.zeros(n_layers, dtype=int)
+    if species_A is not None:
+        layer_na     = np.zeros(n_layers, dtype=int)
+    if species_B is not None:
+        layer_nb     = np.zeros(n_layers, dtype=int)
 
     for i in range(n_layers):
     
+        z_min_bin = min_z + i * layer_height
+        z_max_bin = min_z + (i + 1) * layer_height
 
-        z_min = min_z + i * layer_height
-        z_max = min_z + (i + 1) * layer_height
-
-        mask = (z >= z_min) & (z < z_max)
+        mask = (z >= z_min_bin) & (z < z_max_bin)
         
         tot = np.count_nonzero(mask)
-        n_A = np.count_nonzero(mask & (elements == species_A))
-        n_B = np.count_nonzero(mask & (elements == species_B))
+        if species_A is not None:
+            n_A = np.count_nonzero(mask & (elements == species_A))
+        if species_B is not None:
+            n_B = np.count_nonzero(mask & (elements == species_B))
         
-        layer_info.append((i + 1, tot, n_A, n_B))
+        layer_number[i] = i
+        layer_ntot[i]   = tot
+        if species_A is not None:
+            layer_na[i]     = n_A
+        if species_B is not None:
+            layer_nb[i]     = n_B
 
-    return layer_info
+    if species_A is not None and species_B is not None:
+        return layer_number, layer_ntot, layer_na, layer_nb
+    elif species_A is not None:
+        return layer_number, layer_ntot, layer_na
+    elif species_B is not None:
+        return layer_number, layer_ntot, layer_nb
+    else:
+        return layer_number, layer_ntot
 
