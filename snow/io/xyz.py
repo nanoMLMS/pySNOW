@@ -3,7 +3,7 @@ import numpy as np
 import os
 import inspect
 
-def read_xyz_movie(file_path: str, extra_cols_indexes: list = None) -> Tuple[list, np.ndarray]:
+def read_xyz_movie(file_path: str, extra_cols_indexes: list = None) -> Tuple[list, list]:
     """
     Obtains the coordinates and elements for each frame of an xyz trajectory.
 
@@ -20,8 +20,11 @@ def read_xyz_movie(file_path: str, extra_cols_indexes: list = None) -> Tuple[lis
 
     Returns
     -------
-    Tuple[np.ndarray, np.ndarray]
-        list of lists of chemical symbols and a list of (n_atoms, 3) arrays for the coordinates
+    Tuple[list, list]
+        if extra_cols_indexes is not provided: list of lists of chemical symbols and a list of (n_atoms, 3) arrays for the coordinates
+    Tuple[list, list, list]
+        if extra_cols_indexes is provided: list of lists of chemical symbols, list of (n_atoms, 3) arrays for the coordinates, list of (n_atoms, len(extra_cols_indexes)) for the extra arrays to be read.
+        
     """
     
     el_list = []
@@ -87,7 +90,15 @@ def read_xyz_movie(file_path: str, extra_cols_indexes: list = None) -> Tuple[lis
 
 def read_xyz(file, extra_cols_indexes=None):
     """
-    wrapper of read_xyz_movie to read single-frame movies - mostyl for compatibility
+    wrapper of read_xyz_movie to read single-frame xyz files.
+
+    Returns
+    -------
+    Tuple[list, np.ndarray]
+        if extra_cols_indexes is not provided: list of chemical symbols and a list of (n_atoms, 3) arrays for the coordinates
+    Tuple[list, np.ndarray, np.ndarray]
+        if extra_cols_indexes is provided: list of chemical symbols, (n_atoms, 3) array for the coordinates, (n_atoms, len(extra_cols_indexes)) array for the extra values to be read.
+        
     """
 
     if extra_cols_indexes is not None:
