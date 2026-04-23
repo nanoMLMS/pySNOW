@@ -1,16 +1,18 @@
 # SNOW
 
-SNOW is a mostly standalone (only a few required dependencies: numpy and scipy) characterization tool for trajectories generated during MD simulations
+SNOW is a mostly standalone (only a few required dependencies: numpy and scipy) characterization tool for atomistic configurations. Although it is designed with confined systems (nanoparticles/clusters) in mind, it is able to treat periodic systems as well. The package provides functions and code snippets to parse data, analyze it, and export it in various formats. It is designed following a list of principles - namely ease of use, ease of modification, independence (from many complex packages), and integrability (with other simulation and analysis codes). Check out the [documentation](https://nanomlms.github.io/snowWiki/about/) for more on design principles.
 
 ## Features
+Let's put a picture here in the future!.
+
 
 SNOW allows for the computation of a number of properties and descriptors for atomistic structures, ranging from the coordination number to more complex parameters such as Steinhardt's parameters.
 
 ### Input - Output
 
-The structures can be obtained using external modules, such as [ASE](https://wiki.fysik.dtu.dk/ase/index.html) or read fromthe popular xyz format or from LAMMPS data files using the funtion provided by SNOW. 
+The structures can be obtained using external modules, such as [ASE](https://wiki.fysik.dtu.dk/ase/index.html) or read from the popular xyz format or from LAMMPS data files using the io functions provided in by SNOW. 
 
-If you use SNOW, the functions will genrally provide a tuple: a list of elements for each of the atoms in the system and a 3d array containg the coordinates of each atom. This will have an extra dimension if you read a trajectory consisting of multiple snapshot as generated for instance from an MD simulation.
+If you use SNOW, the functions will genrally provide a tuple: a list of elements for each of the atoms in the system and a 3d array containg the coordinates of each atom. Support for loading files.
 
 As an example, if we want to read the coordinates from a file named "Au561_Ih.xyz", containing a single snaplshot, we would call:
 ```python
@@ -189,3 +191,33 @@ python cnapatterner.py -i input.xyz -o output.xyz
 <div align="center">
   <img src="https://github.com/user-attachments/assets/46d18b9e-3829-4cf1-82c4-a8204f4da237" width="60%">
 </div>
+
+## Installation
+
+Snow can be installed in a python environment with pip. Please follow our [installation tutorial](https://nanomlms.github.io/snowWiki/install/).
+
+### System and software requirements
+
+System requirements should be light - many analyses run well on a laptop computer. PySNOW is a python library - the only software requirements are
+
+```
+python>=3.9
+numpy
+scipy
+```
+
+Some optional dependencies are: `pytest` for testing, `tqdm` for visualizing progress in looped calculations. PySNOW is also proficuously coupled with the I/O modules of packages such as `ase`, which offers a plethora of formats to read data from - this data can be then directly analyzed with pySNOW.
+
+### (Optional) tests
+
+We recommend running tests to check everything is working properly after installing pySNOW. A few automated tests can be done using the `pytest` package (an extra, optional dependence):
+
+```
+pip install pytest
+cd tests
+pytest
+```
+
+## Documentation
+
+The documentation is available [here](https://nanomlms.github.io/snowWiki/) (WIP).
