@@ -91,6 +91,7 @@ def agcn_calculator(coords, cut_off, cn_max = 12.0, strained: bool = False, pbc:
     sites=[]
 
     thr_cn = kwargs.get('thr_cn', None)
+    print(thr_cn)
     dbulk = kwargs.get('dbulk', None)
 
     if strained and dbulk is None:
