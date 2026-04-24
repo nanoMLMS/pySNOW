@@ -218,6 +218,6 @@ cd tests
 pytest
 ```
 
-## Documentation
+## Documentation
 
 The documentation is available [here](https://nanomlms.github.io/snowWiki/) (WIP).
