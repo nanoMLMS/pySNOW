@@ -1,8 +1,24 @@
-*.pot
-*.DS_Store
-build/
-.ipynb_checkpoints/
-snow/__pycache__/
-snow/*/__pycache__/
+# Python
+*.py[cod]
+*.so
+*.egg-info/
 __pycache__/
-*.egg-info
+**/__pycache__/
+
+# Distribution
+build/
+dist/
+
+# Environments
+.env
+venv/
+.venv/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# macOS
+.DS_Store
+
+# Miscellaneous
+*.pot
