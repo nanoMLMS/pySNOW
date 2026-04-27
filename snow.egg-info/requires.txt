@@ -1,6 +1,5 @@
 numpy
 scipy
-pytest
 
 [tests]
 pytest
