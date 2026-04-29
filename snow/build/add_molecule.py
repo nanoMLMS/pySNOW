@@ -1,9 +1,9 @@
 from collections import Counter
 
 import numpy as np
-from scipy.optimize import minimize
+from scipy.spatial.distance import cdist
 
-from snow.transform.rototranslation import align_z_to_axis
+from snow.transform.rototranslation import align_z_to_axis, rotate_around_ax
 from snow.descriptors.shape_descriptors import geometric_com as gcom
 
 
@@ -144,6 +144,7 @@ def apply_occupation(pairs, occ):
 
 
 #gibo stuff
+#TODO: extend to pbc
 
 def add_molecule(el: list[str],
                 coords: np.ndarray, 
@@ -151,30 +152,60 @@ def add_molecule(el: list[str],
                 direction: np.ndarray, 
                 distance: float, 
                 el_molecule: list[str], 
-                coords_molecule: np.ndarray):
+                coords_molecule: np.ndarray,
+                theta: float=0.,
+                phi: float=0.):
     """
-    add a molecule at a distance from a given site and along a given direction. 
-    The molecule will be taken as provided to the function and aligned to the direction vector (basically 
-    rotate of an angle that aligns the (0,0,1) vector with direction). It is thus good practice to 
-    leave the anchor atom of the molecule in the origin, and orient it as you want it to be placed.
-    Future implementation: add the angle at which the molecule is placed wrt direction.
+    Add a molecule at a distance from a given site and along a given direction. 
+    Regarding the final orientation: the molecule will be taken as provided to the function, 
+    rotated by theta (angle wrt direction vector around the x axis) and phi (angle around the direction vector),
+    and placed at a distance from the adsorption site along the given direction. 
     
     Parameters
     ----------
+    el: list[str]
+        list of chemical symbols of atoms in the system.
+    coords: np.ndarray
+        positions of atoms in the system
+    site: np.ndarray
+        coordinates of the adsorption site. The anchor atom will be placed at a distance=distance from this site
+    direction: np.ndarray
+        direction (3-d vector) to place the adsorbed molecule in
+    distance: float 
+        distance at which to place the (anchor atom of the) molecule
+    el_molecule: list[str]
+        list of chemical symbols of the atoms in the molecule
+    coords_molecule: np.ndarray
+        cooridnates of the atoms making up the molecule
+    theta: float
+        angle in radians with respect to the direction vector. The molecule will be rotated around the original
+        x axis of an angle theta, resulting in an adsorbed configuration with theta being the angle between the
+        direction vector and the initial z axis of your molecule
+    phi: float
+        angle in radians to rotate the molecule around the direction vector.
     
-    
-    
-    
+
     Returns
     -------
+        Tuple[list, np.ndarray]
+        The list of chemical symbols and the np.ndarray for the positions of the atoms in the new system comprising the adsorbed molecule.
     
     """
 
+    #rotate the molecule 
+    if theta != 0.:
+        coords_molecule = rotate_around_ax(coords_molecule, [1.,0.,0.], theta)
+    if phi != 0.:
+        coords_molecule = rotate_around_ax(coords_molecule, [0.,0.,1.], phi)
+
+    #normalize direction
     norm_direction = np.asarray(direction, dtype=float)
     norm_direction /= np.linalg.norm(norm_direction)
 
+    #compute shift
     shift = distance*norm_direction
 
+    #place molecule
     coords_molecule = align_z_to_axis(coords_molecule, norm_direction)
     coords_adsorbed_molecule = np.array([coord_mol + site + shift for coord_mol in coords_molecule])
 
@@ -203,66 +234,57 @@ def locally_normal_direction(coords: np.ndarray, site: np.ndarray, cutoff: float
     return direction 
 
 
+def triplet_normal(coords: np.ndarray, triplet: list[int]):
+    """
+    get the normal direction wrt to a plane defined by the three atoms making up a triplet.
+    """
+
+    p1, p2, p3 = coords[triplet[0]], coords[triplet[1]], coords[triplet[2]]
+
+    ax1 = p2-p1
+    ax2 = p3-p1
+
+    normal = np.cross(ax1, ax2)
+    normal /= np.linalg.norm(normal)
+
+    #a primitive check on orientation:
+    #this probably only works with convex nanoparticles.
+    site = (p1+p2+p3)/3.
+    if np.dot(normal, site-gcom(coords)) >= 0:
+        return normal
+    else:
+        return normal*-1.
 
 
+def fourplet_normal(coords: np.ndarray, fourplet: list[int]):
+    """
+    get the normal direction wrt to the surface defined by the atoms in a fourplet.
+    If the four atoms are not on a single plane, an average over the planes defined 
+    by the possible triplets is returned.
+    """
 
-
-
-# #some helper function for the optimization process
-# def angles_to_unit_vector(theta_phi):
-#     theta, phi = theta_phi #need a single array of variables for optimization
-#     return np.array([
-#         np.sin(theta) * np.cos(phi),
-#         np.sin(theta) * np.sin(phi),
-#         np.cos(theta)
-#     ])
-
-# #the main function to minimize: sum of distances
-# def objective(theta_phi, neigh_coords):
-#     p = angles_to_unit_vector(theta_phi)
-#     return -np.sum(np.linalg.norm(neigh_coords - p, axis=1))
-
-# def gradient(theta_phi):
-#     "analytic gradient of the objective wrt theta, phi"
-
-#     theta, phi = theta_phi
-#     st, ct = np.sin(theta), np.cos(theta)
-#     sp, cp = np.sin(phi),   np.cos(phi)
-
-# def site_direction_gcn(el, coords, index, site, cutoff):
-#     """get the direction to adsorb molecules on a gcn (atomic) site by 
-#     maximizing the distance of the adsorbed atom from atoms in proximity of the site.
-#     """
-
-#     if index is not None:
-#         site = coords[index]
-
-#     #implict constraint: we only care about a direction (so an angle)
-#     initial_direction =  np.array(site - gcom(coords))
-#     initial_direction /= np.linalg.norm(initial_direction)
-#     shifted_coords = coords-site
-
-#     #select only neighbours in the cutoff radius
-#     distances_to_site = np.linalg.norm(shifted_coords, axis=1)
-#     mask = distances_to_site < cutoff
-#     # exclude the site atom itself (distance == 0)
-#     if index is not None:
-#         mask[index] = False
-#     neighbour_coords = shifted_coords[mask]
-
-#     if len(neighbour_coords) == 0:
-#         # no neighbours: fall back to the bulk-away direction
-#         return initial_direction
+    p1, p2, p3, p4 = coords[fourplet[0]], coords[fourplet[1]], coords[fourplet[2]], coords[fourplet[3]]
     
-#     #convert initial direction to angles:
-#     d = initial_direction
-#     theta_0 = np.arccos(d[2])
-#     phi_0   = np.arctan2(d[1], d[0])
+    n1 = triplet_normal(coords, [fourplet[0], fourplet[1], fourplet[2]])
+    n2 = triplet_normal(coords, [fourplet[0], fourplet[1], fourplet[3]])
+    n3 = triplet_normal(coords, [fourplet[1], fourplet[2], fourplet[3]])
+    n4 = triplet_normal(coords, [fourplet[0], fourplet[2], fourplet[3]])
 
-#     #optimize
-#     result = minimize(
-#         objective, [theta_0, phi_0],
-#         jac=gradient,
-#         method='BFGS',
-#         options={'gtol': 1e-10, 'maxiter': 500}
-#     )
+    normal = n1+n2+n3+n4
+    return normal / np.linalg.norm(normal)
+
+
+def check_overlapping(el: list[str], coords: np.ndarray, atomic_radii: dict):
+    """
+    Check if any atom in coords is overlapping with any other atom.
+    """
+
+    radii = np.array([atomic_radii[s] for s in el])          # (N,)
+    radii_sum = radii[:, None] + radii[None, :]              # (N, N) pairwise sums
+
+    dist_matrix = cdist(coords, coords)                      # (N, N) pairwise distances
+
+    # ignore self-pairs by setting diagonal to infinity
+    np.fill_diagonal(dist_matrix, np.inf)
+
+    return np.any(dist_matrix < radii_sum), np.where(dist_matrix < radii_sum)
