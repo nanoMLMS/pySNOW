@@ -124,8 +124,15 @@ def agcn_calculator(coords, cut_off, cn_max = 12.0, strained: bool = False, pbc:
 
 
 
-def bridge_gcn(coords: np.ndarray, cut_off: float, thr_cn: int, dbulk : float = None, cn_max = 18.0,
-                phantom: bool=True, strained: bool = False, pbc: bool = False, box = None)-> tuple:
+def bridge_gcn(coords: np.ndarray, 
+               cut_off: float, 
+               thr_cn: int, 
+               dbulk : float = None, 
+               cn_max = 18.0,
+               phantom: bool=True, 
+               strained: bool = False, 
+               pbc: bool = False, 
+               box = None)-> tuple:
     """
     Identifies bridge absorption sites and computes the Generalized Coordination Number (GCN)
     for a site. The GCN is defined as the sum of the coordination numbers of the neighbors
@@ -141,7 +148,7 @@ def bridge_gcn(coords: np.ndarray, cut_off: float, thr_cn: int, dbulk : float = 
         Maximum typical coordination number in the specific system (default is 18.0).
     phantom : bool, optional
         If True, also returns the coordinates of the midpoints between pairs ('phantom' atoms indicating the bridge sites)
-        for representation and testing (default is True).
+        (default is True).
     thr_cn : int
         a threshold coordination number value. If provided, only atoms with coordination < thr_cn are considered for the GCN calculation
         (e.g. useful if you only want to consider surface atoms in your calculation)
@@ -217,7 +224,7 @@ def bridge_gcn(coords: np.ndarray, cut_off: float, thr_cn: int, dbulk : float = 
 def three_hollow_gcn(coords: np.ndarray, 
                      cut_off: float, 
                      thr_cn: int, 
-                     phantom: bool=False, 
+                     phantom: bool=True, 
                      dbulk: float = None, 
                      cn_max: float = 22.0, 
                      strained: bool = False, 
@@ -236,7 +243,7 @@ def three_hollow_gcn(coords: np.ndarray,
         (e.g. useful if you only want to consider surface atoms in your calculation)
     phantom : bool, optional
         If True, also returns the coordinates of the midpoints between triplets ('phantom' atoms indicating the 3-hollow sites)
-        for representation and testing (default is True).
+        (default is True).
     dbulk: float, optional
         Bulk distance for strained aGCN (default is None), has to be provided if strained is True
     cn_max: float
@@ -318,7 +325,7 @@ def three_hollow_gcn(coords: np.ndarray,
 def four_hollow_gcn(coords: np.ndarray, 
                     cut_off: float, 
                     thr_cn: int, 
-                    phantom: bool=False,
+                    phantom: bool=True,
                     dbulk: float = None,
                     cn_max: float = 26.0, 
                     strained: bool = False, 
@@ -335,6 +342,9 @@ def four_hollow_gcn(coords: np.ndarray,
     thr_cn : int
         a threshold coordination number value. If provided, only atoms with coordination < thr_cn are considered for the GCN calculation
         (e.g. useful if you only want to consider surface atoms in your calculation)
+    phantom : bool, optional
+        If True, also returns the coordinates of the midpoints between fourplets ('phantom' atoms indicating the 3-hollow sites)
+        (default is True).
     dbulk: float, optional
         Bulk distance for strained aGCN (default is None), has to be provided if strained is True
     cn_max: float
