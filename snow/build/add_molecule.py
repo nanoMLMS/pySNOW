@@ -1,6 +1,10 @@
 from collections import Counter
 
 import numpy as np
+from scipy.optimize import minimize
+
+from snow.transform.rototranslation import align_z_to_axis
+from snow.descriptors.shape_descriptors import geometric_com as gcom
 
 
 def prepare_data(data_list):
@@ -137,3 +141,128 @@ def apply_occupation(pairs, occ):
         return [pairs[0]]
     n = max(1, int(len(pairs) * occ / 100))
     return pairs[:n]
+
+
+#gibo stuff
+
+def add_molecule(el: list[str],
+                coords: np.ndarray, 
+                site: np.ndarray, 
+                direction: np.ndarray, 
+                distance: float, 
+                el_molecule: list[str], 
+                coords_molecule: np.ndarray):
+    """
+    add a molecule at a distance from a given site and along a given direction. 
+    The molecule will be taken as provided to the function and aligned to the direction vector (basically 
+    rotate of an angle that aligns the (0,0,1) vector with direction). It is thus good practice to 
+    leave the anchor atom of the molecule in the origin, and orient it as you want it to be placed.
+    Future implementation: add the angle at which the molecule is placed wrt direction.
+    
+    Parameters
+    ----------
+    
+    
+    
+    
+    Returns
+    -------
+    
+    """
+
+    norm_direction = np.asarray(direction, dtype=float)
+    norm_direction /= np.linalg.norm(norm_direction)
+
+    shift = distance*norm_direction
+
+    coords_molecule = align_z_to_axis(coords_molecule, norm_direction)
+    coords_adsorbed_molecule = np.array([coord_mol + site + shift for coord_mol in coords_molecule])
+
+    el = el + el_molecule
+    coords = np.vstack([coords, coords_adsorbed_molecule])
+
+    return el, coords
+
+
+def locally_normal_direction(coords: np.ndarray, site: np.ndarray, cutoff: float):
+    """
+    get a direction to place adsorbed molecules on nanoparticles and surfaces
+    by computing the line connecting the adsorption site 
+    and the (geometric) center of mass of the local environment of the site."""
+
+    neighbours = np.array([coord for coord in coords if (np.linalg.norm(coord-site) < cutoff) ])
+    #capire come togliere i due siti da bridge
+    if neighbours is None:
+        raise Exception("cutoff is too small in locally_normal_direction, no neighbours found to define a locally normal direction.")
+    
+    direction = site - gcom(neighbours)
+    if np.all( direction == np.array([0.,0.,0.]) ):
+        raise Exception("cutoff is too small in locally_normal_direction, not enough neighbours found to define a locally normal direction.")
+    direction = direction / np.linalg.norm(direction)
+
+    return direction 
+
+
+
+
+
+
+
+# #some helper function for the optimization process
+# def angles_to_unit_vector(theta_phi):
+#     theta, phi = theta_phi #need a single array of variables for optimization
+#     return np.array([
+#         np.sin(theta) * np.cos(phi),
+#         np.sin(theta) * np.sin(phi),
+#         np.cos(theta)
+#     ])
+
+# #the main function to minimize: sum of distances
+# def objective(theta_phi, neigh_coords):
+#     p = angles_to_unit_vector(theta_phi)
+#     return -np.sum(np.linalg.norm(neigh_coords - p, axis=1))
+
+# def gradient(theta_phi):
+#     "analytic gradient of the objective wrt theta, phi"
+
+#     theta, phi = theta_phi
+#     st, ct = np.sin(theta), np.cos(theta)
+#     sp, cp = np.sin(phi),   np.cos(phi)
+
+# def site_direction_gcn(el, coords, index, site, cutoff):
+#     """get the direction to adsorb molecules on a gcn (atomic) site by 
+#     maximizing the distance of the adsorbed atom from atoms in proximity of the site.
+#     """
+
+#     if index is not None:
+#         site = coords[index]
+
+#     #implict constraint: we only care about a direction (so an angle)
+#     initial_direction =  np.array(site - gcom(coords))
+#     initial_direction /= np.linalg.norm(initial_direction)
+#     shifted_coords = coords-site
+
+#     #select only neighbours in the cutoff radius
+#     distances_to_site = np.linalg.norm(shifted_coords, axis=1)
+#     mask = distances_to_site < cutoff
+#     # exclude the site atom itself (distance == 0)
+#     if index is not None:
+#         mask[index] = False
+#     neighbour_coords = shifted_coords[mask]
+
+#     if len(neighbour_coords) == 0:
+#         # no neighbours: fall back to the bulk-away direction
+#         return initial_direction
+    
+#     #convert initial direction to angles:
+#     d = initial_direction
+#     theta_0 = np.arccos(d[2])
+#     phi_0   = np.arctan2(d[1], d[0])
+
+#     #optimize
+#     result = minimize(
+#         objective, [theta_0, phi_0],
+#         jac=gradient,
+#         method='BFGS',
+#         options={'gtol': 1e-10, 'maxiter': 500}
+#     )

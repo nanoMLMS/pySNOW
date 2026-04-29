@@ -79,7 +79,7 @@ def rotate_around_ax(coords, axis, angle):
 
 def align_axis_to_z(coords: np.ndarray, axis: np.ndarray) -> np.ndarray:
     """ 
-    Rotates the system so that the provided symmetry_axis is aligned with the z=(0,0,1) axis
+    Rotates the system so that the provided axis is aligned with the z=(0,0,1) axis
 
     Parameters
     ----------
@@ -94,7 +94,7 @@ def align_axis_to_z(coords: np.ndarray, axis: np.ndarray) -> np.ndarray:
         The transformed system of coordinates
     """
 
-    #two possibly bad cases
+    #two possible bad cases
     if np.allclose(axis, [0., 0., 1.]):
         return coords
     elif np.allclose(axis, [0., 0., -1.]):
@@ -103,6 +103,45 @@ def align_axis_to_z(coords: np.ndarray, axis: np.ndarray) -> np.ndarray:
     axis = np.asarray(axis, dtype = float)
     axis /= np.linalg.norm(axis) 
     rotation_axis = np.cross(axis, np.array([0, 0, 1]))
+    
+    #angle of rotation
+    cos_theta = np.dot(axis, np.array([0, 0, 1]))
+    sin_theta = np.linalg.norm(rotation_axis)
+    
+    angle = np.arctan2(sin_theta, cos_theta)
+    
+    #normalizing the rot axis
+    rotation_axis = rotation_axis / np.linalg.norm(rotation_axis)
+
+    return rotate_around_ax(coords, rotation_axis, angle)
+
+def align_z_to_axis(coords: np.ndarray, axis: np.ndarray) -> np.ndarray:
+    """ 
+    Rotates the system so that the original z-axis of the system 
+    is aligned with the provided axis
+
+    Parameters
+    ----------
+    coords : np.ndarray
+        Array of the atomic coordinates
+    axis : np.ndarray
+        axis to become the new z-axis of the coordinates
+
+    Returns
+    -------
+    np.ndarray
+        The transformed system of coordinates
+    """
+
+    #two possible bad cases
+    if np.allclose(axis, [0., 0., 1.]):
+        return coords
+    elif np.allclose(axis, [0., 0., -1.]):
+        return rotate_around_ax(coords, [1., 0., 0.], np.pi)
+
+    axis = np.asarray(axis, dtype = float)
+    axis /= np.linalg.norm(axis) 
+    rotation_axis = np.cross(np.array([0, 0, 1]), axis)
     
     #angle of rotation
     cos_theta = np.dot(axis, np.array([0, 0, 1]))
