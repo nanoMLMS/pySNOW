@@ -37,7 +37,7 @@ def translate_com_to_origin(coords : np.ndarray, elements=None) -> np.ndarray:
 
 def rotate_around_ax(coords, axis, angle):
     """
-    Rotate coordinates around a given axis by a given angle.
+    Rotate coordinates around a given axis by a given angle (in radians).
 
     Parameters
     ----------

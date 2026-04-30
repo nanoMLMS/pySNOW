@@ -273,6 +273,9 @@ def fourplet_normal(coords: np.ndarray, fourplet: list[int]):
     normal = n1+n2+n3+n4
     return normal / np.linalg.norm(normal)
 
+def cover_surface(el, coords, thr_cn, ratio=1.0, sites: str = 'atop', ):
+
+    return
 
 def check_overlapping(el: list[str], coords: np.ndarray, atomic_radii: dict):
     """
@@ -287,4 +290,4 @@ def check_overlapping(el: list[str], coords: np.ndarray, atomic_radii: dict):
     # ignore self-pairs by setting diagonal to infinity
     np.fill_diagonal(dist_matrix, np.inf)
 
-    return np.any(dist_matrix < radii_sum), np.where(dist_matrix < radii_sum)
+    return np.any(dist_matrix < radii_sum)#, np.where(dist_matrix < radii_sum)
