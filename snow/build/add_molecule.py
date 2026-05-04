@@ -5,6 +5,7 @@ from scipy.spatial.distance import cdist
 
 from snow.transform.rototranslation import align_z_to_axis, rotate_around_ax
 from snow.descriptors.shape_descriptors import geometric_com as gcom
+from snow.descriptors.coordination import coordination_number, bridge_gcn, three_hollow_gcn, four_hollow_gcn
 
 
 def prepare_data(data_list):
@@ -154,7 +155,8 @@ def add_molecule(el: list[str],
                 el_molecule: list[str], 
                 coords_molecule: np.ndarray,
                 theta: float=0.,
-                phi: float=0.):
+                phi: float=0.,
+                molecule_only: bool=False):
     """
     Add a molecule at a distance from a given site and along a given direction. 
     Regarding the final orientation: the molecule will be taken as provided to the function, 
@@ -183,6 +185,8 @@ def add_molecule(el: list[str],
         direction vector and the initial z axis of your molecule
     phi: float
         angle in radians to rotate the molecule around the direction vector.
+    molecule_only: bool
+        Only return the elements list and coords array of the molecule rather than those of the entire system. Default to False
     
 
     Returns
@@ -209,10 +213,14 @@ def add_molecule(el: list[str],
     coords_molecule = align_z_to_axis(coords_molecule, norm_direction)
     coords_adsorbed_molecule = np.array([coord_mol + site + shift for coord_mol in coords_molecule])
 
-    el = el + el_molecule
-    coords = np.vstack([coords, coords_adsorbed_molecule])
+    if molecule_only:
+        return el_molecule, coords_adsorbed_molecule
 
-    return el, coords
+    else:
+        el = el + el_molecule
+        coords = np.vstack([coords, coords_adsorbed_molecule])
+
+        return el, coords
 
 
 def locally_normal_direction(coords: np.ndarray, site: np.ndarray, cutoff: float):
@@ -273,9 +281,7 @@ def fourplet_normal(coords: np.ndarray, fourplet: list[int]):
     normal = n1+n2+n3+n4
     return normal / np.linalg.norm(normal)
 
-def cover_surface(el, coords, thr_cn, ratio=1.0, sites: str = 'atop', ):
 
-    return
 
 def check_overlapping(el: list[str], coords: np.ndarray, atomic_radii: dict):
     """
@@ -291,3 +297,71 @@ def check_overlapping(el: list[str], coords: np.ndarray, atomic_radii: dict):
     np.fill_diagonal(dist_matrix, np.inf)
 
     return np.any(dist_matrix < radii_sum)#, np.where(dist_matrix < radii_sum)
+
+def cover_surface(el, coords, cutoff, thr_cn, el_adsorbate, coords_adsorbate, distance, atomic_radii, ratio=1.0, sites_type: str = 'atop', theta=0., phi=0.):
+    """cover as much as possible a system with molecules while avoiding overlapping. Eventually you can decide to
+    only keep a given fraction of all the molecules with the ratio argument. The order in which sites will tentatively be covered
+    by a molecule is random. The orientation of the molecule can be random or fixed (only fixed for now). The sites can be chosen as atop, bridge, 
+    three-hollow or four-hollow."""
+
+    assert 0.0 <= ratio <= 1.0
+
+    #get sites and normal directions
+    if sites_type == 'atop':
+        cns = coordination_number(coords, cutoff)
+        sites = np.asarray([coord for coord, cn in zip(coords, cns) if cn<thr_cn ])
+        directions = np.asarray([ locally_normal_direction(coords, site, cutoff) for site in sites ])
+    elif sites_type == 'bridge':
+        sites, pairs, bgcns = bridge_gcn(coords, cutoff, thr_cn)
+        directions = np.asarray([ locally_normal_direction(coords, site, cutoff) for site in sites ])
+    elif sites_type == 'three-hollow':
+        sites, triplets, tgcns = three_hollow_gcn(coords, cutoff, thr_cn)
+        directions = np.asarray([ triplet_normal(coords, triplet) for triplet in triplets ])
+    elif sites_type == 'four-hollow':
+        sites, fourplets, fgcns = four_hollow_gcn(coords, cutoff, thr_cn)
+        directions = np.asarray([ fourplet_normal(coords, fourplet) for fourplet in fourplets ])
+    else:
+        raise Exception(f'sites_type {sites_type} not recognized.')
+
+    #iterate randomly over sites and try to place a molecule there
+    indexes = np.random.permutation(len(sites))
+
+    test_el     = el
+    test_coords = coords
+
+    el_ads_list = []
+    coords_ads_list = []
+
+    overlap_count = 0
+
+    #add adsorbates to full coverage
+    for i in indexes:
+        site = sites[i]
+        direction = directions[i]
+        #for now fixed orientation
+        el_ads, coords_ads = add_molecule(test_el, test_coords, site, direction, distance, el_adsorbate, coords_adsorbate, theta, phi, molecule_only=True)
+
+        if not check_overlapping(test_el+el_ads, np.vstack((test_coords,coords_ads)), atomic_radii):
+            test_el = test_el + el_ads
+            test_coords = np.vstack((test_coords,coords_ads))
+            el_ads_list.append(el_ads)
+            coords_ads_list.append(coords_ads)
+        
+        else:
+            overlap_count +=1
+    
+    print('tries that resulted in overlapping atoms:',overlap_count)
+
+
+    #only keep a (random) ratio fraction of the full coverage
+    if ratio < 1.:
+        test_el = el
+        test_coords = coords
+        keep_indexes = np.random.choice( len(el_ads_list), int(np.round(ratio*len(el_ads_list))), replace=False )
+        for i in keep_indexes:
+            test_el = test_el + el_ads_list[i]
+            test_coords = np.vstack((test_coords, coords_ads_list[i]))
+    
+        print('only kept',len(keep_indexes),'adsorbates out of',len(el_ads_list),'possible ones ')
+
+    return test_el, test_coords
