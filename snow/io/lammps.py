@@ -14,7 +14,7 @@ def read_lammps_data(file_path: str) -> Tuple[np.ndarray, np.ndarray]:
 
     Returns
     -------
-    Tuple[np.ndarray, np.ndarray]
+    Tuple[list, np.ndarray]
         Elements and coordinates array of the system
     """
     coordinates = []
