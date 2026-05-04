@@ -3,7 +3,7 @@ from collections import Counter
 import numpy as np
 from scipy.spatial.distance import cdist
 
-from snow.transform.rototranslation import align_z_to_axis, rotate_around_ax
+from snow.misc.rototranslation import align_z_to_axis, rotate_around_ax
 from snow.descriptors.shape_descriptors import geometric_com as gcom
 from snow.descriptors.coordination import coordination_number, bridge_gcn, three_hollow_gcn, four_hollow_gcn
 

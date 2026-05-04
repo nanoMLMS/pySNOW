@@ -5,10 +5,9 @@ from scipy.sparse import coo_matrix
 from scipy.spatial import ConvexHull, cKDTree
 from scipy.spatial.distance import pdist, squareform
 
-
 from snow.descriptors.utils import distance_matrix, hetero_distance_matrix, _check_structure
 from snow.descriptors.shape_descriptors import center_of_mass, geometric_com
-from snow.transform.rototranslation import align_axis_to_z
+from snow.misc.rototranslation import align_axis_to_z
 
     
 def pddf_calculator(coords, bin_width: float, use_lattice_units: bool, lattice=None):
