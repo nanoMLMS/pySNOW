@@ -272,3 +272,65 @@ def gyr_rad(positions, masses=None):
     centered = positions - np.average(positions, axis=0, weights=masses)
 
     return np.sqrt( np.average( np.sum(centered**2, axis=1), weights=masses ) )
+
+
+
+#experimental fast pbc com/gcom calculators
+def _parse_box_triclinic(box: np.ndarray):
+    """
+    Returns (H, origin) where H is the (3,3) matrix of lattice vectors as columns.
+    Accepts:
+      (3,)   — orthorhombic lengths, origin at 0
+      (3,2)  — lower/upper bounds per axis, orthorhombic
+      (3,3)  — full lattice matrix (vectors as rows, standard convention)
+    """
+    box = np.asarray(box, dtype=float)
+    if box.shape == (3,):
+        return np.diag(box), np.zeros(3)
+    elif box.shape == (3, 2):
+        lengths = box[:, 1] - box[:, 0]
+        return np.diag(lengths), box[:, 0]
+    elif box.shape == (3, 3):
+        # convention: rows are lattice vectors → transpose to get columns
+        return box.T, np.zeros(3)
+    else:
+        raise ValueError("Box must be shape (3,), (3,2), or (3,3).")
+
+
+def center_of_mass_pbc(
+    coords: np.ndarray,
+    elements,
+    box: np.ndarray,
+) -> np.ndarray:
+    masses = np.array([mass[e] for e in elements])
+    H, origin = _parse_box_triclinic(box)
+
+    # Cartesian → fractional
+    H_inv = np.linalg.inv(H)
+    r_frac = (coords - origin) @ H_inv.T          # (n, 3), each row in [0,1)
+
+    # Angle method in fractional space (L=1)
+    theta = 2 * np.pi * r_frac                    # (n, 3)
+    xi    = np.average(np.cos(theta), axis=0, weights=masses)
+    zeta  = np.average(np.sin(theta), axis=0, weights=masses)
+
+    frac_com = (np.arctan2(-zeta, -xi) + np.pi) / (2 * np.pi)
+
+    # Fractional → Cartesian
+    return H @ frac_com + origin
+
+
+def geometric_com_pbc(
+    coords: np.ndarray,
+    box: np.ndarray,
+) -> np.ndarray:
+    H, origin = _parse_box_triclinic(box)
+    H_inv = np.linalg.inv(H)
+    r_frac = (coords - origin) @ H_inv.T
+
+    theta = 2 * np.pi * r_frac
+    xi    = np.mean(np.cos(theta), axis=0)
+    zeta  = np.mean(np.sin(theta), axis=0)
+
+    frac_com = (np.arctan2(-zeta, -xi) + np.pi) / (2 * np.pi)
+    return H @ frac_com + origin

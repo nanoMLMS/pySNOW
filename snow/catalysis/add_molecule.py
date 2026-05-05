@@ -2,9 +2,10 @@ from collections import Counter
 
 import numpy as np
 from scipy.spatial.distance import cdist
+from snow.descriptors.utils import pbc_distance
 
 from snow.misc.rototranslation import align_z_to_axis, rotate_around_ax
-from snow.descriptors.shape_descriptors import geometric_com as gcom
+from snow.descriptors.shape_descriptors import geometric_com as gcom, geometric_com_pbc as gcom_pbc
 from snow.descriptors.coordination import coordination_number, bridge_gcn, three_hollow_gcn, four_hollow_gcn
 
 
@@ -223,28 +224,57 @@ def add_molecule(el: list[str],
         return el, coords
 
 
-def locally_normal_direction(coords: np.ndarray, site: np.ndarray, cutoff: float):
+def get_local_neighbours(coords, center, cutoff, pbc=False, box=None):
+    """get neighbours of a specific inside inside a given cutoff"""
+
+
+    if pbc:
+        print('pbc are not implemented yet')
+        neighbours = None
+        # if box is None:
+        #     raise ValueError('A box must be provided if pbc are enabled')
+
+        # neighbours = np.array([coord for coord in coords if pbc_distance(coord, center, box) < cutoff])
+
+    else:
+        neighbours = np.array([coord for coord in coords if (np.linalg.norm(coord-center) < cutoff) ])
+
+    if neighbours is None:
+        raise Exception("cutoff is too small in locally_normal_direction, no neighbours found to define a locally normal direction.")
+
+    return neighbours
+
+def locally_normal_direction(coords: np.ndarray, site: np.ndarray, cutoff: float, pbc=False, box=None):
     """
     get a direction to place adsorbed molecules on nanoparticles and surfaces
     by computing the line connecting the adsorption site 
     and the (geometric) center of mass of the local environment of the site."""
 
-    neighbours = np.array([coord for coord in coords if (np.linalg.norm(coord-site) < cutoff) ])
-    #capire come togliere i due siti da bridge
-    if neighbours is None:
-        raise Exception("cutoff is too small in locally_normal_direction, no neighbours found to define a locally normal direction.")
-    
-    direction = site - gcom(neighbours)
+    #should we remove the two atoms from birdge sites neighbour calculations?
+
+    #get neighbours of the site
+    neighbours = get_local_neighbours(coords, site, cutoff, pbc, box)
+
+    #compute a locally normal direction
+    if pbc:
+        direction = site - gcom_pbc(neighbours, box)
+
+    else:
+        direction = site - gcom(neighbours)
+
     if np.all( direction == np.array([0.,0.,0.]) ):
-        raise Exception("cutoff is too small in locally_normal_direction, not enough neighbours found to define a locally normal direction.")
+        raise Exception("cutoff is too small in locally_normal_direction, not enough neighbours found to define a locally normal direction (the adsorption site coincides with the geometric center of mass of the neighbourhood).")
+
     direction = direction / np.linalg.norm(direction)
 
     return direction 
 
 
-def triplet_normal(coords: np.ndarray, triplet: list[int]):
+def triplet_normal(coords: np.ndarray, triplet: list[int], cutoff, pbc=False, box=None):
     """
     get the normal direction wrt to a plane defined by the three atoms making up a triplet.
+    You still need a cutoff to define a lcoal atomic environmoment - this is used to compute
+    the 'outside' orientation with respect to the local surface.
     """
 
     p1, p2, p3 = coords[triplet[0]], coords[triplet[1]], coords[triplet[2]]
@@ -252,31 +282,59 @@ def triplet_normal(coords: np.ndarray, triplet: list[int]):
     ax1 = p2-p1
     ax2 = p3-p1
 
+    if pbc:
+
+        print('pbc not implemented yet')
+        pass
+
+        # if type(box) == list and len(box)==3 or type(box)==np.ndarray and (box.shape==(3,) or box.shape==(3,1)):
+        #     box = np.asarray([[box[0],0.,0.], [0., box[1], 0.], [0., 0., box[2]] ])
+        # elif box.shape !=(3,3):
+        #     raise Exception('Please provide the box as either a (3,3) or (3,) array or list.')
+
+        # inv_box = np.linalg.inv(box)
+        # frac_1 = ax1 @ inv_box
+        # frac_2 = ax2 @ inv_box
+        # frac_1 -= np.round(frac_1)
+        # frac_2 -= np.round(frac_2)
+        # ax1 = frac_1 @ box
+        # ax2 = frac_2 @ box
+
+
     normal = np.cross(ax1, ax2)
     normal /= np.linalg.norm(normal)
 
     #a primitive check on orientation:
-    #this probably only works with convex nanoparticles.
     site = (p1+p2+p3)/3.
+
+    neighs = get_local_neighbours(coords, site, cutoff, pbc, box)
+
+    if pbc:
+        ref_gcom = gcom_pbc(coords, box)
+    else:
+        ref_gcom = gcom(coords)
+
     if np.dot(normal, site-gcom(coords)) >= 0:
         return normal
     else:
         return normal*-1.
 
 
-def fourplet_normal(coords: np.ndarray, fourplet: list[int]):
+def fourplet_normal(coords: np.ndarray, fourplet: list[int], cutoff, pbc=False, box=None):
     """
     get the normal direction wrt to the surface defined by the atoms in a fourplet.
     If the four atoms are not on a single plane, an average over the planes defined 
     by the possible triplets is returned.
+    You still need a cutoff to define a lcoal atomic environmoment - this is used to compute
+    the 'outside' orientation with respect to the local surface.
     """
 
     p1, p2, p3, p4 = coords[fourplet[0]], coords[fourplet[1]], coords[fourplet[2]], coords[fourplet[3]]
     
-    n1 = triplet_normal(coords, [fourplet[0], fourplet[1], fourplet[2]])
-    n2 = triplet_normal(coords, [fourplet[0], fourplet[1], fourplet[3]])
-    n3 = triplet_normal(coords, [fourplet[1], fourplet[2], fourplet[3]])
-    n4 = triplet_normal(coords, [fourplet[0], fourplet[2], fourplet[3]])
+    n1 = triplet_normal(coords, [fourplet[0], fourplet[1], fourplet[2]], cutoff, pbc, box)
+    n2 = triplet_normal(coords, [fourplet[0], fourplet[1], fourplet[3]], cutoff, pbc, box)
+    n3 = triplet_normal(coords, [fourplet[1], fourplet[2], fourplet[3]], cutoff, pbc, box)
+    n4 = triplet_normal(coords, [fourplet[0], fourplet[2], fourplet[3]], cutoff, pbc, box)
 
     normal = n1+n2+n3+n4
     return normal / np.linalg.norm(normal)
@@ -286,6 +344,7 @@ def fourplet_normal(coords: np.ndarray, fourplet: list[int]):
 def check_overlapping(el: list[str], coords: np.ndarray, atomic_radii: dict):
     """
     Check if any atom in coords is overlapping with any other atom.
+    TODO: add pbc
     """
 
     radii = np.array([atomic_radii[s] for s in el])          # (N,)
@@ -298,7 +357,7 @@ def check_overlapping(el: list[str], coords: np.ndarray, atomic_radii: dict):
 
     return np.any(dist_matrix < radii_sum)#, np.where(dist_matrix < radii_sum)
 
-def cover_surface(el, coords, cutoff, thr_cn, el_adsorbate, coords_adsorbate, distance, atomic_radii, ratio=1.0, sites_type: str = 'atop', theta=0., phi=0.):
+def cover_surface(el, coords, cutoff, thr_cn, el_adsorbate, coords_adsorbate, distance, atomic_radii, ratio=1.0, sites_type: str = 'atop', theta=0., phi=0., pbc=False, box=None):
     """cover as much as possible a system with molecules while avoiding overlapping. Eventually you can decide to
     only keep a given fraction of all the molecules with the ratio argument. The order in which sites will tentatively be covered
     by a molecule is random. The orientation of the molecule can be random or fixed (only fixed for now). The sites can be chosen as atop, bridge, 
@@ -310,16 +369,16 @@ def cover_surface(el, coords, cutoff, thr_cn, el_adsorbate, coords_adsorbate, di
     if sites_type == 'atop':
         cns = coordination_number(coords, cutoff)
         sites = np.asarray([coord for coord, cn in zip(coords, cns) if cn<thr_cn ])
-        directions = np.asarray([ locally_normal_direction(coords, site, cutoff) for site in sites ])
+        directions = np.asarray([ locally_normal_direction(coords, site, cutoff, pbc, box) for site in sites ])
     elif sites_type == 'bridge':
         sites, pairs, bgcns = bridge_gcn(coords, cutoff, thr_cn)
-        directions = np.asarray([ locally_normal_direction(coords, site, cutoff) for site in sites ])
+        directions = np.asarray([ locally_normal_direction(coords, site, cutoff, pbc, box) for site in sites ])
     elif sites_type == 'three-hollow':
         sites, triplets, tgcns = three_hollow_gcn(coords, cutoff, thr_cn)
-        directions = np.asarray([ triplet_normal(coords, triplet) for triplet in triplets ])
+        directions = np.asarray([ triplet_normal(coords, triplet, cutoff, pbc, box) for triplet in triplets ])
     elif sites_type == 'four-hollow':
         sites, fourplets, fgcns = four_hollow_gcn(coords, cutoff, thr_cn)
-        directions = np.asarray([ fourplet_normal(coords, fourplet) for fourplet in fourplets ])
+        directions = np.asarray([ fourplet_normal(coords, fourplet, cutoff, pbc, box) for fourplet in fourplets ])
     else:
         raise Exception(f'sites_type {sites_type} not recognized.')
 
