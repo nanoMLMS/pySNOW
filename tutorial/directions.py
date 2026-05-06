@@ -4,7 +4,7 @@
 #the sites positions are represented by fictitious Hydrogen atoms.
 from snow.io.xyz import read_xyz, write_xyz
 from snow.descriptors.coordination import *
-from snow.build.add_molecule import *
+from snow.catalysis.add_molecule import *
 
 import sys
 
@@ -59,7 +59,7 @@ write_xyz(file_out, bridge_el, bridge_coords, additional_data=vectors, mode='a' 
 #3hollow
 vectors = []
 for site, triplet in zip(t_sites, triplets):
-    vec = triplet_normal(coords, triplet)
+    vec = triplet_normal(coords, triplet, cutoff)
     vectors.append(vec)
 
 vectors = np.asarray(vectors)
@@ -74,7 +74,7 @@ write_xyz(file_out, th_el, th_coords, additional_data=vectors, mode='a' )
 
 vectors = []
 for site, fourplet in zip(f_sites, fourplets):
-    vec = fourplet_normal(coords, fourplet)
+    vec = fourplet_normal(coords, fourplet, cutoff)
     vectors.append(vec)
 
 vectors = np.asarray(vectors)
