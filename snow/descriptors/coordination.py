@@ -83,11 +83,12 @@ def agcn_calculator(coords, cut_off, cn_max = 12.0, strained: bool = False, pbc:
 
     Returns
     -------
+    ndarray: sites (atomic coordinates. If thr_cn is enabled, only coordinates of atoms selected by the coordination condition)
     ndarray: Values of the atop GCN.
     """
     neigh_list, coord_numbers = coordination_number(coords, cut_off, neigh_list=True, pbc=pbc, box=box)
     n_atoms = len(coord_numbers)
-    agcn = np.zeros(n_atoms)
+    agcn = []
     sites=[]
 
     thr_cn = kwargs.get('thr_cn', None)
@@ -115,12 +116,12 @@ def agcn_calculator(coords, cut_off, cn_max = 12.0, strained: bool = False, pbc:
 #                d_nb_nnb= np.linalg.norm(coords[nb] - coords[i])
 #                self_sgcn += dbulk/d_nb_nnb
 #            agcn[i]=((sgcn-self_sgcn)/cn_max)
-            agcn[i] = sgcn/cn_max
+            agcn.append( sgcn/cn_max )
         else:
             agcn_i = sum(coord_numbers[neigh] for neigh in atom_neighbors)# - coord_numbers[i]
-            agcn[i]=(agcn_i / cn_max)
-            
-    return sites, agcn
+            agcn.append(agcn_i / cn_max)
+
+    return np.asarray(sites), np.asarray(agcn)
 
 
 
@@ -214,7 +215,7 @@ def bridge_gcn(coords: np.ndarray,
             pos_2 = coords[p[1]]
             sites.append((pos_1 + pos_2) / 2)
     if phantom:
-        return sites, pairs, b_gcn
+        return np.asarray(sites), pairs, b_gcn
     else:
         return pairs, b_gcn
 
@@ -317,7 +318,7 @@ def three_hollow_gcn(coords: np.ndarray,
                         th_gcn.append(th_gcn_i / cn_max)
 
     if phantom:
-        return sites, triplets, th_gcn
+        return np.asarray(sites), triplets, th_gcn
     else:
         return triplets, th_gcn
 
@@ -434,6 +435,6 @@ def four_hollow_gcn(coords: np.ndarray,
 
     #print("\nDone four hollow")
     if phantom:
-        return sites, fours, fh_gcn
+        return np.asarray(sites), fours, fh_gcn
     else:
         return fours, fh_gcn

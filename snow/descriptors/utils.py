@@ -530,6 +530,9 @@ def pbc_distance(p1, p2, box):
 
     if type(box) == list and len(box)==3 or type(box)==np.ndarray and (box.shape==(3,) or box.shape==(3,1)):
         box = np.asarray([[box[0],0.,0.], [0., box[1], 0.], [0., 0., box[2]] ])
+    elif box.shape !=(3,3):
+        raise Exception('Please provide the box as either a (3,3) or (3,) array or list.')
+
 
     diff    = p1-p2
     inv_box = np.linalg.inv(box)
