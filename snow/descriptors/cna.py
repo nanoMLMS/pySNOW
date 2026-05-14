@@ -78,7 +78,7 @@ def longest_path_or_cycle(neigh_common, neigh_list):
 
 
 def calculate_cna(
-    coords, cut_off=None, return_pairs=False, pbc=False, box=None
+    coords, cut_off, return_pairs=False, pbc=False, box=None
 ) -> tuple[int, np.ndarray]:
     """perform the common neighbour analysis for the provided coords.
 
@@ -89,7 +89,7 @@ def calculate_cna(
     ----------
     coords : np.ndarray
         array containing the coordainates of each atom
-    cut_off : float, default None
+    cut_off : float
         cutoff radius for the determination of nearest neighbours. If None, an adaptive cutoff is computed
     return_pairs : bool, default False
         Wether to return an ordered list of the indices of the atoms forming each pair, by default False
@@ -148,7 +148,7 @@ def calculate_cna(
 
 
 def calculate_cna_fast(
-    coords, cut_off=None, return_pairs=False, pbc=False, box=None, display_progress=False
+    coords, cut_off, return_pairs=False, pbc=False, box=None, display_progress=False
 ):
     """
     Faster version of calculate_cna that precomputes neighbor sets.
@@ -160,7 +160,7 @@ def calculate_cna_fast(
     ----------
     coords : ndarray
         array containing the coordinates of atoms in the system
-    cut_off : float, default None
+    cut_off : float
         cutoff radius for the determination of nearest neighbors. If None, an adaptive cutoff is computed
     return_pair : bool, default False
         Whether to return an ordered list of the indices of the atoms forming a given pair, by default False
@@ -226,7 +226,7 @@ def calculate_cna_fast(
 
 def cna_peratom(
     coords: np.ndarray,
-    cut_off: float=None,
+    cut_off: float,
     pbc: bool = False,
     box: np.ndarray = None
 ):
@@ -241,7 +241,7 @@ def cna_peratom(
     ----------
     coords : np.ndarray
         Array containing the coordinates of the atoms in your system.
-    cut_off : float, default None
+    cut_off : float
         Cutoff radius for nearest-neighbor determination. If None, an adaptive cutoff is computed
     pbc : bool, default False
         Whether to use or not periodic boundary conditions
@@ -290,7 +290,7 @@ def cna_peratom(
 
 def cnap_peratom(
     coords: np.ndarray,
-    cut_off: float = None,
+    cut_off: float,
     pbc: bool = False,
     box: np.ndarray = None,
     display_progress: bool = False) -> np.ndarray:
@@ -304,7 +304,7 @@ def cnap_peratom(
     ----------
     coords : np.ndarray
         (N, 3) array with atomic coordinates
-    cut_off : float, default None
+    cut_off : float
         Cutoff radius for neighbor determination. If None, an adaptive cutoff is used
     pbc : bool, default False
         Whether to use or not periodic boundary conditions
