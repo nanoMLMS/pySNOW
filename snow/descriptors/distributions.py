@@ -1,12 +1,12 @@
 import os
 
 import numpy as np
-from scipy.sparse import coo_matrix
 from scipy.spatial import ConvexHull, cKDTree
-from scipy.spatial.distance import pdist, squareform
+#from scipy.spatial.distance import pdist, squareform
+#from scipy.sparse import coo_matrix
 
 from snow.descriptors.utils import distance_matrix, hetero_distance_matrix, _check_structure
-from snow.descriptors.shape_descriptors import center_of_mass, geometric_com
+from snow.descriptors.shape_descriptors import center_of_mass
 from snow.misc.rototranslation import align_axis_to_z
 
     
@@ -308,7 +308,7 @@ def com_rdf_calculator(coords : np.ndarray,
         raise ValueError('Provide either the list of elements or the center of mass of your system as an argument to the RDF function')
 
     if com is None:
-        com = center_of_mass(coords, elements)
+        com = center_of_mass(elements, coords)
     
     #obtain the list of distances of each atom to the com
     com_dists = np.zeros(len(coords))
