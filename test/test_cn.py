@@ -30,7 +30,7 @@ def test_cn_threeatoms():
 import os
 
 def test_fcc_bulk():
-    el, coords = read_xyz("cube_test.xyz")
+    el, coords = read_xyz("test/cube_test.xyz")
     assert coordination_number(coords=coords , cut_off = 3.0)[142] == 12
 
 """
