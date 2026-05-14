@@ -107,7 +107,6 @@ def pddf_calculator_by_elements(
 
     #some sanity checks
     if use_lattice_units:
-
         coords = coords / lattice
 
         if lattice is None:
