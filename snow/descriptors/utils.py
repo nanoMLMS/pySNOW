@@ -545,3 +545,13 @@ def pbc_distance(p1, p2, box):
     # back to cartesian
     diff_mic = frac @ box
     return np.linalg.norm(diff_mic)
+
+def progress_bar(current, total, length=50):
+    """
+    Prints a nice progess bar
+    """
+    percent = current / total
+    filled_length = int(length * percent)
+    bar = '=' * filled_length + '-' * (length - filled_length)
+    print(f'\r[{bar}] {percent * 100:.2f}%', end='')
+    return

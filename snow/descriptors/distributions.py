@@ -10,32 +10,35 @@ from snow.descriptors.shape_descriptors import center_of_mass, geometric_com
 from snow.misc.rototranslation import align_axis_to_z
 
     
-def pddf_calculator(coords, bin_width: float, use_lattice_units: bool, lattice=None):
+def pddf_calculator(coords, bin_width: float, use_lattice_units: bool, lattice):
     """
-    Computes the pair distance distribution function for a given set of coordinates of atoms. \n
+    Computes the pair distance distribution function for a given set of coordinates of atoms. 
+
     If use_lattice_units=True, bin_width should be provided in lattice units (alat) and the pddf 
     is returned in lattice units.
-    If use_lattice=False, the bin width should be provided in the coordinates units.
+    If use_lattice_units=False, the bin width should be provided in the coordinates units.
+
     Parameters
     ----------
-    coords : ndarray
+    coords : np.ndarray
         Array of the coordinates of the atoms forming the system.
-    bin_width: float
+    bin_width : float
         width of the bins to bin the distances in the system. It should be provided in lattice units if
         use_lattice_units==True, and in the same units as coords if use_lattice==False
-    use_lattice_units: bool
-        If True, the PDDF is returned in units of the lattice consatnt (passed as the 'lattice' argument) and
+    use_lattice_units : bool
+        If True, the PDDF is returned in units of the lattice constant (passed as the 'lattice' argument) and
         the bin_width should be given in units of the lattice constant.
-        If False, the PPDF is returned in the units of coords, and the bin_width should be given in the same units
-        as coords.
-    lattice: float,
+        If False, the PDDF is returned in the units of coords, and the bin_width should be given 
+        in the same units as coords.
+    lattice : float, optional
         Specify a value for the lattice parameter of your structure in the same units as coords.
+        Only needed if use_lattice_units is True
 
     Returns
     -------
     tuple
-        - ndarray: the values of the interatomic distances for each bin
-        - ndarray: the number of atoms within a given distance for each bin
+        - np.ndarray : the values of the interatomic distances for each bin
+        - np.ndarray : the number of atoms within a given distance for each bin
 
     """
 
@@ -64,44 +67,47 @@ def pddf_calculator(coords, bin_width: float, use_lattice_units: bool, lattice=N
 
 
 def pddf_calculator_by_elements(
-        coords: np.ndarray,
         species: list,
+        coords: np.ndarray,
         elements: list,
         bin_width: float,
         use_lattice_units: bool,
-        lattice=None,
+        lattice : float = None,
         cutoff : float = None,
 ):
     """
-    Computes the pair distance distribution function (PDDF) for a given set of coordinates,
-    considering only atoms of a specified chemical element. Uses histogram counting for efficiency.
+    Computes the chemical element-wise pair distance distribution function (PDDF) for a given set of coordinates.
+
+    This function only considers distances between atoms of specified chemical elements (A-A, A-B, or A-B).
+    It can be decided whether to use lattice units or not. Histogram counting is used for efficiency.
 
     Parameters
     ----------
-    coords : ndarray
-        Array of the coordinates of the atoms forming the system.
     species : list[str]
         List of atomic species corresponding to each coordinate.
-    elements: list[str]
-        The elements of which to consider the pairs
-    bin_width: float
+    coords : ndarray
+        Array of the coordinates of the atoms forming the system.
+    elements : list[str]
+        The elements of which to consider the pairs 
+        (i.e. [A,A], or [A,B], or [B,B], given A and B two chemical species in your system)
+    bin_width : float
         width of the bins to bin the distances in the system. It should be provided in lattice units if
         use_lattice_units==True, and in the same units as coords if use_lattice==False
-    use_lattice_units: bool
-        If True, the PDDF is returned in units of the lattice consatnt (passed as the 'lattice' argument) and
+    use_lattice_units : bool
+        If True, the PDDF is computed and returned in units of the lattice constant (passed as the 'lattice' argument) and
         the bin_width should be given in units of the lattice constant.
         If False, the PPDF is returned in the units of coords, and the bin_width should be given in the same units
         as coords.
-    lattice: float,
-        Specify a value for the lattice parameter of your structure in the same units as coords.
-    cutoff: float,
-        If specified, only 
+    lattice: float, optional
+        Specify a value for the lattice parameter of your structure in the same units as coords. Only needed if use_lattice_units is set to True
+    cutoff: float, optional
+        If specified, only distances up to this value are taken into account for the histogram calculation
 
     Returns
     -------
     tuple
-        - ndarray: the midpoints of the bins (in lattice units)
-        - ndarray: the histogram counts of distances
+        - np.ndarray: the midpoints of the bins (in lattice units)
+        - np.ndarray: the histogram counts of distances
     """
 
 
@@ -190,39 +196,33 @@ def gdr_notnorm_calculator(
     coords: np.ndarray,
     cut_off: float,
     bin_count: int = None,
-    bin_precision: float = None,
-    box_volume=None,
+    bin_precision: float = None
 ) -> tuple[np.ndarray, np.ndarray]:
     """
-    Computes the Radial Distribution Function as defined in "Understanding Molecular Simulation" by Frankel and Smit, for each atom concentric shells with
+    Computes the (unnormalized) Radial Distribution Function as defined in "Understanding Molecular Simulation" by Frenkel and Smit, for each atom concentric shells with
     a certain bin precision (or number of bins) are constructed and the density of atoms found in each shell is computed. 
     
-    Note that technically we implemented a periodic version as well but it still is not wokring properly.
-
     Parameters
     ----------
-    elements : np.ndarray
-        _description_
     coords : np.ndarray
         XYZ coordinates of atoms, shape (n_atoms, 3).
     cut_off : float
-        Cutoff distance for finding pairs in angstroms. If None, an adaptive cutoff is used per atom.
+        Cutoff distance for finding pairs in angstroms.
     bin_count : int, optional
-        Number of bins, by default None
+        Number of bins, by default None. Either bin_count or bin_precision should be specified.
     bin_precision : float, optional
-        Bin precision, by default None
-    box_volume = None: float, optional
-        Box dimension for PBC (WIP), by default None (no PBC, good for isolated systems)
+        Bin precision, by default None. Either bin_count or bin_precision should be specified.
 
     Returns
     -------
     tuple[np.ndarray, np.ndarray]
-        Binned distance and rdf
+        - np.ndarray : binned distances
+        - np.ndarray : g(r) values
 
     Raises
     ------
     ValueError
-        _description_
+        If neither bin_count nor bin_precision was specified.
     """
     _check_structure(coords=coords)
 
@@ -258,36 +258,49 @@ def gdr_notnorm_calculator(
 
     # Normalize RDF
     shell_volumes = (4 / 3) * np.pi * (bin_edges[1:] ** 3 - bin_edges[:-1] ** 3)
-    if box_volume == None:
-        hull = ConvexHull(coords)
-        box_volume = hull.volume
+    # if box_volume == None:
+    #     hull = ConvexHull(coords)
+    #     box_volume = hull.volume
+    hull = ConvexHull(coords)
+    box_volume = hull.volume
 
     number_density = n_atoms / box_volume
-    # rdf = rdf / (number_density * shell_volumes * n_atoms)
     rdf = rdf / (number_density * shell_volumes * n_atoms)
     return bin_centers, rdf
 
 
 
-def com_rdf_calculator(coords :np.ndarray, 
-                       bin_width :float, 
-                       com=None, 
-                       elements:list = None):
+def com_rdf_calculator(coords : np.ndarray, 
+                       bin_width : float, 
+                       com : np.ndarray = None, 
+                       elements : list = None):
     """
     Compute the Radial Distribution Function: a distribution of all the distances wrt to the center
-    of mass of the system. The com can be provided as an argument or computed by the function
+    of mass of the system. The com can be provided as an argument or computed by the function (in this case, 
+    pass the list of chemical elements in your system as an argument)
 
-    ----------
     Parameters
-    coords: ndarray
+    ----------
+    coords : np.ndarray
         coordinates of atoms in the system
-    bin_width: float
+    bin_width : float
         bin width for binning of the distribution
-    elements: ndarray, optional
+    com : np.ndarray, optional
+        center of mass of the system (as a three-elements coordinates array). If None (default), it is computed
+    elements : list[str], optional
         chemical species of the atoms in the system used in the center of mass calculation. If None,
         provide the com as an argument to the function
-    com: ndarray, optional
-        center of mass of the system. If None (default), it is computed
+
+    Returns
+    -------
+    tuple
+        - np.ndarray : binned distances
+        - np.ndarray : binned RDF (counts of distances)
+
+    Raises
+    ------
+    ValueError
+        If neither the list of elements nor the center of mass was specified.
     """
 
     #compute com if not provided
@@ -322,7 +335,10 @@ def cut_layers(
     
 ):
     """
-    Cuts a single frame into layers using z-coordinates.
+    Cuts a single frame into layers and compute the distribution of atoms in the layers.
+
+    Computes the distribution of atoms per layer of width `layer_height`. The axis along which (perpendicular)
+    planes are cut can be specified as either 'z' (default), 'x', 'y', or a user-defined np.ndarray
 
     Parameters
     ----------
@@ -332,21 +348,23 @@ def cut_layers(
         coordinates of the atoms provided - Shape (n_atoms, 3)
     cutting_ax : str or np.ndarray
         either 'x', 'y', 'z', or a (3, ) np.ndarray such as (1,1,0)
-    species_A: str (optional)
+    species_A : str (optional)
         chemical specie 1 to filter the coords and get a chemical specie-wise count of atoms per layer
-    species_B: str (optional)
+    species_B : str (optional)
         chemical specie 2 to filter the coords and get a chemical specie-wise count of atoms per layer
         
-    Return
-    _________
-    layer_number: np.ndarray
-        the layer number (or id)
-    layer_ntot:
-        the number of atoms per layer
-    layer_na:
-        the number of atoms per layers of species 'species_A'
-    layer_nb:
-        the number of atoms per layers of species 'species_B'
+    Returns
+    -------
+    layer_number : np.ndarray
+        Layer indices, shape (n_layers,).
+    layer_ntot : np.ndarray
+        Total atom count per layer, shape (n_layers,).
+    layer_na : np.ndarray
+        Atom count per layer for species_A, shape (n_layers,).
+        Only returned if species_A is not None.
+    layer_nb : np.ndarray
+        Atom count per layer for species_B, shape (n_layers,).
+        Only returned if species_B is not None.
     """
 
     if cutting_ax == 'x':

@@ -20,187 +20,27 @@ from snow.descriptors.utils import (
 
 from snow.descriptors.coordination import coordination_number
 
-### start Sofia test
-def fortran_like_chain_length(neigh_common, neigh_list, a, b):
-    """
-    CNA t-signature (Honeycutt–Andersen), Fortran-equivalent.
-
-    Parameters
-    ----------
-    neigh_common : array-like
-        Common nearest neighbours of atoms a and b
-    neigh_list : dict or list
-        Neighbour list for each atom
-    a, b : int
-        Indices of the central atom pair
-    """
-
-    neigh_common = list(neigh_common)
-    n = len(neigh_common)
-    if n < 2:
-        return 0
-
-    pair = {a, b}
-
-    # adjacency restricted to common neighbours ONLY
-    adj = {
-        u: set(
-            v for v in neigh_list[u]
-            if v in neigh_common and v not in pair
-        )
-        for u in neigh_common
-    }
-
-    max_len = 0
-
-    def backtrack(path, used):
-        nonlocal max_len
-
-        # number of consecutive bonds
-        max_len = max(max_len, len(path) - 1)
-
-        # pruning
-        if len(path) + (n - len(used)) - 1 <= max_len:
-            return
-
-        last = path[-1]
-        for nxt in adj[last]:
-            if nxt not in used:
-                used.add(nxt)
-                backtrack(path + [nxt], used)
-                used.remove(nxt)
-
-    # try all starting points
-    for start in neigh_common:
-        backtrack([start], {start})
-
-    # check cycle closure ONLY if full chain
-    if max_len == n - 1:
-        for u in neigh_common:
-            if neigh_common[0] in adj[u]:
-                max_len = n
-                break
-
-    return max_len
-
-def calculate_cna_sofia(coords, cut_off, return_pair=False):
-    """
-    Common Neighbour Analysis (Honeycutt–Andersen)
-
-    Returns
-    -------
-    n_pairs : int
-    cna : ndarray (Npairs, 3) with (r, s, t)
-    pairs : list of tuples (optional)
-    """
-
-    neigh_list = nearest_neighbours(coords, cut_off)
-    pairs = pair_list(coords=coords, cut_off=cut_off)
-
-    r = np.zeros(len(pairs), dtype=int)
-    s = np.zeros(len(pairs), dtype=int)
-    t = np.zeros(len(pairs), dtype=int)
-
-    if return_pair:
-        ret_pair = []
-
-    for i, (a, b) in enumerate(pairs):
-
-        # common neighbours (exclude central pair explicitly)
-        neigh_common = np.intersect1d(neigh_list[a], neigh_list[b])
-        neigh_common = neigh_common[
-            (neigh_common != a) & (neigh_common != b)
-        ]
-
-        if return_pair:
-            ret_pair.append((a, b))
-
-        # r: number of common neighbours
-        r[i] = len(neigh_common)
-
-        # s: number of bonds between common neighbours
-        s_i = 0
-        for idx, j in enumerate(neigh_common):
-            for k in neigh_common[idx + 1:]:
-                if k in neigh_list[j]:
-                    s_i += 1
-        s[i] = s_i
-
-        # t: longest CNA chain (Fortran-like)
-        t[i] = fortran_like_chain_length(
-            neigh_common, neigh_list, a, b
-        )
-
-    cna = np.column_stack((r, s, t))
-
-    if return_pair:
-        return len(pairs), cna, ret_pair
-
-    return len(pairs), cna
-
-def cna_percentages_sofia(coords, cut_off, r_bulk_threshold=12):
-    """
-    CNA con percentuali, separando coppie bulk e surface.
-    
-    Parameters
-    ----------
-    coords : np.ndarray
-        (N,3) array con le coordinate atomiche
-    cut_off : float
-        Cutoff per nearest neighbours
-    r_bulk_threshold : int
-        Numero minimo di vicini per considerare un atomo "bulk"
-    
-    Returns
-    -------
-    dict
-        'total' : dict[signature tuple] -> percentuale
-        'bulk'  : dict[signature tuple] -> percentuale
-        'surface': dict[signature tuple] -> percentuale
-    """
-    # Frame dummy (0) perché calculate_cna_sofia richiede index_frame
-    frame = 0
-
-    # CNA totale
-    n_pairs, cna, pairs = calculate_cna_sofia(frame, coords, cut_off, return_pair=True)
-
-    # Signature uniche totali
-    unique_sigs, counts = np.unique(cna, axis=0, return_counts=True)
-    percentages_total = 100 * counts / n_pairs
-    total_dict = {tuple(sig): perc for sig, perc in zip(unique_sigs, percentages_total)}
-
-    # Ora dividiamo bulk vs surface
-    bulk_counts = {}
-    surface_counts = {}
-    
-    # Precalcolo numero di vicini per ogni atomo
-    neigh_list = nearest_neighbours(frame, coords, cut_off)
-    num_neigh = np.array([len(n) for n in neigh_list])
-
-    for sig, pair in zip(cna, pairs):
-        # Atomi coinvolti nella coppia
-        a, b = pair
-        # Se entrambi hanno num_neigh >= r_bulk_threshold → bulk
-        if num_neigh[a] >= r_bulk_threshold and num_neigh[b] >= r_bulk_threshold:
-            bulk_counts[tuple(sig)] = bulk_counts.get(tuple(sig), 0) + 1
-        else:
-            surface_counts[tuple(sig)] = surface_counts.get(tuple(sig), 0) + 1
-
-    # Trasformiamo in percentuali
-    n_bulk = sum(bulk_counts.values())
-    n_surface = sum(surface_counts.values())
-
-    bulk_dict = {sig: 100*cnt/n_bulk for sig, cnt in bulk_counts.items()} if n_bulk>0 else {}
-    surface_dict = {sig: 100*cnt/n_surface for sig, cnt in surface_counts.items()} if n_surface>0 else {}
-
-    return {
-        'total': total_dict,
-        'bulk': bulk_dict,
-        'surface': surface_dict
-    }
-
-### end Sofia test
 def longest_path_or_cycle(neigh_common, neigh_list):
+    """
+    Find the longest path or cycle in the subgraph induced by a subset of nodes.
+
+    Builds a subgraph from neigh_common using adjacency information from neigh_list,
+    then runs a depth-first search (DFS) from each node to find the longest path
+    or cycle in the subgraph.
+
+    Parameters
+    ----------
+    neigh_common : iterable
+        Subset of nodes to consider (e.g. common neighbors of two atoms).
+    neigh_list : dict
+        Full adjacency list of the graph, mapping each node to its neighbors.
+        Only edges between nodes in neigh_common are considered.
+
+    Returns
+    -------
+    int
+        Length of the longest path or cycle found in the subgraph.
+    """
 
     graph = {node: set() for node in neigh_common}
     for node in neigh_common:
@@ -238,29 +78,32 @@ def longest_path_or_cycle(neigh_common, neigh_list):
 
 
 def calculate_cna(
-    coords, cut_off, return_pair=False, pbc=False, box=None
+    coords, cut_off=None, return_pairs=False, pbc=False, box=None
 ) -> tuple[int, np.ndarray]:
-    """_summary_
+    """perform the common neighbour analysis for the provided coords.
+
+    Automatically finds pairs and assigns a cna signature to each pair. The pairs can
+    be returned as tuples of indexes of the coordinates if `return_pair`=True.
 
     Parameters
     ----------
-    coords : ndarray
-        3xNatoms array containing the coordainates of each atom
-    cut_off : float
-        cutoff radius for the determination of nearest neaighbours
-    return_pair : bool, optional
-        Wether to return an ordered list of the inideces of the atoms forming a given pair, by default False
-    pbc : bool
-        whether to use pbc or not
-    box : ndarray
-        if you want pbc, you need to provide the simulation box.
+    coords : np.ndarray
+        array containing the coordainates of each atom
+    cut_off : float, default None
+        cutoff radius for the determination of nearest neighbours. If None, an adaptive cutoff is computed
+    return_pairs : bool, default False
+        Wether to return an ordered list of the indices of the atoms forming each pair, by default False
+    pbc : bool, default False
+        whether to use periodic boundary conditions or not.
+    box : ndarray, default None
+        if pbc are enabled, the simulation box is needed to compute periodic neighbours.
 
     Returns
     -------
-    tuple[int, np.ndarray, list]
-        The number of pairs, the cna signatures [r, s, t] for each pair and the ordered list of pairs (if return_pair == True)
-    tuple[int, np.ndarray]
-        The number of pairs, the cna signatures [r, s, t] for each pair if return_pair==False
+    tuple
+        - int : number of pairs found
+        - np.ndarray : cna signatures (r,s,t) for each found pair in a (n_pairs, 3) array
+        - list : the indexes of atoms in pairs corresponding to the computed cna signatures. Only returned if `return_pairs`=True
     """
 
     neigh_list = nearest_neighbours(
@@ -274,14 +117,14 @@ def calculate_cna(
     s = np.zeros(len(pairs))
     t = np.zeros(len(pairs))
 
-    if return_pair:
+    if return_pairs:
         ret_pair = []
 
     for i, p in enumerate(pairs):
         neigh_1 = neigh_list[p[0]]
         neigh_2 = neigh_list[p[1]]
         neigh_common = np.intersect1d(neigh_1, neigh_2)
-        if return_pair:
+        if return_pairs:
             ret_pair.append(p)
 
         # Calculate r and s
@@ -298,47 +141,45 @@ def calculate_cna(
 
     cna = np.column_stack((r, s, t))
 
-    if return_pair:
+    if return_pairs:
         return len(pairs), cna, ret_pair
-
-    return len(pairs), cna
+    else:
+        return len(pairs), cna
 
 
 def calculate_cna_fast(
-    coords, cut_off=None, return_pair=False, pbc=False, box=None, display_progress=False
+    coords, cut_off=None, return_pairs=False, pbc=False, box=None, display_progress=False
 ):
     """
     Faster version of calculate_cna that precomputes neighbor sets.
 
+    performs common neighbour analysis with a faster algorithm, useful for N>1e5 atoms.
+    This method avoids scanning the entire pair list for every atom. 
+
     Parameters
     ----------
-    
-        _description_
     coords : ndarray
-        3xNatoms array containing the coordinates of each atom
-    cut_off : float
-        cutoff radius for the determination of nearest neighbors
-    return_pair : bool, optional
+        array containing the coordinates of atoms in the system
+    cut_off : float, default None
+        cutoff radius for the determination of nearest neighbors. If None, an adaptive cutoff is computed
+    return_pair : bool, default False
         Whether to return an ordered list of the indices of the atoms forming a given pair, by default False
-    pbc : bool
-        whether to use pbc or not
-    box : ndarray
-        if you want pbc, you need to provide the simulation box.
-    display_progress: bool
+    pbc : bool, default False
+        whether to use periodic boundary conditions or not.
+    box : ndarray, default None
+        if pbc are enabled, the simulation box is needed to compute periodic neighbours.
+    display_progress: bool, default False
         Wheter to display a progress bar - needs the tqdm library
 
     Returns
     -------
-    tuple[int, np.ndarray, list]
-        The number of pairs, the cna signatures [r, s, t] for each pair and the ordered list of pairs (if return_pair == True)
-    tuple[int, np.ndarray]
-        The number of pairs, the cna signatures [r, s, t] for each pair
+    tuple
+        - int : number of pairs found
+        - np.ndarray : cna signatures (r,s,t) for each found pair in a (n_pairs, 3) array
+        - list : the indexes of atoms in pairs corresponding to the computed cna signatures. Only returned if `return_pairs`=True
     """
-    # Get neighbor list and pair list (assumed to be implemented efficiently)
 
-    if cut_off == None:
-        r_i = np.zeros(len(coords))
-
+    # Get neighbor list and pair list
     neigh_list = nearest_neighbours(
         coords=coords, cut_off=cut_off, pbc=pbc, box=box
     )
@@ -353,7 +194,7 @@ def calculate_cna_fast(
     r = np.empty(len(pairs), dtype=int)
     s = np.empty(len(pairs), dtype=float)
     t = np.empty(len(pairs), dtype=float)
-    ret_pair = [] if return_pair else None
+    ret_pair = [] if return_pairs else None
 
     iterator = enumerate(tqdm(pairs, desc="Processing pairs")) if display_progress \
             else enumerate(pairs)
@@ -374,72 +215,37 @@ def calculate_cna_fast(
         # If longest_path_or_cycle expects a numpy array, we convert common accordingly.
         t[i] = longest_path_or_cycle(np.array(list(common)), neigh_list)
 
-        if return_pair:
+        if return_pairs:
             ret_pair.append(p)
 
     cna = np.column_stack((r, s, t))
-    if return_pair:
+    if return_pairs:
         return len(pairs), cna, ret_pair
     return len(pairs), cna
 
 
-def write_cna(
-    frame,
-    len_pair,
-    cna,
-    pair_list,
-    file_path=None,
-    signature=True,
-    cna_unique=True,
-):
-
-    if frame == 0 and os.path.exists(file_path + "signatures.csv"):
-        os.remove(file_path + "signatures.csv")
-
-    if frame == 0 and os.path.exists(file_path + "cna_unique.csv"):
-        os.remove(file_path + "cna_unique.csv")
-
-    perc = 100 * np.unique(cna, axis=0, return_counts=True)[1] / len_pair
-
-    if signature == True:
-
-        with open(file_path + "signatures.csv", "a") as f:
-            f.write(f"\n{frame}\n")
-
-            for i, p in enumerate(pair_list):
-                f.write(f"{p[0]}, {p[1]}, {cna[i]}\n")
-
-    if cna_unique == True:
-        with open(file_path + "cna_unique.csv", "a") as f:
-            f.write(f"\n{frame}\n")
-
-            for i, p in enumerate(perc):
-                f.write(
-                    #f"{np.unique(cna, axis=0, return_counts=True)[0][i]}, {np.unique(cna, axis=0, return_counts=True)[1][i]},{p}\n"
-                    f"{p}, {np.unique(cna, axis=0, return_counts=True)[0][i]},\n" #percentage and signature
-                )
-
-
 def cna_peratom(
     coords: np.ndarray,
-    cut_off: float = None,
+    cut_off: float=None,
     pbc: bool = False,
     box: np.ndarray = None
 ):
     """
-    Optimized per-atom CNA calculation by precomputing a mapping from atom indices
-    to pair indices. This avoids scanning the entire pair list for every atom.
+    Optimized per-atom CNA calculation. 
+    
+    Computes the cna signatures for all pairs in the system, and assign to each atom the list of 
+    signatures it participates to.
+    
 
     Parameters
     ----------
-        _description_
     coords : np.ndarray
-        Array containing the coordinates of each atom.
-    cut_off : float
-        Cutoff radius for nearest-neighbor determination.
-    pbc : bool
+        Array containing the coordinates of the atoms in your system.
+    cut_off : float, default None
+        Cutoff radius for nearest-neighbor determination. If None, an adaptive cutoff is computed
+    pbc : bool, default False
         Whether to use or not periodic boundary conditions
-    box : np.ndarray
+    box : np.ndarray, default None
         Simulation box. Only needed if you enable PBC
 
     Returns
@@ -453,7 +259,7 @@ def cna_peratom(
     _, cna, pair_list = calculate_cna_fast(
         coords=coords,
         cut_off=cut_off,
-        return_pair=True,
+        return_pairs=True,
         pbc=pbc,
         box = box
     )
@@ -487,29 +293,32 @@ def cnap_peratom(
     cut_off: float = None,
     pbc: bool = False,
     box: np.ndarray = None,
-    display_progress: bool = False,) -> np.ndarray:
+    display_progress: bool = False) -> np.ndarray:
     """
-    Computes the CNA patterns per atom and assigns an integer structure ID
-    (see README for mapping).
+    Computes the per-atom CNA patterns and assigns an integer structure ID.
+
+    Tries to match the cna per atom patterns to known patterns in a database for atomic 
+    environment characterization (see README.md for ID-structure mapping).
 
     Parameters
     ----------
     coords : np.ndarray
         (N, 3) array with atomic coordinates
-    cut_off : float
-        Cutoff radius for neighbor determination
-    pbc : bool
+    cut_off : float, default None
+        Cutoff radius for neighbor determination. If None, an adaptive cutoff is used
+    pbc : bool, default False
         Whether to use or not periodic boundary conditions
-    box : np.ndarray
+    box : np.ndarray, default None
         Simulation box. Only needed if you enable PBC
-    display_progress: bool
-        Wheter to display a progress bar
+    display_progress: bool, default False
+        Wheter to display a progress bar - needs the tqdm optional dependency library.
 
     Returns
     -------
     np.ndarray
-        Array of integer structure IDs per atom
+        Array of (integers) structure IDs per atom
     """
+
     # Compute CNA info
     cna = cna_peratom(coords, cut_off, pbc=pbc, box=box)
     n_atoms = len(coords)
@@ -576,3 +385,64 @@ def cnap_peratom(
         cna_atom[i] = match_pattern(sigs, counts)
 
     return cna_atom
+
+def write_cna(
+    frame,
+    len_pair,
+    cna,
+    pair_list,
+    file_path='./',
+    signature=True,
+    cna_unique=True
+):
+    """
+    export cna analysis to files in .csv format
+
+    save to file the indexes of atoms making up a pair and their signature (if `signature`=True).
+    save to file the unique cna signatures, and their occurrence wrt to the total number as a percentage
+    Note that if `frame`==0, previous files named 'signatures.csv' and 'cna_unique.csv' will be flushed.
+
+    Parameters
+    ----------
+    frame : int
+        config frame id, mostly for reference (and written to file)
+    len_pair : int
+        number of pairs in the system
+    cna : np.ndarray
+        array of the (previously computed) cna signatures
+    pair_list: list
+        list of lists of atomic indexes, to label atoms making up pairs
+    file_path : str, default './'
+        folder to write output files in
+    signature: bool, default True
+        write cna signatures together with corresponding pair indexes in a signatures.csv file
+    cna_unique : bool, default True
+        write unique cna signatures and their occurrence (as a percentage) in a cna_unique.csv file
+    """
+    #remove old files
+    if frame == 0 and os.path.exists(file_path + "signatures.csv") and signature:
+        os.remove(file_path + "signatures.csv")
+
+    if frame == 0 and os.path.exists(file_path + "cna_unique.csv") and cna_unique:
+        os.remove(file_path + "cna_unique.csv")
+
+    #len_pair = len(cna)
+    perc = 100 * np.unique(cna, axis=0, return_counts=True)[1] / len_pair
+
+    if signature == True:
+
+        with open(file_path + "signatures.csv", "a") as f:
+            f.write(f"\n{frame}\n")
+
+            for i, p in enumerate(pair_list):
+                f.write(f"{p[0]}, {p[1]}, {cna[i]}\n")
+
+    if cna_unique == True:
+        with open(file_path + "cna_unique.csv", "a") as f:
+            f.write(f"\n{frame}\n")
+
+            for i, p in enumerate(perc):
+                f.write(
+                    #f"{np.unique(cna, axis=0, return_counts=True)[0][i]}, {np.unique(cna, axis=0, return_counts=True)[1][i]},{p}\n"
+                    f"{p}, {np.unique(cna, axis=0, return_counts=True)[0][i]},\n" #percentage and signature
+                )
