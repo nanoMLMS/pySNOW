@@ -86,6 +86,7 @@ def agcn_calculator(coords, cut_off, cn_max = 12.0, strained: bool = False, pbc:
         if thr_cn is not None and coord_numbers[i] >= thr_cn:
             continue
         sites.append(coords[i])
+        
         if strained:
             sgcn=0
             for nb in neigh_list[i]:
@@ -106,7 +107,7 @@ def agcn_calculator(coords, cut_off, cn_max = 12.0, strained: bool = False, pbc:
             agcn_i = sum(coord_numbers[neigh] for neigh in atom_neighbors)# - coord_numbers[i]
             agcn.append(agcn_i / cn_max)
 
-    return np.asarray(sites), np.asarray(agcn)
+    return np.array(sites), np.array(agcn)
 
 
 

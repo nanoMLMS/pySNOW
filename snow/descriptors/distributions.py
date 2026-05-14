@@ -10,7 +10,7 @@ from snow.descriptors.shape_descriptors import center_of_mass
 from snow.misc.rototranslation import align_axis_to_z
 
     
-def pddf_calculator(coords, bin_width: float, use_lattice_units: bool, lattice):
+def pddf_calculator(coords, bin_width: float, use_lattice_units: bool, lattice : float = None):
     """
     Computes the pair distance distribution function for a given set of coordinates of atoms. 
 

@@ -5,7 +5,7 @@ from scipy.spatial.distance import cdist
 from snow.descriptors.utils import pbc_distance
 
 from snow.misc.rototranslation import align_z_to_axis, rotate_around_ax
-from snow.descriptors.shape_descriptors import geometric_com as gcom, geometric_com_pbc as gcom_pbc
+from snow.descriptors.shape_descriptors import geometric_com as gcom
 from snow.descriptors.coordination import coordination_number, bridge_gcn, three_hollow_gcn, four_hollow_gcn
 
 #TODO: extend to pbc
@@ -188,9 +188,8 @@ def triplet_normal(coords: np.ndarray, triplet: list[int], cutoff):
     #a check on orientation:
     site = (p1+p2+p3)/3.
     neighs = get_local_neighbours(coords, site, cutoff)
-    lae = np.asarray([coords[neigh] for neigh in neighs])
 
-    if np.dot(normal, site-gcom(lae)) >= 0:
+    if np.dot(normal, site-gcom(neighs)) >= 0:
         return normal
     else:
         return normal*-1.
