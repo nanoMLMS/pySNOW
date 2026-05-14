@@ -13,14 +13,17 @@ def distance_matrix(coords):
     """
     Computes distance between atoms and saves them in a matrix of distances
 
-    Parameters:
-        coords (array): array of the 3d coordinates
+    Parameters
+    ----------
+    coords : np.ndarray
+        array of the 3d coordinates of the N atoms
 
-    Returns:
-        dist_mat (array): distance matrix
-
-        dist_max (float): the maximum distance between atoms
-        dist_min (float): the minimum distance between atoms
+    Returns
+    -------
+    tuple
+        - np.ndarray : distance matrix
+        - float : maximum of the distance matrix
+        - float : minimum of the distance matrix
     """
     distances = pdist(coords)
     dist_mat = squareform(distances)
@@ -45,14 +48,14 @@ def sparse_adjacency_matrix(coords, cutoff):
 
     Parameters
     ----------
-    coords: ndarray
+    coords : ndarray
         Array with the XYZ coordinates of the atoms, shape (n_atoms, 3).
     cut_off : float
         Cutoff distance for finding neighbors in angstrom.
 
     Returns
     -------
-    ndarray
+    adjacency_matrix : np.ndarray
         A sparse adjacency matrix with ones for adjacent points.
     """
     # Create a KDTree for efficient distance queries
@@ -74,23 +77,26 @@ def sparse_adjacency_matrix(coords, cutoff):
 
 
 def hetero_distance_matrix(coords, elements):
-    """Computes the distance matrix for atoms with different chemical species (eg. if atom "i" is a gold atom and atom "j" a platinum atom then $M_{ij} = d_{ij}$,
-    if they are both gold atoms then $M_{ij} = 0$)
+    """Computes the distance matrix for only atoms with different chemical species 
+    
+    Only takes into account hetero pairs, e.g. if atom "i" is a gold atom and atom "j" a platinum atom
+    then $M_{ij} = d_{ij}$, if they are both gold atoms then $M_{ij} = 0$)
 
     Parameters
     ----------
     coords : ndarray
         positions of the atoms in the system
     elements : ndarray
-        array of chemcial species of the atoms in the system
+        array of chemical species of the atoms in the system
 
     Returns
     -------
-    ndarray
+    dist_mat : np.ndarray
+        hetero-pairs distance matrix
         
     """
     n_atoms = np.shape(coords)[0]
-    dist_mat, dist_max, dist_min = distance_matrix(coords=coords)
+    dist_mat, _, _ = distance_matrix(coords=coords)
 
     triu_indices = np.triu_indices(n_atoms, k=1)
     id_i, id_j = triu_indices
@@ -106,7 +112,9 @@ def hetero_distance_matrix(coords, elements):
 
 def distance_matrix_pbc(positions, cell):
     """
-    Compute pairwise distance matrix under periodic boundary conditions. This method is slower but works with any cell
+    Compute pairwise distance matrix under periodic boundary conditions. 
+    
+    CKDTree only accepts parallelopipedal cells. This method is slower but works with any cell
     provided as a (3,3) array (3 axes defining the cell). 
 
     Parameters
@@ -121,6 +129,7 @@ def distance_matrix_pbc(positions, cell):
     dmat : (N,N) ndarray
         Pairwise distance matrix using minimum image convention.
     """
+
     pos = np.asarray(positions)
     cell = np.asarray(cell)
 
@@ -145,7 +154,9 @@ def distance_matrix_pbc(positions, cell):
 
 def nn_pbc(coords, box, cut_off):
     """
-    nearest neighbour calculation with KDTree can only be done with rectangular boxes. This function allows to get nearest neighbours in PBC
+    Computes the nearest neighbour list with a slower but pbc-compatible algorithm
+
+    Nearest neighbour calculation with KDTree can only be done with rectangular boxes. This helper function allows to get nearest neighbours in PBC
     with any kind of box, given the box as ((a1, a2, a3), (b1, b2, b3), (c1, c2, c3))
     
     Parameters
@@ -159,8 +170,8 @@ def nn_pbc(coords, box, cut_off):
 
     Returns
     -------
-    list of lists
-        Each sublist contains the indices of neighboring atoms for the corresponding atom.
+    neigh : list of lists
+        The i-th sublist contains the indices of neighboring atoms for the i-th atom.
     """
 
     dmat   = distance_matrix_pbc(coords, box)[0]
@@ -197,10 +208,9 @@ def nearest_neighbours(
 
     Returns
     -------
-    list of lists
-        Each sublist contains the indices of neighboring atoms for the corresponding atom.
+    neigh : list of lists
+        The i-th sublist contains the indices of neighboring atoms for the i-th atom.
     """
-    sqrt_2 = np.sqrt(2)
 
     if pbc:
         if box is None:
@@ -212,7 +222,7 @@ def nearest_neighbours(
         elif box.shape == (3,):  # Direct box lengths
             box_size = box
         elif box.shape == (3,3):
-            #use slower but more robust function
+            #resort to slower but more robust function
             return nn_pbc(coords, box, cut_off)
         else:
             raise ValueError("Box must be of shape (3,) or (3,2) or (3,3)")
@@ -279,17 +289,16 @@ def pair_list(
         Array with the XYZ coordinates of the atoms, shape (n_atoms, 3).
     cut_off : float, optional
         Cutoff distance for finding pairs in angstroms. If None, an adaptive cutoff is used per atom.
-    pbc : bool, optional
-        Whether to apply periodic boundary conditions. Defaults to False.
+    pbc : bool, default False
+        Whether to apply periodic boundary conditions.
     box : np.ndarray, optional
-        Simulation box size (either [Lx, Ly, Lz] or [[xmin, xmax], [ymin, ymax], [zmin, zmax]] or 3 cell vectors (shape (3,3) - slower)).
+        Simulation box size (either [Lx, Ly, Lz] or [[xmin, xmax], [ymin, ymax], [zmin, zmax]] or 3 cell vectors (shape (3,3) - slower)). Has to provided if pbc=True
 
     Returns
     -------
     list
-        List of tuples representing pairs of atoms that are within the cutoff distance.
+        List of tuples with indexes of pairs of atoms that are within the cutoff distance.
     """
-    sqrt_2 = np.sqrt(2)
 
     if pbc:
         if box is None:
@@ -335,12 +344,17 @@ def kl_div(func1: np.array, func2: np.array) -> float:
     """
     Calculate the Kullback-Leibler divergence between two functions.
 
-    Arguments:
-        func1 (np.array) : values taken by the first function for a given set of inputs
-        func2 (np.array) : values taken by the second function for the same set of inputs
+    Parameters
+    ----------
+    func1 : np.array 
+        values taken by the first function for a given set of inputs
+    func2 : np.array
+        values taken by the second function for the same set of inputs
 
-    Returns:
-        kldiv (float) : KL Divergency between function 1 and function 2
+    Returns
+    -------
+    kldiv : float)
+        KL divergence between function 1 and function 2
     """
     kldiv = 0.0
 
@@ -352,6 +366,7 @@ def kl_div(func1: np.array, func2: np.array) -> float:
 def apply_pbc(coords, box_size):
     """
     Apply periodic boundary conditions to atom coordinates.
+
     Maps coordinates to be within the simulation box.
 
     Parameters
@@ -383,7 +398,18 @@ def apply_pbc(coords, box_size):
 
 
 def bounding_box(points):
-    """Calculate an axis-aligned bounding box from a set of points."""
+    """Calculate an axis-aligned bounding box from a set of points.
+    
+    Parameters
+    ----------
+    points : np.ndarray
+        coordinates of the points in the system
+    
+    Returns
+    -------
+    np.ndarray
+        computed axis-aligned bounding box.    
+    """
     x_coordinates, y_coordinates, z_coordinates = zip(*points)
     return np.array(
         [
@@ -397,7 +423,7 @@ def bounding_box(points):
 def second_neighbours(
         coords: np.ndarray, cutoff: float, pbc: bool = False, box = None
 ) -> list:
-    """Generates a list of lists of atomic indeces for each atom corresponding to aotoms that are neighbours of first neighbours
+    """Generates a list of lists of atomic indices for each atom corresponding to atoms that are neighbours of first neighbours
     excluding those which are already first neighbours.
 
     Parameters
@@ -430,7 +456,7 @@ def second_neighbours(
 
 def get_coords_by_element(el, coords, chosen_element):
     """
-    Returns the coordinates (and the chemical element array, for convenience) filtered for a selected chemical specie.
+    Returns the coordinates (and the chemical element array, for consistency) filtered for a selected chemical specie.
     It can deal with both single frame and 'movie'-style coords objects in list or np.ndarray format
 
     Parameters
@@ -491,7 +517,7 @@ def get_coords_by_element(el, coords, chosen_element):
 
 
 def _check_structure(coords: np.ndarray, elements: np.ndarray | None = None, *, require_elements: bool = False):
-    """_summary_
+    """sanity-checks that a structure (list of coordinates) is provided in the right format
 
     Parameters
     ----------
@@ -549,6 +575,15 @@ def pbc_distance(p1, p2, box):
 def progress_bar(current, total, length=50):
     """
     Prints a nice progess bar
+
+    Parameters
+    ----------
+    current : float
+        current step
+    total : float
+        total number of steps
+    length : int, default 50
+        how many elements your progress bar should be made of.
     """
     percent = current / total
     filled_length = int(length * percent)

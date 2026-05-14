@@ -7,24 +7,25 @@ def read_xyz_movie(file_path: str, extra_cols_indexes: list = None) -> Tuple[lis
     """
     Obtains the coordinates and elements for each frame of an xyz trajectory.
 
+    Data from extra columns can also be loaded with the extra_cols_indexes variable.
+    Consider that the first four 'indexes' are element and three cartesian coordinates and are returned by deafult from the function.
+    Example: if your .xyz file has per-atom information like " El pos1 pos2 pos3 force1 force2 force3 charge ",
+    you can get the extra columns force1, force2, charge by passing extra_cols_indexes=[4, 5, 7].
+    At the moment only float values parsing is supported.
+
     Parameters
     ----------
     file_path : str
         Path to the xyz file with the structure
-    extra_frames_indexes : str
-        index for the extra columns of per-atom data to be extracted from the .xyz file. Consider that the first three 'indexes'
-        are element and three cartesian coordinates and are returned by deafult from the function.
-        Example: if your .xyz file has per-atom information like " El pos1 pos2 pos3 force1 force2 force3 charge ",
-        you can get the extra columns force1, force2, charge by passing extra_cols_indexes=[4, 5, 7].
-        For now only float values parsing is supported.
+    extra_frames_indexes : list[int]
+        index for the extra columns of per-atom data to be extracted from the .xyz file. 
 
     Returns
     -------
-    Tuple[list, list]
-        if extra_cols_indexes is not provided: list of lists of chemical symbols and a list of (n_atoms, 3) arrays for the coordinates
-    Tuple[list, list, list]
-        if extra_cols_indexes is provided: list of lists of chemical symbols, list of (n_atoms, 3) arrays for the coordinates, list of (n_atoms, len(extra_cols_indexes)) for the extra arrays to be read.
-        
+    tuple
+        - list[list] : list of lists of chemical elements of the atoms in the system
+        - list[np.ndarray] : list of arrays of coordinates fo atoms in the system
+        - list[np.ndarray] : list of arrays of data extra from extra columns. Only returned if extra_cols_indexes is set.        
     """
     
     el_list = []
@@ -90,15 +91,24 @@ def read_xyz_movie(file_path: str, extra_cols_indexes: list = None) -> Tuple[lis
 
 def read_xyz(file, extra_cols_indexes=None):
     """
+    Read an xyz file that contains a single configuration.
+
     wrapper of read_xyz_movie to read single-frame xyz files.
+
+    Parameters
+    ----------
+    file : str
+        file from where to read
+    extra_frames_indexes : list[int]
+        index for the extra columns of per-atom data to be extracted from the .xyz file. 
 
     Returns
     -------
-    Tuple[list, np.ndarray]
-        if extra_cols_indexes is not provided: list of chemical symbols and a list of (n_atoms, 3) arrays for the coordinates
-    Tuple[list, np.ndarray, np.ndarray]
-        if extra_cols_indexes is provided: list of chemical symbols, (n_atoms, 3) array for the coordinates, (n_atoms, len(extra_cols_indexes)) array for the extra values to be read.
-        
+    tuple
+        - list : list of lists of chemical elements of the atoms in the system
+        - np.ndarray : array of coordinates fo atoms in the system
+        - np.ndarray : array of data extra from extra columns. Only returned if extra_cols_indexes is set.    
+
     """
 
     if extra_cols_indexes is not None:
@@ -112,26 +122,25 @@ def read_xyz(file, extra_cols_indexes=None):
 
 def write_xyz(filename, elements, coords, additional_data=None, box=None, mode='w'):
     """
-    Writes atomic data to an XYZ file in OVITO-compatible format. Currently only accepting numbers
-    as additional data.
+    Writes atomic data to an XYZ file in OVITO-compatible format. 
+    
+    The function is currently only accepting numbers as additional data. If needed, it can write the
+    simulation box as well.
 
     Parameters
     ----------
-    filename: str
+    filename : str
         Name of the output .xyz file.
-    elements: ndarray
+    elements : ndarray
         List of atomic symbols (e.g., ['Au', 'Au', ...]).
-    coords: ndarray)
+    coords : ndarray)
         Nx3 array of atomic coordinates.
-    additional_data: list or np.ndarray, optional
+    additional_data : list or np.ndarray, optional
         Additional per-atom data, such as coordination numbers.
-    box: np.ndarray
-        a box to be written to file
-    mode: str
+    box : np.ndarray, optional
+        a simulation box to be written to file
+    mode : str
         mode for writing ('a'->append,  'w'->(over)write)
-
-    Returns:
-        None
     """
 
     n_atoms = len(elements)
@@ -193,16 +202,16 @@ def write_xyz_movie(filename, elements_list, coords_list, additional_data_list=N
     
     Parameters
     ----------
-    filename: str
+    filename : str
         Name of the output .xyz file.
-    elements: ndarray
-        List of atomic symbols (e.g., ['Au', 'Au', ...]).
-    coords: ndarray)
-        Nx3 array of atomic coordinates.
-    additional_data: list or np.ndarray, optional
+    elements : list[list[str]]
+        List of lists of atomic symbols (e.g., ['Au', 'Au', ...]).
+    coords : ndarray or list[np.ndarray]
+        list or array of arrays of atomic coordinates.
+    additional_data : list or np.ndarray of np.ndarrays, optional
         Additional per-atom data, such as coordination numbers.
-    box: np.ndarray
-        a box to be written to file
+    box : np.ndarray, optional
+        a simulation box to be written to file
 
     Returns:
         None
@@ -220,57 +229,11 @@ def write_xyz_movie(filename, elements_list, coords_list, additional_data_list=N
             write_xyz(filename, els, coords, add_data, box=box, mode='a')
 
 
-def write_xyz_movie_old(frame, filename, elements, coords, additional_data=None):
-    """
-    Writes atomic data to an XYZ file in OVITO-compatible format.
-
-    Parameters
-    ----------
-    frame: int
-        Frame number.
-    filename: str
-        Name of the output .xyz file.
-    elements: ndarray
-        List of atomic symbols (e.g., ['Au', 'Au', ...]).
-    coords: ndarray)
-        Nx3 array of atomic coordinates.
-    additional_data: list or np.ndarray, optional
-        Additional per-atom data, such as coordination numbers.
-
-    Returns:
-        An xyz file containing the elements and coordinates of each atom and any additional per atom data (e.g. coordination number, agcn, strain...)
-    """
-
-    if frame==0 and os.path.exists(filename):
-            os.remove(filename)
-
-    n_atoms = len(coords)
-
-    # Check if additional_data is provided and has the correct shape
-    if additional_data is not None:
-        additional_data = np.array(additional_data)
-        if additional_data.shape[0] != n_atoms:
-            raise ValueError(
-                f"The number of rows in additional_data ({additional_data.shape[0]}) must match the number of atoms ({n_atoms}).")
-
-    with open(filename, 'a') as xyz_file:
-        # Write header
-        xyz_file.write(f"{n_atoms}\n\n")
-        #xyz_file.write(f"\n{frame}\n")
-        #xyz_file.write("Generated XYZ file with optional properties\n")
-
-        # Write atom data
-        for i in range(n_atoms):
-            atom_line = f"{elements[i]} {coords[i, 0]:.6f} {coords[i, 1]:.6f} {coords[i, 2]:.6f}"
-            if additional_data is not None:
-                # Add the additional per-atom data
-                atom_line += ' ' + ' '.join([f"{additional_data[i, j]:.6f}" for j in range(additional_data.shape[1])])
-            xyz_file.write(atom_line + "\n")
-
-
 def write_phantom_xyz(filename, coords, additional_data=None):
     """
-    Writes atomic data to an XYZ file in OVITO-compatible format.
+    Writes 'phantom' atomic data to an XYZ file in OVITO-compatible format.
+
+    used to write xyz files with positions of adsorption sites as fictitious atoms.
 
     Parameters
     ----------
@@ -283,7 +246,8 @@ def write_phantom_xyz(filename, coords, additional_data=None):
     additional_data: list or np.ndarray, optional
         Additional per-atom data, such as coordination numbers.
 
-    Returns:
+    Returns
+    -------
         An xyz file containing the elements and coordinates of each atom and any additional per atom data (e.g. coordination number, agcn, strain...) 
     """
     n_atoms = len(coords)
@@ -312,7 +276,7 @@ def write_phantom_xyz(filename, coords, additional_data=None):
 
 def write_xyz_movie_with_str(frame, filename, elements, coords, additional_data=None):
     """
-    Writes atomic data to an XYZ file in OVITO-compatible format.
+    Writes atomic data to an XYZ file in OVITO-compatible format with additional_data of type string
 
     Parameters
     ----------
@@ -328,9 +292,6 @@ def write_xyz_movie_with_str(frame, filename, elements, coords, additional_data=
         Additional per-atom data, such as coordination numbers, site types, etc.
         Can contain both numeric and string data.
 
-    Returns
-    -------
-    None
     """
 
     if frame == 0 and os.path.exists(filename):

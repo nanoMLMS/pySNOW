@@ -4,17 +4,17 @@ import os
 import inspect
 
 def read_rgl(filepot: str) -> dict:
-    """Reads parameter for the RGL potential from a file
+    """Reads parameters for the Rosato-Guillope-Legrand (RGL) potential from a file
 
     Parameters
     ----------
     filepot : str
-        _description_
+        file from which to read the potential
 
     Returns
     -------
     dict
-        _description_
+        a dictionary with the parameters of the potential
     """
     with open(filepot, 'r') as file:
         lines = file.readlines()
