@@ -10,12 +10,13 @@ def read_lammps_data(file_path: str) -> Tuple[np.ndarray, np.ndarray]:
     Parameters
     ----------
     file_path : str
-        Path to the lammps data file
+        Path to the lammps data file from
 
     Returns
     -------
-    Tuple[list, np.ndarray]
-        Elements and coordinates array of the system
+    tuple
+        - list : chemical symbols of the atoms in the system
+        - np.ndarray : coordinates of the atoms in the system
     """
     coordinates = []
     elements = []
@@ -62,30 +63,32 @@ def read_lammps_data(file_path: str) -> Tuple[np.ndarray, np.ndarray]:
         
 def read_order_lammps_dump(filename, id_index: int = 0, type_index: int = 1, coords_indexes: list = [2,3,4], scaled_coords=True):
     """
-    Extract a movie ( Tuple[np.ndarray, np.ndarray] ) from a lammps dump file. Atoms are not written in a consistent \n
-    order in dump files, so you generally need to reorder them. 
-    You can choose the columns to get the information about id, type, and coords from the lammps dump file. Default is 
+    Extract a movie ( Tuple[np.ndarray, np.ndarray] ) from a lammps dump file. 
+    
+    Atoms are not written in a consistent order in dump files, so you generally need to reorder them. 
+    You can choose the columns to read the information about id, type, and coords from the lammps dump file. Default is 
     to 'atomic' style, which has the shape 'id type xs ys zs'.
 
     Parameters
     ----------
     filename : str
         filename for the lammps-dump file to extract atoms from.
-    id_index: int
+    id_index: int, default 0
         index of the column that contains ids of your atoms in the lammps dump -  default to 0
-    type_index: int
+    type_index: int, default 1
         index of the column that contains the type of atoms in the dump (in lammps these are mapped to numbers)
-    coords_indexes: list of ints
-        list of indexes of the columns that contain the positions of your atoms - default to [1,2,3]
-    scaled_coords: bool
+    coords_indexes: list[int], default [2,3,4]
+        list of indexes of the columns that contain the positions of the atoms
+    scaled_coords: bool, default True
         bool to check if coordinates are scaled (written in terms of the box sizes length). Default to True, which is 
-        lammps' default. Probably this can be dealt with automatically by checking if all positions are between 0 and 1,
-        but not super general and robust
+        lammps' default.
 
     Returns
     -------
-    Tuple[np.ndarray, np.ndarray]
-        species ids and positions from the lammps dump with consistent ordering of atoms. Here, pos[i] is a Nx3 array with positions of the i-th frame and so on.
+    tuple
+        - list[np.ndarray] : list of arrays with the chemical species in the system. In lammps these are mapped to a number, so these will actually be an array of numbers.
+                              Eventually, users can convert these to chemical symbols once they know the mapping
+        - list[np.ndarray] : list of arrays of coordinates of atoms in the system
     """
 
     try:

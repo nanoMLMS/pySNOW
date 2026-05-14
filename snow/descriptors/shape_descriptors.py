@@ -9,17 +9,21 @@
 import numpy as np
 from snow.misc.constants import mass
 
-
 def eccentricity(coords, round_step=None):
     """
     Compute the eccentricity (smallest/largest bounding box dimension), a measure of shape anisotropy.
 
-    Parameters:
+    Parameters
     -----------
     coords: ndarray(n_atoms, 3) 
         Coordinates of the atoms in your systems.
-    round_step: float
-        precision for rounding - optional, default to None
+    round_step: float, optional
+        precision for rounding - optional
+    
+    Returns
+    -------
+    ratio : float
+        computed eccentricity
     """
 
     frame_coords = np.atleast_2d(coords)  # ensures array 2D
@@ -47,21 +51,24 @@ def eccentricity(coords, round_step=None):
     
 
 
-def center_of_mass(
-         coords: np.ndarray, elements
-) -> np.ndarray:
+def center_of_mass(elements: list[str], coords: np.ndarray) -> np.ndarray:
     """
     Calculate the center of mass for a given frame of coordinates.
 
-    Parameters:
-    -----------
+    Atomic masses are read from `snow.misc.constants` and used as weights for the 
+    weighted average of positions.
+
+    Parameters
+    ----------
+    elements : list or np.ndarray
+        List of element symbols corresponding to the atoms, for weighted sum on masses
     coords : np.ndarray
         Array of atomic coordinates of shape ( n_atoms, 3).
-    elements : list or np.ndarray
-        List of element symbols corresponding to the atoms, for weighted sum
 
-    Returns:
-        np.ndarray: The center of mass as a 3D vector.
+    Returns
+    -------
+    com : np.ndarray 
+        The center of mass as a 3D vector (x_{com}, y_{com}, z_{com}).
     """
 
     # Get the masses of the elements
@@ -78,14 +85,29 @@ def center_of_mass(
 
 def geometric_com(coords: np.ndarray):
     """
-    Computes the average of the coordinates
+    Computes the geometric center of mass (average of the coordinates)
+
+    Computes the average of the coordinates, which is the geometrical center of mass
+    (thus, not considering different weights due to different atomic masses)
+
+    Parameters
+    ----------
+    coords : np.ndarray
+        Array of atomic coordinates of shape ( n_atoms, 3).
+
+    Returns
+    -------
+    gcom : np.ndarray 
+        The geometric center of mass as a 3D vector (x_{com}, y_{com}, z_{com}).
     """
+
     gcom = np.mean(coords, axis=0)
     return gcom
 
+
 def gyr_tensor(positions):
     """ 
-    Computes the gyration tensor for a given set of coordinates. \n
+    Computes the gyration tensor for a given set of coordinates.
     This is done in the center of positions reference system.
 
     Parameters
@@ -95,11 +117,11 @@ def gyr_tensor(positions):
 
     Returns
     -------
-    ndarray
+    np.ndarray
         3x3 gyration tensor
     """
 
-    centered = positions - np.average(positions, axis=0)
+    centered = positions - geometric_com(positions)
 
     Sxx = np.average(centered[:,0]*centered[:,0])
     Syy = np.average(centered[:,1]*centered[:,1])
@@ -113,7 +135,7 @@ def gyr_tensor(positions):
 
 def gyr_desc_from_tensor(gyration_tensor):
     """ 
-    Computes general shape descriptors (asphericity, acylindricity, relative shape anisotropy) from the gyration tensor
+    Computes general shape descriptors (asphericity, acylindricity, relative shape anisotropy) from the gyration tensor.
     
     Parameters
     ----------
@@ -122,11 +144,11 @@ def gyr_desc_from_tensor(gyration_tensor):
 
     Returns
     -------
-    float
+    b : float
         asphericity
-    float
+    c : float
         acylindricity
-    float
+    k : float
         relative shape anisotropy
     """
 
@@ -146,8 +168,9 @@ def gyr_desc_from_tensor(gyration_tensor):
 
 def gyr_desc(positions):
     """ 
-    Computes general shape descriptors obtained from the gyration tensor \n
-    (asphericity, acylindricity, relative shape anisotropy) directly from the provided atomic positions. \n
+    Computes general shape descriptors obtained from the gyration tensor.
+
+    Computes asphericity, acylindricity, and relative shape anisotropy from the provided atomic positions.
     
     Parameters
     ----------
@@ -156,11 +179,11 @@ def gyr_desc(positions):
 
     Returns
     -------
-    float
+    b : float
         asphericity
-    float
+    c : float
         acylindricity
-    float
+    k : float
         relative shape anisotropy
     """
 
@@ -171,22 +194,25 @@ def gyr_desc(positions):
 def inertia_tensor(positions, masses=None, COM=True):
 
     """ 
-    Computes the inertia tensor for a given set of coordinates. \n
-    This can be done in the center of mass reference system or in the raw provided coordinates
+    Computes the inertia tensor for a given set of coordinates.
+
+    This can be done in the center of mass reference system or in the raw provided 
+    coordinates - switch with the boolean `COM` variable
 
     Parameters
     ----------
     positions : ndarray
         Nx3 Array of the coordinates of the atoms in the system.
-    masses : ndarray
-        array of the masses of the atoms in the system. Default to np.ones(n)
+    masses : ndarray, optional
+        Masses of the atoms, shape (n_atoms,). If None (default), all masses
+        are set to 1 (equal masses).
     COM : bool
         if True, the calculation is performed in the center of mass reference system. Otherwise, it 
         is performed with the raw coordinates provided by the user
 
     Returns
     -------
-    ndarray
+    np.ndarray
         3x3 inertia tensor
     """
 
@@ -216,6 +242,11 @@ def aspect_ratio_from_tensor(inertia_tensor):
     ----------
     inertia_tensor : ndarray
         3x3 inertia tensor
+    
+    Returns
+    -------
+    ar : float
+        aspect ratio
     """
 
     eigenvalues, eigenvectors = np.linalg.eig(inertia_tensor)
@@ -228,7 +259,9 @@ def aspect_ratio_from_tensor(inertia_tensor):
 def aspect_ratio(positions, masses=None, COM=True):
     """ 
     Computes the aspect ratio, a shape descriptor derived from the inertia tensor, for a given set of coordinates. \n
-    This can be done in the center of mass reference system or in the raw provided coordinates
+
+    This can be done in the center of mass reference system or in the raw provided coordinates (switch with the COM
+    boolean variable).
 
     Parameters
     ----------
@@ -276,61 +309,62 @@ def gyr_rad(positions, masses=None):
 
 
 #experimental fast pbc com/gcom calculators
-def _parse_box_triclinic(box: np.ndarray):
-    """
-    Returns (H, origin) where H is the (3,3) matrix of lattice vectors as columns.
-    Accepts:
-      (3,)   — orthorhombic lengths, origin at 0
-      (3,2)  — lower/upper bounds per axis, orthorhombic
-      (3,3)  — full lattice matrix (vectors as rows, standard convention)
-    """
-    box = np.asarray(box, dtype=float)
-    if box.shape == (3,):
-        return np.diag(box), np.zeros(3)
-    elif box.shape == (3, 2):
-        lengths = box[:, 1] - box[:, 0]
-        return np.diag(lengths), box[:, 0]
-    elif box.shape == (3, 3):
-        # convention: rows are lattice vectors → transpose to get columns
-        return box.T, np.zeros(3)
-    else:
-        raise ValueError("Box must be shape (3,), (3,2), or (3,3).")
+#further testing needed.
+# def _parse_box_triclinic(box: np.ndarray):
+#     """
+#     Returns (H, origin) where H is the (3,3) matrix of lattice vectors as columns.
+#     Accepts:
+#       (3,)   — orthorhombic lengths, origin at 0
+#       (3,2)  — lower/upper bounds per axis, orthorhombic
+#       (3,3)  — full lattice matrix (vectors as rows, standard convention)
+#     """
+#     box = np.asarray(box, dtype=float)
+#     if box.shape == (3,):
+#         return np.diag(box), np.zeros(3)
+#     elif box.shape == (3, 2):
+#         lengths = box[:, 1] - box[:, 0]
+#         return np.diag(lengths), box[:, 0]
+#     elif box.shape == (3, 3):
+#         # convention: rows are lattice vectors → transpose to get columns
+#         return box.T, np.zeros(3)
+#     else:
+#         raise ValueError("Box must be shape (3,), (3,2), or (3,3).")
 
 
-def center_of_mass_pbc(
-    coords: np.ndarray,
-    elements,
-    box: np.ndarray,
-) -> np.ndarray:
-    masses = np.array([mass[e] for e in elements])
-    H, origin = _parse_box_triclinic(box)
+# def center_of_mass_pbc(
+#     coords: np.ndarray,
+#     elements,
+#     box: np.ndarray,
+# ) -> np.ndarray:
+#     masses = np.array([mass[e] for e in elements])
+#     H, origin = _parse_box_triclinic(box)
 
-    # Cartesian → fractional
-    H_inv = np.linalg.inv(H)
-    r_frac = (coords - origin) @ H_inv.T          # (n, 3), each row in [0,1)
+#     # Cartesian → fractional
+#     H_inv = np.linalg.inv(H)
+#     r_frac = (coords - origin) @ H_inv.T          # (n, 3), each row in [0,1)
 
-    # Angle method in fractional space (L=1)
-    theta = 2 * np.pi * r_frac                    # (n, 3)
-    xi    = np.average(np.cos(theta), axis=0, weights=masses)
-    zeta  = np.average(np.sin(theta), axis=0, weights=masses)
+#     # Angle method in fractional space (L=1)
+#     theta = 2 * np.pi * r_frac                    # (n, 3)
+#     xi    = np.average(np.cos(theta), axis=0, weights=masses)
+#     zeta  = np.average(np.sin(theta), axis=0, weights=masses)
 
-    frac_com = (np.arctan2(-zeta, -xi) + np.pi) / (2 * np.pi)
+#     frac_com = (np.arctan2(-zeta, -xi) + np.pi) / (2 * np.pi)
 
-    # Fractional → Cartesian
-    return H @ frac_com + origin
+#     # Fractional → Cartesian
+#     return H @ frac_com + origin
 
 
-def geometric_com_pbc(
-    coords: np.ndarray,
-    box: np.ndarray,
-) -> np.ndarray:
-    H, origin = _parse_box_triclinic(box)
-    H_inv = np.linalg.inv(H)
-    r_frac = (coords - origin) @ H_inv.T
+# def geometric_com_pbc(
+#     coords: np.ndarray,
+#     box: np.ndarray,
+# ) -> np.ndarray:
+#     H, origin = _parse_box_triclinic(box)
+#     H_inv = np.linalg.inv(H)
+#     r_frac = (coords - origin) @ H_inv.T
 
-    theta = 2 * np.pi * r_frac
-    xi    = np.mean(np.cos(theta), axis=0)
-    zeta  = np.mean(np.sin(theta), axis=0)
+#     theta = 2 * np.pi * r_frac
+#     xi    = np.mean(np.cos(theta), axis=0)
+#     zeta  = np.mean(np.sin(theta), axis=0)
 
-    frac_com = (np.arctan2(-zeta, -xi) + np.pi) / (2 * np.pi)
-    return H @ frac_com + origin
+#     frac_com = (np.arctan2(-zeta, -xi) + np.pi) / (2 * np.pi)
+#     return H @ frac_com + origin

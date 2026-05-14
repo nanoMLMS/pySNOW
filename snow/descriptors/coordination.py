@@ -1,34 +1,30 @@
 import numpy as np
-from snow.descriptors.utils import pair_list, nearest_neighbours, pbc_distance
-
-#possible update: modify phantom arguments so that the default return is sites, gcn
-#and with a bool option you can also get the ids of atoms for a pair, triplet, or fourplet
+from snow.descriptors.utils import pair_list, nearest_neighbours, pbc_distance, progress_bar
 
 def coordination_number(coords, cut_off, neigh_list=False, pbc=False, box=None):
     """
-    Computes the coordination number (number of nearest neighbours within a cutoff) for each atom in the system,
-    optionally it also returns the neighbour list
+    Computes the coordination number (number of nearest neighbours within a cutoff) for each atom in the system.
+
+    Optionally, the neighbour list (which is the heavy part of the calculation) can be returned with neigh_list=True.
+
 
     Parameters
     ----------
-    coords : ndarray
+    coords : np.ndarray
         Array of the coordinates of the atoms forming the system.
     cut_off : float
         The cutoff distance for determining nearest neighbors.
-    neigh_list : bool, optional
-        Option to return the neighbour list as well as the coordination number of each atom (defualt is False)
-    pbc : bool, optional
-        Whether to apply periodic boundary conditions. Defaults to False.
+    neigh_list : bool, default False
+        Option to return the neighbour list as well as the coordination number of each atom
+    pbc : bool, default False
+        Whether to apply periodic boundary conditions.
     box : np.ndarray, optional
         Simulation box size (either [Lx, Ly, Lz] or [[xmin, xmax], [ymin, ymax], [zmin, zmax]] or 3 cell vectors (shape (3,3) - slower)).
 
-    Return
+    Returns
     -------
-    If neigh_list is True:
-        tuple
-            - list: neighbour list, the list of indeces of the neighbours of each atom
-            - ndarray: the coordination numbers of each atom
-    Otherwise:
+    tuple
+        - list: neighbour list, the list of indeces of the neighbours of each atom. Only returned if `neigh_list` is True
         - ndarray: the coordination numbers of each atom
     """
     neigh = nearest_neighbours(
@@ -44,17 +40,6 @@ def coordination_number(coords, cut_off, neigh_list=False, pbc=False, box=None):
         return coord_numb
 
 
-def progress_bar(current, total, length=50):
-    """
-    Prints a nice progess bar to make look like it is doing something
-    """
-    percent = current / total
-    filled_length = int(length * percent)
-    bar = '=' * filled_length + '-' * (length - filled_length)
-    print(f'\r[{bar}] {percent * 100:.2f}%', end='')
-    return
-
-
 def agcn_calculator(coords, cut_off, cn_max = 12.0, strained: bool = False, pbc: bool = False, box = None, **kwargs):
     """
     Calculates the atop Generalized Coordination Number (GCN) for a site. The GCN is defined as the sum of the coordination numbers of the neighbors
@@ -66,15 +51,15 @@ def agcn_calculator(coords, cut_off, cn_max = 12.0, strained: bool = False, pbc:
         Array of the coordinates of the atoms forming the system.
     cut_off : float
         The cutoff distance for determining nearest neighbors.
-    cn_max : float, optional
+    cn_max : float, default 12.0
         Maximum coordination number in the specific system (default is 12.0, ok for fcc materials).
-    strained : bool, optional
-        if True, computes the strained aGCN (default is False).
-    pbc : bool, optional
+    strained : bool, default False
+        if True, computes the strained aGCN.
+    pbc : bool, default False
         Whether to apply periodic boundary conditions. Defaults to False.
     box : np.ndarray, optional
         Simulation box size (either [Lx, Ly, Lz] or [[xmin, xmax], [ymin, ymax], [zmin, zmax]] or 3 cell vectors (shape (3,3) - slower)).
-    kwargs:
+    kwargs :
         thr_cn: int, optional
             a threshold coordination number value. If provided, only atoms with coordination < thr_cn are considered for the GCN calculation
             (e.g. useful if you only want to consider surface atoms in your calculation)
@@ -101,6 +86,7 @@ def agcn_calculator(coords, cut_off, cn_max = 12.0, strained: bool = False, pbc:
         if thr_cn is not None and coord_numbers[i] >= thr_cn:
             continue
         sites.append(coords[i])
+        
         if strained:
             sgcn=0
             for nb in neigh_list[i]:
@@ -121,7 +107,7 @@ def agcn_calculator(coords, cut_off, cn_max = 12.0, strained: bool = False, pbc:
             agcn_i = sum(coord_numbers[neigh] for neigh in atom_neighbors)# - coord_numbers[i]
             agcn.append(agcn_i / cn_max)
 
-    return np.asarray(sites), np.asarray(agcn)
+    return np.array(sites), np.array(agcn)
 
 
 
@@ -137,7 +123,7 @@ def bridge_gcn(coords: np.ndarray,
     """
     Identifies bridge absorption sites and computes the Generalized Coordination Number (GCN)
     for a site. The GCN is defined as the sum of the coordination numbers of the neighbors
-    of the two atoms forming the site, counted only once.
+    of the two atoms forming the site, counted only once, divided by the reference maximum cn.
 
     Parameters
     ----------
@@ -145,32 +131,29 @@ def bridge_gcn(coords: np.ndarray,
         Array of the coordinates of the atoms forming the system.
     cut_off : float
         The cutoff distance for determining nearest neighbors.
-    cn_max : float, optional
-        Maximum typical coordination number in the specific system (default is 18.0).
-    phantom : bool, optional
+    cn_max : float, default 18.0
+        Maximum typical coordination number in the specific system (default is 18.0 - ok for FCC systems).
+    phantom : bool, default True
         If True, also returns the coordinates of the midpoints between pairs ('phantom' atoms indicating the bridge sites)
         (default is True).
     thr_cn : int
-        a threshold coordination number value. If provided, only atoms with coordination < thr_cn are considered for the GCN calculation
-        (e.g. useful if you only want to consider surface atoms in your calculation)
-    dbulk: float, optional
+        a threshold coordination number value. Only atoms with coordination < thr_cn are considered for the GCN calculation
+        (only surface bridge sites are considered)
+    strained : bool, default False
+        if True, computes the strained aGCN.
+    dbulk : float, optional
         Bulk distance for strained aGCN (default is None), has to be provided if strained is True
-    pbc : bool, optional
+    pbc : bool, default False
         Whether to apply periodic boundary conditions. Defaults to False.
     box : np.ndarray, optional
         Simulation box size (either [Lx, Ly, Lz] or [[xmin, xmax], [ymin, ymax], [zmin, zmax]] or 3 cell vectors (shape (3,3) - slower)).
 
     Returns
     -------
-    If phantom is True:
-        tuple
-            - ndarray: Coordinates of the midpoints.
-            - list: List of pairs.
-            - ndarray: Values of the bridge GCN ordered as the pairs.
-    Otherwise:
-        tuple
-            - list: List of pairs.
-            - ndarray: Values of the bridge GCN.
+    tuple
+        - ndarray: Coordinates of the midpoints. Only returned if `phantom` is True
+        - list: List of pairs.
+        - ndarray: Values of the bridge GCN ordered as the pairs.
     """
 
     #sanity check
@@ -232,36 +215,36 @@ def three_hollow_gcn(coords: np.ndarray,
                      pbc: bool = None, 
                      box = None) -> tuple:
     """
-    Finds the location of three-hollow sites and returns their location and GCN
+    Finds the location of three-hollow sites and returns their location and GCN.
+
     Parameters
     ----------
-    coords: np.ndarray
+    coords : np.ndarray
         Array with the XYZ coordinates of the atoms, shape (n_atoms, 3).
     cut_off : float
         Cutoff distance for finding neighbors in angstrom.
     thr_cn : int
-        a threshold coordination number value. If provided, only atoms with coordination < thr_cn are considered for the GCN calculation
-        (e.g. useful if you only want to consider surface atoms in your calculation)
-    phantom : bool, optional
+        a threshold coordination number value. Only atoms with coordination < thr_cn are considered for the GCN calculation
+        (only surface hollow sites are considered).
+    phantom : bool, default True
         If True, also returns the coordinates of the midpoints between triplets ('phantom' atoms indicating the 3-hollow sites)
-        (default is True).
-    dbulk: float, optional
+    dbulk : float, optional
         Bulk distance for strained aGCN (default is None), has to be provided if strained is True
-    cn_max: float
+    cn_max : float, default 22.0
         Maximum typical coordination number in the specific system (default is 22.0 - ok for FCC materials).
-    strained : bool, optional
-        if True, computes the strained aGCN (default is False).
-    pbc : bool, optional
-        Whether to apply periodic boundary conditions. Defaults to False.
+    strained : bool, default False
+        if True, computes the strained aGCN.
+    pbc : bool, default False
+        Whether to apply periodic boundary conditions.
     box : np.ndarray, optional
         Simulation box size (either [Lx, Ly, Lz] or [[xmin, xmax], [ymin, ymax], [zmin, zmax]] or 3 cell vectors (shape (3,3) - slower)).
 
     Returns
     -------
-        sites : list
-            Midpoint of triplets that form a three hollow site
-        th_gcn: list
-            GCN of the three hollow sites
+    tuple
+        - ndarray: Coordinates of the triplets midpoints. Only returned if `phantom` is True
+        - list: List of atomic indexes labelling triplets.
+        - ndarray: Values of the three-hollow GCN ordered as the pairs.            
 
     """
 
@@ -334,6 +317,7 @@ def four_hollow_gcn(coords: np.ndarray,
                     box = None) -> tuple:
     """
     Finds the location of four-hollow sites and returns their location and GCN
+
     Parameters
     ----------
     coords: np.ndarray
@@ -341,18 +325,17 @@ def four_hollow_gcn(coords: np.ndarray,
     cut_off : float
         Cutoff distance for finding neighbors in angstrom.
     thr_cn : int
-        a threshold coordination number value. If provided, only atoms with coordination < thr_cn are considered for the GCN calculation
-        (e.g. useful if you only want to consider surface atoms in your calculation)
-    phantom : bool, optional
-        If True, also returns the coordinates of the midpoints between fourplets ('phantom' atoms indicating the 3-hollow sites)
-        (default is True).
+        a threshold coordination number value. Only atoms with coordination < thr_cn are considered for the GCN calculation
+        (e.g. only surface atoms are considered)
+    phantom : bool, default True
+        If True, also returns the coordinates of the midpoints between fourplets ('phantom' atoms indicating the 4-hollow sites)
     dbulk: float, optional
         Bulk distance for strained aGCN (default is None), has to be provided if strained is True
     cn_max: float
         Maximum typical coordination number in the specific system (default is 26.0 - ok for FCC materials).
-    strained : bool, optional
-        if True, computes the strained aGCN (default is False).
-    pbc : bool, optional
+    strained : bool, default False
+        if True, computes the strained aGCN.
+    pbc : bool, default False
         Whether to apply periodic boundary conditions. Defaults to False.
     box : np.ndarray, optional
         Simulation box size (either [Lx, Ly, Lz] or [[xmin, xmax], [ymin, ymax], [zmin, zmax]] or 3 cell vectors (shape (3,3) - slower)).
@@ -360,10 +343,10 @@ def four_hollow_gcn(coords: np.ndarray,
 
     Returns
     -------
-        sites : list
-            Midpoint of triplets that form a four hollow site
-        th_gcn: list
-            GCN of the four hollow sites
+    tuple
+        - ndarray: Coordinates of the fourplets midpoints. Only returned if `phantom` is True
+        - list: List of atomic indexes labelling fourplets.
+        - ndarray: Values of the four-hollow GCN ordered as the pairs.  
 
     """
 
