@@ -4,6 +4,8 @@ Data from International Tables for Crystallography (2006). Vol. C. ch. 6.1, pp. 
 DOI : https://doi.org/10.1107/97809553602060000600
 The data can also be found at:
 http://lampx.tugraz.at/~hadley/ss1/crystaldiffraction/atomicformfactors/formfactors.php
+
+A dictionary below stores tabulated atomic masses for elements of the periodic table.
 """
 
 cm_coeffs={

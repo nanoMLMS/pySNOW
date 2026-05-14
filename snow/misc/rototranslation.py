@@ -2,6 +2,22 @@ import numpy as np
 from snow.descriptors.shape_descriptors import center_of_mass as com, geometric_com as gcom
 
 def ax_from_two_points(coord_pt_1, coord_pt_2):
+    """
+    get the vector connecting two points, oriented from the first to the second.
+    
+    Parameters
+    ----------
+    coord_pt_1 : np.ndarray or list
+        coordinates of the first point
+    coord_pt_2 : np.ndarray or list
+        coordinates of the second point
+    
+    Returns
+    -------
+    ax_connecting : np.ndarray
+        vector connecting the two points
+    
+    """
 
     x_ax = coord_pt_2[0] - coord_pt_1[0]
     y_ax = coord_pt_2[1] - coord_pt_1[1]
@@ -14,24 +30,26 @@ def ax_from_two_points(coord_pt_1, coord_pt_2):
 def translate_com_to_origin(coords : np.ndarray, elements=None) -> np.ndarray:
     """
     Shifts the positions to the center of mass reference system (so that the center of mass is in the origin). 
+
     If elements are provided, a mass-weighted average of positions is performed, otherwise (elements=None), a simple
     geometrical average is used.
 
-    Parameters:
-        index_frame (int): Index of the frame in the trajectory - for reference only.
-        coords (np.ndarray): Array of atomic coordinates of shape (frames, atoms, 3).
-        elements (list or np.ndarray): List of element symbols corresponding to the atoms. Default to None.
-          If None, all positions will have the same weight in the calculation of the center of mass
+    Parameters
+    ----------
+    coords (np.ndarray): 
+        Array of atomic coordinates
+    elements : list
+        List of element symbols corresponding to the atoms. Default to None.
+        If None, all positions will have the same weight in the calculation of the center of mass
     
-    Returns:
-        np.ndarray: shifted coords
+    Returns
+    -------
+    np.ndarray 
+        shifted coords
     """
 
-    #check type
-    coords = np.asarray(coords, dtype = float)
-
     if elements is not None:
-        return coords - com(coords, elements)
+        return coords - com(elements, coords)
     else:
         return coords - gcom(coords)
 
@@ -44,7 +62,7 @@ def rotate_around_ax(coords, axis, angle):
     coords : array-like, shape (..., 3)
         Coordinates to rotate.
     axis : array-like, shape (3,)
-        Rotation axis (will be normalized).
+        Rotation axis.
     angle : float
         Rotation angle in radians.
 
@@ -53,7 +71,7 @@ def rotate_around_ax(coords, axis, angle):
     np.ndarray
         Rotated coordinates, same shape as input.
     """
-    coords = np.asarray(coords, dtype=float)
+    
     axis = np.asarray(axis, dtype=float)
 
     n = np.linalg.norm(axis)
@@ -91,7 +109,7 @@ def align_axis_to_z(coords: np.ndarray, axis: np.ndarray) -> np.ndarray:
     Returns
     -------
     np.ndarray
-        The transformed system of coordinates
+        The transformed coordinates
     """
 
     #two possible bad cases

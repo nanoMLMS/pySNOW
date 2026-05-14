@@ -5,15 +5,23 @@ def strain_mono(coords: np.ndarray, dist_0: float, cut_off: float, neigh_list: l
     """
     Computes the strain for each atom based on neighbor distances.
 
-    Parameters:
-        coords (np.ndarray): Nx3 array of atomic coordinates.
-        dist_0 (float): Reference distance for strain calculation.
-        cut_off (float): Cutoff radius for neighbor search.
-        neigh_list (list, optional): Precomputed neighbor list to speed up if already calculated (default: None).
-        coordination (np.ndarray, optional): Precomputed coordination numbers to speed up if already calculated (default: None).
+    Parameters
+    ----------
+    coords : np.ndarray
+        Nx3 array of atomic coordinates.
+    dist_0 : float 
+        Reference distance for strain calculation.
+    cut_off : float 
+        Cutoff radius for neighbor search.
+    neigh_list : list, optional 
+        Precomputed neighbor list to speed up if already calculated (default: None).
+    coordination : np.ndarray, optional 
+        Precomputed coordination numbers to speed up if already calculated (default: None).
 
-    Returns:
-        np.ndarray: Array of strain values for all atoms.
+    Returns
+    -------
+    strain_syst : np.ndarray
+        Array of strain values for all atoms.
     """
     n_atoms = coords.shape[0]
     

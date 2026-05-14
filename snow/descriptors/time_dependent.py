@@ -2,25 +2,27 @@ import numpy as np
 
 def compute_MSD(movie, masks=None, step_by_step=False):
     """
-    Computes the mean squared displacement along a trajectory. A mask can be used to select specific (groups of) \n
-    atoms to contribute to the calculation. The calculation can be done relative to the initial positions or to \n
+    Computes the mean squared displacement (MSD) along a trajectory. 
+    
+    A mask can be used to select specific (groups of) atoms to contribute to the MSD.
+    The calculation can be done relative to the initial positions or to
     the preceding timestep by appropriately setting the step_by_step flag.
 
     Parameters
     ----------
-    movie : Tuple[np.ndarray] - or list?
-        (list of) coordinates of sequential frames of the system
-    masks : Tuple[np.ndarray] - or list?
-        (list of) array of bools for whether to count for an atom or not in the calculation of the MSD. \n
-        This should follow the order / convention of the positions in movie to refer to individual atoms, and will be 
-        reordered according to the ID mapping by the function. Default to all True
-    step_by_step : bool
+    movie : list[np.ndarray]
+        list of coordinates of sequential frames of the system. 
+        Each list item should be a (n,3) np.ndarray coordinates array
+    masks : list[list[bool]], optional
+        list of lists of bools for whether to count for an atom or not in the calculation of the MSD.
+        Default to all True.
+    step_by_step : bool, default False
         If True, the MSD at each timestep is computed relative to the timestep before. If False, it is 
         computed relative to the initial position. Default to False
 
     Returns
     -------
-    ndarray
+    MSD : np.ndarray
         mean squared displacement along the trajectory
     
     """

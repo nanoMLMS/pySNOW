@@ -6,16 +6,17 @@
 
 import numpy as np
 from snow.misc.constants import cm_coeffs
-from snow.descriptors.utils import distance_matrix
+#from snow.descriptors.utils import distance_matrix
 
 def thomson(element: str ,q : float):
     """
     Computes the Thomson part of the atomic form factor at given exchanged
     momentum using the Cromer-Mann approximation
-        Parameters
+    
+    Parameters
     ----------
     element : str
-        Name of the chemical species
+        Symbol of the chemical species
     q : float
         Magnitude of exchanged momentum
 
@@ -33,14 +34,15 @@ def thomson(element: str ,q : float):
 def iq_from_dist_mat(species: list ,q : float ,dist_mat : np.ndarray):
     """
     Computes the SAXS spectrum for a set of points from its distance matrix.
-        Parameters
+
+    Parameters
     ----------
     species : list[strings]
         The list with species of the atoms
     q : float
         Magnitude of exchanged momentum
     dist_mat : float
-        Matrix of distances of the atoms as computed in snow.utils.distance_matrix
+        Matrix of distances of the atoms, can be computed with `snow.utils.distance_matrix`
 
     Returns
     -------
@@ -62,9 +64,11 @@ def iq_from_pddf(element_i: str,element_j : str,q :float,
             dists:list ,counts:list ,nat:int =0):
     """
     Computes thes SAXS spectrum from a PDDF.
+
     Carfeul: if the bin at distance 0 is not included, nat must be
     manually set, otherwise set at 0
-        Parameters
+
+    Parameters
     ----------
     element_i : str
         Name of the chemical species of atoms i
