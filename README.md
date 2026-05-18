@@ -1,6 +1,6 @@
 # SNOW
 
-SNOW is a mostly standalone (only a few required dependencies: numpy and scipy) characterization tool for atomistic configurations. It is designed with confined systems (nanoparticles/clusters) in mind, but it is able to treat periodic systems as well. The package provides functions and code snippets to parse data, analyze it, and export it in various formats. It is developed following a list of principles - namely ease of use, ease of modification, independence (from many complex packages), and integrability (with other simulation and analysis codes). Check out the [documentation](https://nanomlms.github.io/snowWiki/about/](https://nanomlms.github.io/pySNOW_Docs/).
+SNOW is a mostly standalone (only a few required dependencies: numpy and scipy) characterization tool for atomistic configurations. It is designed with confined systems (nanoparticles/clusters) in mind, but it is able to treat periodic systems as well. The package provides functions and code snippets to parse data, analyze it, and export it in various formats. It is developed following a list of principles - namely ease of use, ease of modification, independence (from many complex packages), and integrability (with other simulation and analysis codes). Check out the [documentation](https://nanomlms.github.io/pySNOW_Docs/).
 
 ## Features
 Let's put a picture here in the future!.
@@ -220,4 +220,4 @@ pytest
 
 ## Documentation
 
-The documentation is available [here](https://nanomlms.github.io/snowWiki/](https://nanomlms.github.io/pySNOW_Docs/) (WIP).
+The documentation is available [here](https://nanomlms.github.io/pySNOW_Docs/).
