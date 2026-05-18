@@ -1,7 +1,6 @@
 from typing import Tuple
 import numpy as np
 import os
-import inspect
 
 def read_xyz_movie(file_path: str, extra_cols_indexes: list = None) -> Tuple[list, list]:
     """

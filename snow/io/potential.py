@@ -1,7 +1,4 @@
-from typing import Tuple
 import numpy as np
-import os
-import inspect
 
 def read_rgl(filepot: str) -> dict:
     """Reads parameters for the Rosato-Guillope-Legrand (RGL) potential from a file
