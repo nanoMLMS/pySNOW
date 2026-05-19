@@ -1,11 +1,7 @@
-import os
-
 import numpy as np
 from scipy.spatial import ConvexHull, cKDTree
-#from scipy.spatial.distance import pdist, squareform
-#from scipy.sparse import coo_matrix
 
-from snow.descriptors.utils import distance_matrix, hetero_distance_matrix, _check_structure
+from snow.descriptors.utils import distance_matrix, _check_structure
 from snow.descriptors.shape_descriptors import center_of_mass
 from snow.misc.rototranslation import align_axis_to_z
 

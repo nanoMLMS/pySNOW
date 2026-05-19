@@ -2,7 +2,6 @@ import os
 from os import write
 
 import numpy as np
-from scipy.spatial import KDTree
 
 try:
     from tqdm import tqdm
@@ -13,12 +12,9 @@ except ImportError:
 
 
 from snow.descriptors.utils import (
-    adjacency_matrix,
     nearest_neighbours,
     pair_list,
 )
-
-from snow.descriptors.coordination import coordination_number
 
 def longest_path_or_cycle(neigh_common, neigh_list):
     """

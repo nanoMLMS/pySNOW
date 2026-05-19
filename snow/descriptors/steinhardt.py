@@ -1,6 +1,5 @@
 import numpy as np
 from scipy.special import sph_harm
-from scipy.spatial import cKDTree
 from snow.descriptors.utils import nearest_neighbours
 try:
     from tqdm import tqdm

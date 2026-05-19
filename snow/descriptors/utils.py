@@ -1,8 +1,6 @@
-import os
-
 import numpy as np
 from scipy.sparse import coo_matrix
-from scipy.spatial import ConvexHull, cKDTree
+from scipy.spatial import cKDTree
 from scipy.spatial.distance import pdist, squareform
 
 rescale = (1 + np.sqrt(2)) / 2

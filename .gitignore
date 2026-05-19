@@ -23,3 +23,5 @@ venv/
 
 # Miscellaneous
 *.pot
+tutorial/tutorial_structures/Cu247_Dh_*
+tutorial/Au13_ih_*
