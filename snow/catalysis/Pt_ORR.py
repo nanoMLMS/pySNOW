@@ -15,7 +15,7 @@ from atomistic nanoparticle structures.
 
 References
 ----------
-.. [1] Rossi, K.; Asara, G. G.; Baletto, F.
+[1] Rossi, K.; Asara, G. G.; Baletto, F.
        "A genomic characterisation of monometallic nanoparticles".
        Phys. Chem. Chem. Phys. 2019, 21, 4888–4898.
        DOI: https://doi.org/10.1039/C8CP05720F
@@ -98,13 +98,6 @@ def get_physical_and_surface_props(agcns, num_nn, natoms, lattice, mass_pt_mg=No
     -----
     Surface atoms are identified using a nearest-neighbour
     criterion (coordination number < 11).
-
-    The active surface area is estimated from the atomic
-    spherical area weighted by the AGCN-dependent factor:
-
-    .. math::
-    
-        A_i = 4 \\pi r^2 \\left(\\frac{12 - AGCN_i}{12}\\right)
     """
     
     atomic_r_AA = lattice/(2 * np.sqrt(2))
@@ -150,18 +143,6 @@ def calculate_volcano_dg_fortran(gcn_unique):
     ndarray
         Free-energy descriptor values (eV) associated
         with each GCN value.
-
-    Notes
-    -----
-    The volcano relation is described by a piecewise-linear model:
-
-    .. math::
-
-        \\Delta G =
-        \\begin{cases}
-        0.192 \\cdot GCN - 0.724 & \\text{if } GCN < 8.33 \\\\
-        -0.178 \\cdot GCN + 2.345 & \\text{otherwise}
-        \\end{cases}
     """
 
 
@@ -198,22 +179,6 @@ def perform_activity_analysis(unique_gcns, occurrences, phys_props):
         Overpotential corresponding to a total current density
         larger than 1 mA/cm².
 
-    Notes
-    -----
-    The current contribution of each site is estimated as:
-
-    .. math::
-
-        j_i = e^{(\\Delta G_i - U)/k_B T} \\cdot f_i \\cdot j_{lim}
-
-    where:
-
-    - :math:`\\Delta G_i` is obtained from the volcano relation,
-    - :math:`f_i` is the relative frequency of the site,
-    - :math:`j_{lim}` is the limiting current density,
-    - :math:`U` is the applied potential.
-
-    Specific activity is evaluated at 0.9 V.
     """
     
     u_bins = np.arange(1, 1299) * 0.001 # j*0.001
