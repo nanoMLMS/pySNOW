@@ -6,7 +6,6 @@
 
 import numpy as np
 from snow.misc.constants import cm_coeffs
-#from snow.descriptors.utils import distance_matrix
 
 def thomson(element: str ,q : float):
     """

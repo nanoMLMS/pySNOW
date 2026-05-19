@@ -1,7 +1,5 @@
 from typing import Tuple
 import numpy as np
-import os
-import inspect
 
 
 def read_lammps_data(file_path: str) -> Tuple[np.ndarray, np.ndarray]:
