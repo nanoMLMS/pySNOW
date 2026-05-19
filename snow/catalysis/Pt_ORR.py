@@ -5,18 +5,108 @@ from snow.io.xyz import read_xyz
 from snow.descriptors.coordination import agcn_calculator, nearest_neighbours
 from snow.misc.constants import *
 
+"""
+Utilities for estimating ORR electrocatalytic activity of Pt nanoparticles.
+
+The module provides routines to compute geometrical descriptors,
+surface properties, and electrochemical activity metrics
+(specific activity, mass activity, and overpotential)
+from atomistic nanoparticle structures.
+
+References
+----------
+.. [1] Rossi, K.; Asara, G. G.; Baletto, F.
+       "A genomic characterisation of monometallic nanoparticles".
+       Phys. Chem. Chem. Phys. 2019, 21, 4888–4898.
+       DOI: https://doi.org/10.1039/C8CP05720F
+       
+       
+"""
+
+
 
 KB_T = 8.6173303e-5 * 298     # eV
 V_REVERSIBLE = 1.23           # V (Theorical Potential ORR)
 
 
 def get_geometry_properties(coords):
+    """
+    Compute basic geometrical properties of the nanoparticle.
+
+    Parameters
+    ----------
+    coords : ndarray of shape (N, 3)
+        Cartesian coordinates of the atoms in Angstrom.
+
+    Returns
+    -------
+    dict
+        Dictionary containing:
+
+        - ``natoms`` : int
+            Total number of atoms.
+        - ``rij_max`` : float
+            Maximum interatomic distance in Angstrom.
+    """
+    
     natoms = len(coords)
     rij_max = np.max(pdist(coords))
     return {"natoms": natoms, "rij_max": rij_max}
 
 def get_physical_and_surface_props(agcns, num_nn, natoms, lattice, mass_pt_mg=None):
+    """
+    Compute physical and surface-related properties of a Pt nanoparticle.
 
+    Parameters
+    ----------
+    agcns : ndarray
+        Array of generalized coordination numbers (GCN/AGCN)
+        for each atom.
+
+    num_nn : ndarray
+        Number of nearest neighbours for each atom.
+
+    natoms : int
+        Total number of atoms in the nanoparticle.
+
+    lattice : float
+        FCC lattice parameter in Angstrom.
+
+    mass_pt_mg : float, optional
+        Mass of a single Pt atom in milligrams.
+        If not provided, the value is computed from the
+        atomic mass of Pt.
+
+    Returns
+    -------
+    dict
+        Dictionary containing:
+
+        - ``mass_np_mg`` : float
+            Total nanoparticle mass in milligrams.
+        - ``active_surf_m2`` : float
+            Electrochemically active surface area in m².
+        - ``active_surf_cm2`` : float
+            Electrochemically active surface area in cm².
+        - ``counter_surf`` : int
+            Number of surface atoms.
+        - ``surf_mask`` : ndarray of bool
+            Boolean mask identifying surface atoms
+            (atoms with coordination number < 11).
+
+    Notes
+    -----
+    Surface atoms are identified using a nearest-neighbour
+    criterion (coordination number < 11).
+
+    The active surface area is estimated from the atomic
+    spherical area weighted by the AGCN-dependent factor:
+
+    .. math::
+    
+        A_i = 4 \\pi r^2 \\left(\\frac{12 - AGCN_i}{12}\\right)
+    """
+    
     atomic_r_AA = lattice/(2 * np.sqrt(2))
     atomic_r_m=atomic_r_AA* 1e-10
     
@@ -44,12 +134,88 @@ def get_physical_and_surface_props(agcns, num_nn, natoms, lattice, mass_pt_mg=No
     }
 
                     
+
 def calculate_volcano_dg_fortran(gcn_unique):
+    """
+    Compute adsorption free-energy corrections from the
+    volcano relationship as in 
+
+    Parameters
+    ----------
+    gcn_unique : ndarray
+        Array of unique generalized coordination numbers.
+
+    Returns
+    -------
+    ndarray
+        Free-energy descriptor values (eV) associated
+        with each GCN value.
+
+    Notes
+    -----
+    The volcano relation is described by a piecewise-linear model:
+
+    .. math::
+
+        \\Delta G =
+        \\begin{cases}
+        0.192 \\cdot GCN - 0.724 & \\text{if } GCN < 8.33 \\\\
+        -0.178 \\cdot GCN + 2.345 & \\text{otherwise}
+        \\end{cases}
+    """
+
+
     return np.where(gcn_unique < 8.33,
                     0.192 * (gcn_unique) - 0.724,
                     -0.178 * (gcn_unique) + 2.345)
 
+
 def perform_activity_analysis(unique_gcns, occurrences, phys_props):
+    """
+    Compute electrochemical activity metrics for a Pt nanoparticle.
+
+    Parameters
+    ----------
+    unique_gcns : ndarray
+        Unique generalized coordination number values.
+
+    occurrences : ndarray
+        Number of occurrences associated with each GCN value.
+
+    phys_props : dict
+        Dictionary containing physical and surface properties
+        returned by ``get_physical_and_surface_props``.
+
+    Returns
+    -------
+    sa_09 : float
+        Specific activity at 0.9 V.
+
+    ma_09 : float
+        Mass activity at 0.9 V in mA/mg.
+
+    eta1 : float
+        Overpotential corresponding to a total current density
+        larger than 1 mA/cm².
+
+    Notes
+    -----
+    The current contribution of each site is estimated as:
+
+    .. math::
+
+        j_i = e^{(\\Delta G_i - U)/k_B T} \\cdot f_i \\cdot j_{lim}
+
+    where:
+
+    - :math:`\\Delta G_i` is obtained from the volcano relation,
+    - :math:`f_i` is the relative frequency of the site,
+    - :math:`j_{lim}` is the limiting current density,
+    - :math:`U` is the applied potential.
+
+    Specific activity is evaluated at 0.9 V.
+    """
+    
     u_bins = np.arange(1, 1299) * 0.001 # j*0.001
     total_current = np.zeros_like(u_bins)
 
