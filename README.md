@@ -10,8 +10,6 @@ It is developed following a list of principles - namely ease of use, ease of mod
 
 The package supports data import, preprocessing, and analysis through dedicated routines, ultimately enabling the extraction of relevant structural and physical properties.
 
-A schematic representation of the workflow is shown below:
-
 <p align="center">
   <img src="images/workflow.png" alt="pySNOW workflow" height="300">
 </p>
