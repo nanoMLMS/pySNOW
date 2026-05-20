@@ -1,14 +1,33 @@
 # 23/03/2026
 
- - Snow descriptors now work with pbc
- - Modified PDDF by element: now you have to pass two elements (provide same element for homo pddf , different elements for hetero-pddf) - chemical pddf and hetero_pddf are now wrapped in this unique function, so they will not exist anymore.
- - fixed a few bugs mainly in saxs and pddf.
- - io.xyz functions are now able to deal with movies, even with a varying number of atoms per configuration (e.g., for databases with configurations from different systems)
+## Snow descriptors
+- Added support for periodic boundary conditions (PBC).
+
+## PDDF
+- Refactored PDDF-by-element calculations:
+  - the function now requires two elements as input,
+  - homo-PDDF calculations can be obtained by passing the same element twice,
+  - hetero-PDDF calculations can be obtained by passing two different elements.
+- Merged `chemical_pddf` and `hetero_pddf` into a single unified function.
+- Removed the standalone `chemical_pddf` and `hetero_pddf` functions.
+
+## Bug fixes
+- Fixed several bugs, mainly affecting SAXS and PDDF.
+
+## io.xyz
+- Added support for reading XYZ movies.
+- Added support for trajectories with a varying number of atoms per configuration.
 
 # 30/04/2026
 
- - refactoring of add_molecule, now any kind of molecule can be added with any kind of direction and angle on a given site. A few functions return the 'locally normal' direction wrt to the surface in a given site for different use cases.
- - usual bug fixing and docs writing
+## add_molecule
+- Refactored `add_molecule`.
+- Added support for placing arbitrary molecules with custom orientations and angles on selected adsorption sites.
+- Added functions to compute locally normal surface directions for different use cases.
+
+## Documentation and maintenance
+- General bug fixes.
+- Expanded documentation.
 
 # 14/05/2026
 
@@ -39,7 +58,7 @@
   - specific activity
   for Pt nanoparticles following the methodology of Rossi, Baletto et al.
 
-## reax_xyz
+## read_xyz
 - Added support for reading additional columns from input files.
 
 ## io.py
