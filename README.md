@@ -1,5 +1,5 @@
 <h1>
-  <img src="images/logo.png" width="45" valign="middle">
+  <img src="images/logo.png" width="100" valign="middle">
   pySNOW
 </h1>
 
@@ -13,7 +13,7 @@ The package supports data import, preprocessing, and analysis through dedicated 
 A schematic representation of the workflow is shown below:
 
 <figure align="center">
-  <img src="images/workflow.png" alt="pySNOW workflow" height="30">
+  <img src="images/workflow.png" alt="pySNOW workflow" height="300">
   <figcaption>
     A schematic representation of the pySNOW workflow.
   </figcaption>
