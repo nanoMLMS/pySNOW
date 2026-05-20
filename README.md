@@ -1,13 +1,23 @@
-# SNOW
-`pySNOW` (a Python Suite for Nano-Objects Workflows'), is written in the [Python](https://www.python.org/) programming language with the aim of providing a user friendly integrated set of tools for the analysis of atomic configurations originating from Molecular Dynamics and other atomistic simulations. 
+
+<h1>
+  <img src="images/logo.png" width="100" valign="middle">
+  pySNOW
+</h1>
+
+
+`pySNOW` (a Python Suite for (characterising) NanO-World), is written in the [Python :fontawesome-brands-python:](https://www.python.org/) programming language with the aim of providing a user friendly integrated set of tools for the analysis of atomic configurations originating from Molecular Dynamics and other atomistic simulations. 
 
 It is developed following a list of principles - namely ease of use, ease of modification, independence (from many complex packages), and integrability (with other simulation and analysis codes). 
 
 The package supports data import, preprocessing, and analysis through dedicated routines, ultimately enabling the extraction of relevant structural and physical properties.
 
-A schematic representation of the workflow is shown below:
+<p align="center">
+  <img src="images/workflow.png" alt="pySNOW workflow" height="300">
+</p>
 
-![pySNOW workflow](workflow.png)
+<p align="center">
+  A schematic representation of the pySNOW workflow.
+</p>
 
 
 ## Documentation
@@ -42,8 +52,8 @@ pytest
 ```
 
 ## How to cite
-To cite pySNOW you can refer to the following github DOI:
-https://github.com/nanoMLMS/pySNOW
+To cite pySNOW you can refer to the following DOI:
+......
 
 or the link to the github page:
 https://github.com/nanoMLMS/pySNOW
