@@ -27,7 +27,7 @@ def peratom_steinhardt(coords: np.ndarray, l: list[int], cut_off: float, pbc : b
 
     Returns
     -------
-    ndarray, shape (n_l, n_atoms)
+    steins : ndarray, shape (n_l, n_atoms)
         Steinhardt order parameters Q_l for each degree in l and each atom.
     """
     n_atoms = coords.shape[0]

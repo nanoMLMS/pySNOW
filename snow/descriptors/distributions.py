@@ -32,9 +32,10 @@ def pddf_calculator(coords, bin_width: float, use_lattice_units: bool, lattice :
 
     Returns
     -------
-    tuple
-        - np.ndarray : the values of the interatomic distances for each bin
-        - np.ndarray : the number of atoms within a given distance for each bin
+    bin_centers : np.ndarray
+        the values of the interatomic distances corresponding to each bin
+    dist_count : np.ndarray
+        the count of distances for the each bin
 
     """
 
@@ -101,9 +102,10 @@ def pddf_calculator_by_elements(
 
     Returns
     -------
-    tuple
-        - np.ndarray: the midpoints of the bins (in lattice units)
-        - np.ndarray: the histogram counts of distances
+    bin_centers : np.ndarray
+        the values of the interatomic distances corresponding to each bin
+    dist_count : np.ndarray
+        the count of distances for the each bin
     """
 
 
@@ -210,9 +212,10 @@ def gdr_notnorm_calculator(
 
     Returns
     -------
-    tuple[np.ndarray, np.ndarray]
-        - np.ndarray : binned distances
-        - np.ndarray : g(r) values
+    bin_centers : np.ndarray
+        the values of the interatomic distances corresponding to each bin
+    rdf : np.ndarray
+        unnormalized g(r) values
 
     Raises
     ------
@@ -288,9 +291,10 @@ def com_rdf_calculator(coords : np.ndarray,
 
     Returns
     -------
-    tuple
-        - np.ndarray : binned distances
-        - np.ndarray : binned RDF (counts of distances)
+    bin_centers : np.ndarray
+        the values of the interatomic distances corresponding to each bin
+    dist_count : np.ndarray
+        the count of distances for the each bin
 
     Raises
     ------

@@ -23,9 +23,10 @@ def coordination_number(coords, cut_off, neigh_list=False, pbc=False, box=None):
 
     Returns
     -------
-    tuple
-        - list: neighbour list, the list of indeces of the neighbours of each atom. Only returned if `neigh_list` is True
-        - ndarray: the coordination numbers of each atom
+    neighs : list
+        neighbour list, the list of indeces of the neighbours of each atom. Only returned if `neigh_list` is True
+    coord_num : ndarray
+        the coordination numbers of each atom
     """
     neigh = nearest_neighbours(
         coords=coords, cut_off=cut_off, pbc=pbc, box=box
@@ -68,8 +69,10 @@ def agcn_calculator(coords, cut_off, cn_max = 12.0, strained: bool = False, pbc:
 
     Returns
     -------
-    ndarray: sites (atomic coordinates. If thr_cn is enabled, only coordinates of atoms selected by the coordination condition)
-    ndarray: Values of the atop GCN.
+    sites : ndarray
+        sites (atomic coordinates. If thr_cn is enabled, only coordinates of atoms selected by the coordination condition)
+    gcns : ndarray
+        Values of the atop GCN.
     """
     neigh_list, coord_numbers = coordination_number(coords, cut_off, neigh_list=True, pbc=pbc, box=box)
     n_atoms = len(coord_numbers)
@@ -150,10 +153,12 @@ def bridge_gcn(coords: np.ndarray,
 
     Returns
     -------
-    tuple
-        - ndarray: Coordinates of the midpoints. Only returned if `phantom` is True
-        - list: List of pairs.
-        - ndarray: Values of the bridge GCN ordered as the pairs.
+    sites : ndarray
+        Coordinates of the midpoints. Only returned if `phantom` is True
+    pairs : list
+        List of pairs.
+    bgcns : ndarray
+        Values of the bridge GCN ordered as the pairs.
     """
 
     #sanity check
@@ -202,9 +207,6 @@ def bridge_gcn(coords: np.ndarray,
     else:
         return pairs, b_gcn
 
-
-    
-
 def three_hollow_gcn(coords: np.ndarray, 
                      cut_off: float, 
                      thr_cn: int, 
@@ -241,10 +243,12 @@ def three_hollow_gcn(coords: np.ndarray,
 
     Returns
     -------
-    tuple
-        - ndarray: Coordinates of the triplets midpoints. Only returned if `phantom` is True
-        - list: List of atomic indexes labelling triplets.
-        - ndarray: Values of the three-hollow GCN ordered as the pairs.            
+    sites : ndarray
+        Coordinates of the triplets midpoints. Only returned if `phantom` is True
+    triplets : list[list]
+        List of atomic indexes labelling triplets.
+    th_gcns : ndarray
+        Values of the three-hollow GCN ordered as the pairs.            
 
     """
 
@@ -344,9 +348,12 @@ def four_hollow_gcn(coords: np.ndarray,
     Returns
     -------
     tuple
-        - ndarray: Coordinates of the fourplets midpoints. Only returned if `phantom` is True
-        - list: List of atomic indexes labelling fourplets.
-        - ndarray: Values of the four-hollow GCN ordered as the pairs.  
+    sites : ndarray
+        Coordinates of the fourplets midpoints. Only returned if `phantom` is True
+    fourplets : list[list]
+        List of atomic indexes labelling fourplets.
+    fh_gcns : ndarray
+        Values of the four-hollow GCN ordered as the pairs.  
 
     """
 
