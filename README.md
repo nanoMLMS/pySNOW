@@ -1,3 +1,4 @@
+
 <h1>
   <img src="images/logo.png" width="100" valign="middle">
   pySNOW
@@ -17,6 +18,7 @@ The package supports data import, preprocessing, and analysis through dedicated 
 <p align="center">
   A schematic representation of the pySNOW workflow.
 </p>
+
 
 ## Documentation
 
@@ -50,8 +52,8 @@ pytest
 ```
 
 ## How to cite
-To cite pySNOW you can refer to the following github DOI:
-https://github.com/nanoMLMS/pySNOW
+To cite pySNOW you can refer to the following DOI:
+......
 
 or the link to the github page:
 https://github.com/nanoMLMS/pySNOW
