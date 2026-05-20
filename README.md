@@ -1,4 +1,4 @@
-# pySNOW ![pySNOW logo](logo.png)
+# pySNOW ![pySNOW logo](logo_without_txt.png)
 
 `pySNOW` (a Python Suite for (characterising) NanO-World), is written in the [Python :fontawesome-brands-python:](https://www.python.org/) programming language with the aim of providing a user friendly integrated set of tools for the analysis of atomic configurations originating from Molecular Dynamics and other atomistic simulations. 
 
