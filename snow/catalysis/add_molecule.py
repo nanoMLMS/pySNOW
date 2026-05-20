@@ -53,9 +53,10 @@ def add_molecule(el: list[str],
 
     Returns
     -------
-    tuple
-        - list[str] : the list of chemnical symbols of atoms in the system with the adsorbed molecule
-        - np.ndarray : coordinates of atoms in the system with the adsorbed molecule
+    new_el : list[str]
+        the list of chemnical symbols of atoms in the system with the adsorbed molecule
+    new_coords : np.ndarray
+        coordinates of atoms in the system with the adsorbed molecule
     
     """
 
@@ -130,7 +131,7 @@ def locally_normal_direction(coords: np.ndarray, site: np.ndarray, cutoff: float
 
     Returns
     -------
-    np.ndarray
+    direction : np.ndarray
         the vector pointing in the locally normal direction.
     """
 
@@ -169,7 +170,7 @@ def triplet_normal(coords: np.ndarray, triplet: list[int], cutoff):
 
     Returns
     -------
-    np.ndarray
+    normal : np.ndarray
         the vector pointing in the locally normal direction.
 
     """
@@ -213,7 +214,7 @@ def fourplet_normal(coords: np.ndarray, fourplet: list[int], cutoff):
 
     Returns
     -------
-    np.ndarray
+    normal : np.ndarray
         the vector pointing in the locally normal direction.
     """
 
@@ -245,7 +246,7 @@ def check_overlapping(el: list[str], coords: np.ndarray, atomic_radii: dict):
     
     Returns
     -------
-    bool
+    overlap : bool
         wether atoms are overlapping in this configuration or not
     
     """

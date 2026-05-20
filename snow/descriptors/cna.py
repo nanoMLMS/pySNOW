@@ -34,7 +34,7 @@ def longest_path_or_cycle(neigh_common, neigh_list):
 
     Returns
     -------
-    int
+    longest_chain : int
         Length of the longest path or cycle found in the subgraph.
     """
 
@@ -96,10 +96,12 @@ def calculate_cna(
 
     Returns
     -------
-    tuple
-        - int : number of pairs found
-        - np.ndarray : cna signatures (r,s,t) for each found pair in a (n_pairs, 3) array
-        - list : the indexes of atoms in pairs corresponding to the computed cna signatures. Only returned if `return_pairs`=True
+    npairs : int
+        number of pairs found
+    signatures : np.ndarray
+        cna signatures (r,s,t) for each found pair in a (n_pairs, 3) array
+    pairs : list
+        the indexes of atoms in pairs corresponding to the computed cna signatures. Only returned if `return_pairs`=True
     """
 
     neigh_list = nearest_neighbours(
@@ -170,9 +172,12 @@ def calculate_cna_fast(
     Returns
     -------
     tuple
-        - int : number of pairs found
-        - np.ndarray : cna signatures (r,s,t) for each found pair in a (n_pairs, 3) array
-        - list : the indexes of atoms in pairs corresponding to the computed cna signatures. Only returned if `return_pairs`=True
+    npairs : int
+        number of pairs found
+    signatures : np.ndarray
+        cna signatures (r,s,t) for each found pair in a (n_pairs, 3) array
+    pairs : list
+        the indexes of atoms in pairs corresponding to the computed cna signatures. Only returned if `return_pairs`=True
     """
 
     # Get neighbor list and pair list
@@ -311,7 +316,7 @@ def cnap_peratom(
 
     Returns
     -------
-    np.ndarray
+    pattenrs_ids : np.ndarray
         Array of (integers) structure IDs per atom
     """
 

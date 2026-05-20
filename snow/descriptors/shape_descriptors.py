@@ -117,7 +117,7 @@ def gyr_tensor(positions):
 
     Returns
     -------
-    np.ndarray
+    tensor : np.ndarray
         3x3 gyration tensor
     """
 
@@ -212,7 +212,7 @@ def inertia_tensor(positions, masses=None, COM=True):
 
     Returns
     -------
-    np.ndarray
+    tensor : np.ndarray
         3x3 inertia tensor
     """
 
@@ -275,7 +275,7 @@ def aspect_ratio(positions, masses=None, COM=True):
 
     Returns
     -------
-    float
+    ar : float
         aspect ratio
     """
 
@@ -295,7 +295,7 @@ def gyr_rad(positions, masses=None):
     
     Returns
     -------
-    float
+    gr : float
         Gyration radius
     """
 

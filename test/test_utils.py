@@ -3,7 +3,9 @@ from snow.descriptors.utils import distance_matrix, adjacency_matrix
 
 def test_two_atoms():
     coords = np.array([[0, 0, 0], [1, 0, 0]])  # two atoms 1 unit apart
-    dist_mat, dist_max, dist_min = distance_matrix(coords)
+    dist_mat = distance_matrix(coords)
+    dist_max = np.max(dist_mat)
+    dist_min = np.min(dist_mat)
     expected_matrix = np.array([[0, 1],
                                 [1, 0]])
     assert np.allclose(dist_mat, expected_matrix)
@@ -12,7 +14,9 @@ def test_two_atoms():
 
 def test_three_atoms():
     coords = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0]])
-    dist_mat, dist_max, dist_min = distance_matrix(coords)
+    dist_mat = distance_matrix(coords)
+    dist_max = np.max(dist_mat)
+    dist_min = np.min(dist_mat)
     expected_matrix = np.array([[0, 1, 1],
                                 [1, 0, np.sqrt(2)],
                                 [1, np.sqrt(2), 0]])
@@ -22,7 +26,9 @@ def test_three_atoms():
 
 def test_identical_atoms():
     coords = np.array([[0, 0, 0], [0, 0, 0]])
-    dist_mat, dist_max, dist_min = distance_matrix(coords)
+    dist_mat = distance_matrix(coords)
+    dist_max = np.max(dist_mat)
+    dist_min = np.min(dist_mat)
     expected_matrix = np.array([[0, 0],
                                 [0, 0]])
     assert np.allclose(dist_mat, expected_matrix)
@@ -31,7 +37,9 @@ def test_identical_atoms():
 
 def test_single_atom():
     coords = np.array([[1, 2, 3]])
-    dist_mat, dist_max, dist_min = distance_matrix(coords)
+    dist_mat = distance_matrix(coords)
+    dist_max = np.max(dist_mat)
+    dist_min = np.min(dist_mat)
     expected_matrix = np.array([[0]])
     assert np.allclose(dist_mat, expected_matrix)
     assert dist_max == 0

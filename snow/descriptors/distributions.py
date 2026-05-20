@@ -32,9 +32,10 @@ def pddf_calculator(coords, bin_width: float, use_lattice_units: bool, lattice :
 
     Returns
     -------
-    tuple
-        - np.ndarray : the values of the interatomic distances for each bin
-        - np.ndarray : the number of atoms within a given distance for each bin
+    bin_centers : np.ndarray
+        the values of the interatomic distances corresponding to each bin
+    dist_count : np.ndarray
+        the count of distances for the each bin
 
     """
 
@@ -49,7 +50,8 @@ def pddf_calculator(coords, bin_width: float, use_lattice_units: bool, lattice :
     _check_structure(coords=coords)
     n_atoms = np.shape(coords)[0]
     
-    dist_mat, dist_max, dist_min = distance_matrix(coords=coords)
+    dist_mat = distance_matrix(coords=coords)
+    dist_max = np.max(dist_mat)
 
     triu_indeces = np.triu_indices(n_atoms, k=1)
     distances = dist_mat[triu_indeces]
@@ -101,9 +103,10 @@ def pddf_calculator_by_elements(
 
     Returns
     -------
-    tuple
-        - np.ndarray: the midpoints of the bins (in lattice units)
-        - np.ndarray: the histogram counts of distances
+    bin_centers : np.ndarray
+        the values of the interatomic distances corresponding to each bin
+    dist_count : np.ndarray
+        the count of distances for the each bin
     """
 
 
@@ -131,7 +134,8 @@ def pddf_calculator_by_elements(
             )
 
         # Compute distance matrix
-        dist_mat, dist_max, dist_min = distance_matrix(coords=selected_coords)
+        dist_mat = distance_matrix(coords=selected_coords)
+        dist_max = np.max(dist_mat)
         if cutoff:
             n_bins = int(np.ceil(cutoff/ bin_width))
         else:
@@ -152,7 +156,7 @@ def pddf_calculator_by_elements(
     else:
         # Heteroelemental
         # Only take distances of given pair
-        dist_mat,_,_ = distance_matrix(coords)
+        dist_mat = distance_matrix(coords)
 
         #The Mask will zero distances that are not the ones we are looking for
         mask = np.zeros((len(coords),len(coords)))
@@ -210,9 +214,10 @@ def gdr_notnorm_calculator(
 
     Returns
     -------
-    tuple[np.ndarray, np.ndarray]
-        - np.ndarray : binned distances
-        - np.ndarray : g(r) values
+    bin_centers : np.ndarray
+        the values of the interatomic distances corresponding to each bin
+    rdf : np.ndarray
+        unnormalized g(r) values
 
     Raises
     ------
@@ -288,9 +293,10 @@ def com_rdf_calculator(coords : np.ndarray,
 
     Returns
     -------
-    tuple
-        - np.ndarray : binned distances
-        - np.ndarray : binned RDF (counts of distances)
+    bin_centers : np.ndarray
+        the values of the interatomic distances corresponding to each bin
+    dist_count : np.ndarray
+        the count of distances for the each bin
 
     Raises
     ------

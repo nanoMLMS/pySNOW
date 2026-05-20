@@ -36,7 +36,7 @@ def translate_com_to_origin(coords : np.ndarray, elements=None) -> np.ndarray:
 
     Parameters
     ----------
-    coords (np.ndarray): 
+    coords : np.ndarray
         Array of atomic coordinates
     elements : list
         List of element symbols corresponding to the atoms. Default to None.
@@ -44,7 +44,7 @@ def translate_com_to_origin(coords : np.ndarray, elements=None) -> np.ndarray:
     
     Returns
     -------
-    np.ndarray 
+    new_coords : np.ndarray 
         shifted coords
     """
 
@@ -68,7 +68,7 @@ def rotate_around_ax(coords, axis, angle):
 
     Returns
     -------
-    np.ndarray
+    new_coords : np.ndarray
         Rotated coordinates, same shape as input.
     """
     
@@ -108,7 +108,7 @@ def align_axis_to_z(coords: np.ndarray, axis: np.ndarray) -> np.ndarray:
 
     Returns
     -------
-    np.ndarray
+    new_coords : np.ndarray
         The transformed coordinates
     """
 
@@ -147,8 +147,8 @@ def align_z_to_axis(coords: np.ndarray, axis: np.ndarray) -> np.ndarray:
 
     Returns
     -------
-    np.ndarray
-        The transformed system of coordinates
+    new_coords : np.ndarray
+        The transformed coordinates
     """
 
     #two possible bad cases

@@ -18,23 +18,32 @@ def distance_matrix(coords):
 
     Returns
     -------
-    tuple
-        - np.ndarray : distance matrix
-        - float : maximum of the distance matrix
-        - float : minimum of the distance matrix
+    distance_matrix : np.ndarray
+        distance matrix
     """
     distances = pdist(coords)
     dist_mat = squareform(distances)
-    dist_min = 0.0
-    dist_max = np.max(dist_mat)
-    return dist_mat, dist_max, dist_min
+    return dist_mat
 
 
 def adjacency_matrix(coords, cutoff):
     """
     Computes the adjacency matrix Ad_ij, where the entry ij is 1 if distance r_ij<=cutoff, else is 0
+
+    Parameters
+    ----------
+    coords : np.ndarray
+        coordinates of the system
+    cutoff : np.ndarray
+        cutoff to define neighbouring atoms
+
+    Returns
+    -------
+    adj_matrix : np.ndarray
+        adjacency matrix
+
     """
-    dist_mat = distance_matrix(coords)[0]
+    dist_mat = distance_matrix(coords)
     adj_matrix = dist_mat <= cutoff
     return adj_matrix
 
@@ -94,7 +103,7 @@ def hetero_distance_matrix(coords, elements):
         
     """
     n_atoms = np.shape(coords)[0]
-    dist_mat, _, _ = distance_matrix(coords=coords)
+    dist_mat = distance_matrix(coords=coords)
 
     triu_indices = np.triu_indices(n_atoms, k=1)
     id_i, id_j = triu_indices
@@ -148,7 +157,7 @@ def distance_matrix_pbc(positions, cell):
     # distances
     dmat = np.linalg.norm(dr, axis=-1)
 
-    return dmat, np.max(dmat), np.min(dmat) #for compatibility also return max & min distance
+    return dmat
 
 def nn_pbc(coords, box, cut_off):
     """
@@ -172,7 +181,7 @@ def nn_pbc(coords, box, cut_off):
         The i-th sublist contains the indices of neighboring atoms for the i-th atom.
     """
 
-    dmat   = distance_matrix_pbc(coords, box)[0]
+    dmat   = distance_matrix_pbc(coords, box)
     ad_mat = dmat < cut_off
     np.fill_diagonal(ad_mat, False)
 
@@ -261,7 +270,7 @@ def pairs_from_neighbor_list(neigh_list):
         
     Returns
     -------
-    list of tuples
+    piars : list of tuples
         Unique pairs
     """
     pairs = set()
@@ -294,7 +303,7 @@ def pair_list(
 
     Returns
     -------
-    list
+    pairs : list
         List of tuples with indexes of pairs of atoms that are within the cutoff distance.
     """
 
@@ -376,7 +385,7 @@ def apply_pbc(coords, box_size):
 
     Returns
     -------
-    np.ndarray
+    coords : np.ndarray
         Coordinates after applying PBC.
     """
     if box_size.shape == (3, 2):  # Lower and upper bounds provided
@@ -405,7 +414,7 @@ def bounding_box(points):
     
     Returns
     -------
-    np.ndarray
+    box : np.ndarray
         computed axis-aligned bounding box.    
     """
     x_coordinates, y_coordinates, z_coordinates = zip(*points)
@@ -433,7 +442,7 @@ def second_neighbours(
 
     Returns
     -------
-    list
+    snn_list : list[list]
         List of lists containing indeces of second neighbours for each atom
     """
     neigh = nearest_neighbours(
@@ -469,8 +478,10 @@ def get_coords_by_element(el, coords, chosen_element):
     Returns
     -------
     Tuple
-        el, coords of atoms of the selected element (either (list, np.ndarray) or (list of list, list of np.ndarray) 
-        depending on if the input was a single frame or a movie)
+    el : list or list[list]
+        list of elements of selected atoms. The return type depends on whether the input is a single frame or a movie (list of frames)
+    coords : np.ndarray or list[np.ndarray]
+        cooridnates of selected atoms. The return type depends on whether the input is a single frame or a movie (list of frames)
         
     """
 
@@ -514,17 +525,17 @@ def get_coords_by_element(el, coords, chosen_element):
 
 
 
-def _check_structure(coords: np.ndarray, elements: np.ndarray | None = None, *, require_elements: bool = False):
+def _check_structure(coords: np.ndarray, elements: list | None = None, *, require_elements: bool = False):
     """sanity-checks that a structure (list of coordinates) is provided in the right format
 
     Parameters
     ----------
     coords : np.ndarray
-        _description_
-    elements : np.ndarray | None, optional
-        _description_, by default None
+        coordinates of the atoms in the system
+    elements : list | None, optional
+        elements list for the atoms in the system
     require_elements : bool, optional
-        _description_, by default False
+        if elements are required for further checks. No check on elements is currently implemented.
     """
     if not isinstance(coords, np.ndarray):
         raise ValueError("Coordinates must be provided as np.ndarray")
@@ -548,7 +559,7 @@ def pbc_distance(p1, p2, box):
 
     Returns
     -------
-    float
+    distance : float
         Minimum image distance between p1 and p2.
     """
 

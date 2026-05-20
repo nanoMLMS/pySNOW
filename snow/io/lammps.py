@@ -12,9 +12,10 @@ def read_lammps_data(file_path: str) -> Tuple[np.ndarray, np.ndarray]:
 
     Returns
     -------
-    tuple
-        - list : chemical symbols of the atoms in the system
-        - np.ndarray : coordinates of the atoms in the system
+    elements : list
+        chemical symbols of the atoms in the system
+    coords : np.ndarray
+        coordinates of the atoms in the system
     """
     coordinates = []
     elements = []
@@ -83,10 +84,11 @@ def read_order_lammps_dump(filename, id_index: int = 0, type_index: int = 1, coo
 
     Returns
     -------
-    tuple
-        - list[np.ndarray] : list of arrays with the chemical species in the system. In lammps these are mapped to a number, so these will actually be an array of numbers.
-                              Eventually, users can convert these to chemical symbols once they know the mapping
-        - list[np.ndarray] : list of arrays of coordinates of atoms in the system
+    el_list : list[np.ndarray]
+        list of arrays with the chemical species in the system. In lammps these are mapped to a number, so these will actually be an array of numbers.
+        Eventually, users can convert these to chemical symbols once they know the mapping
+    coords_list : list[np.ndarray]
+        list of arrays of coordinates of atoms in the system
     """
 
     try:
