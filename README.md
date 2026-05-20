@@ -12,13 +12,13 @@ The package supports data import, preprocessing, and analysis through dedicated 
 
 A schematic representation of the workflow is shown below:
 
-<figure align="center">
+<p align="center">
   <img src="images/workflow.png" alt="pySNOW workflow" height="300">
-  <figcaption>
-    A schematic representation of the pySNOW workflow.
-  </figcaption>
-</figure>
+</p>
 
+<p align="center">
+  A schematic representation of the pySNOW workflow.
+</p>
 
 ## Documentation
 
