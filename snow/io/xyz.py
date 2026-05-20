@@ -22,9 +22,12 @@ def read_xyz_movie(file_path: str, extra_cols_indexes: list = None) -> Tuple[lis
     Returns
     -------
     tuple
-        - list[list] : list of lists of chemical elements of the atoms in the system
-        - list[np.ndarray] : list of arrays of coordinates fo atoms in the system
-        - list[np.ndarray] : list of arrays of data extra from extra columns. Only returned if extra_cols_indexes is set.        
+    el_list : list[list]
+        list of lists of chemical elements of the atoms in the system
+    coords_list : list[np.ndarray]
+        list of arrays of coordinates fo atoms in the system
+    extra_cols_list : list[np.ndarray]
+        list of arrays of data extra from extra columns. Only returned if extra_cols_indexes is set.        
     """
     
     el_list = []
@@ -104,9 +107,12 @@ def read_xyz(file, extra_cols_indexes=None):
     Returns
     -------
     tuple
-        - list : list of lists of chemical elements of the atoms in the system
-        - np.ndarray : array of coordinates fo atoms in the system
-        - np.ndarray : array of data extra from extra columns. Only returned if extra_cols_indexes is set.    
+    elements : list
+        list of lists of chemical elements of the atoms in the system
+    cordinates : np.ndarray
+        array of coordinates fo atoms in the system
+    extra_cols : np.ndarray
+        array of data extra from extra columns. Only returned if extra_cols_indexes is set.    
 
     """
 
@@ -211,9 +217,6 @@ def write_xyz_movie(filename, elements_list, coords_list, additional_data_list=N
         Additional per-atom data, such as coordination numbers.
     box : np.ndarray, optional
         a simulation box to be written to file
-
-    Returns:
-        None
     """
 
     if additional_data_list is None:
@@ -244,10 +247,6 @@ def write_phantom_xyz(filename, coords, additional_data=None):
         Nx3 array of atomic coordinates.
     additional_data: list or np.ndarray, optional
         Additional per-atom data, such as coordination numbers.
-
-    Returns
-    -------
-        An xyz file containing the elements and coordinates of each atom and any additional per atom data (e.g. coordination number, agcn, strain...) 
     """
     n_atoms = len(coords)
     elements=['X'] * n_atoms
