@@ -18,19 +18,12 @@ def distance_matrix(coords):
 
     Returns
     -------
-    tuple
-    distance_materix : np.ndarray
+    distance_matrix : np.ndarray
         distance matrix
-    max : float
-        maximum of the distance matrix
-    min : float
-        minimum of the distance matrix
     """
     distances = pdist(coords)
     dist_mat = squareform(distances)
-    dist_min = 0.0
-    dist_max = np.max(dist_mat)
-    return dist_mat, dist_max, dist_min
+    return dist_mat
 
 
 def adjacency_matrix(coords, cutoff):
@@ -50,7 +43,7 @@ def adjacency_matrix(coords, cutoff):
         adjacency matrix
 
     """
-    dist_mat = distance_matrix(coords)[0]
+    dist_mat = distance_matrix(coords)
     adj_matrix = dist_mat <= cutoff
     return adj_matrix
 
@@ -110,7 +103,7 @@ def hetero_distance_matrix(coords, elements):
         
     """
     n_atoms = np.shape(coords)[0]
-    dist_mat, _, _ = distance_matrix(coords=coords)
+    dist_mat = distance_matrix(coords=coords)
 
     triu_indices = np.triu_indices(n_atoms, k=1)
     id_i, id_j = triu_indices
@@ -164,7 +157,7 @@ def distance_matrix_pbc(positions, cell):
     # distances
     dmat = np.linalg.norm(dr, axis=-1)
 
-    return dmat, np.max(dmat), np.min(dmat) #for compatibility also return max & min distance
+    return dmat
 
 def nn_pbc(coords, box, cut_off):
     """
@@ -188,7 +181,7 @@ def nn_pbc(coords, box, cut_off):
         The i-th sublist contains the indices of neighboring atoms for the i-th atom.
     """
 
-    dmat   = distance_matrix_pbc(coords, box)[0]
+    dmat   = distance_matrix_pbc(coords, box)
     ad_mat = dmat < cut_off
     np.fill_diagonal(ad_mat, False)
 

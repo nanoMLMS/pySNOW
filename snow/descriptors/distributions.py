@@ -50,7 +50,8 @@ def pddf_calculator(coords, bin_width: float, use_lattice_units: bool, lattice :
     _check_structure(coords=coords)
     n_atoms = np.shape(coords)[0]
     
-    dist_mat, dist_max, dist_min = distance_matrix(coords=coords)
+    dist_mat = distance_matrix(coords=coords)
+    dist_max = np.max(dist_mat)
 
     triu_indeces = np.triu_indices(n_atoms, k=1)
     distances = dist_mat[triu_indeces]
@@ -133,7 +134,8 @@ def pddf_calculator_by_elements(
             )
 
         # Compute distance matrix
-        dist_mat, dist_max, dist_min = distance_matrix(coords=selected_coords)
+        dist_mat = distance_matrix(coords=selected_coords)
+        dist_max = np.max(dist_mat)
         if cutoff:
             n_bins = int(np.ceil(cutoff/ bin_width))
         else:
@@ -154,7 +156,7 @@ def pddf_calculator_by_elements(
     else:
         # Heteroelemental
         # Only take distances of given pair
-        dist_mat,_,_ = distance_matrix(coords)
+        dist_mat = distance_matrix(coords)
 
         #The Mask will zero distances that are not the ones we are looking for
         mask = np.zeros((len(coords),len(coords)))
