@@ -9,7 +9,7 @@ The package supports data import, preprocessing, and analysis through dedicated 
 
 A schematic representation of the workflow is shown below:
 
-![pySNOW workflow](workflow.png)
+![pySNOW workflow](workflow_2.png)
 
 
 ## Documentation
