@@ -4,7 +4,7 @@ from snow.io import read_xyz_movie
 
 BIN_WIDTH=0.05
 
-elements,coordinates = read_xyz_movie("AlAu_ih13.xyz")
+elements,coordinates = read_xyz_movie("test/AlAu_ih13.xyz")
 bincenters,total_pddf = pddf_calculator(coordinates[0],bin_width=BIN_WIDTH,use_lattice_units=False)
 
 _,alal_pddf= pddf_calculator_by_elements(elements[0],coordinates[0],["Al","Al"],bin_width=BIN_WIDTH,use_lattice_units=False)

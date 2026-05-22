@@ -3,7 +3,7 @@ from snow.io import read_xyz_movie
 from snow.descriptors.utils import distance_matrix
 from snow.descriptors.saxs import *
 
-elements,coordinates = read_xyz_movie("AlAu_ih13.xyz")
+elements,coordinates = read_xyz_movie("test/AlAu_ih13.xyz")
 
 #Tests that distance matrix and pddf method give the same SAXS spectra up to RATIO_TOLERANCE error
 
@@ -22,7 +22,7 @@ alal_pddf=np.empty(0)
 alau_pddf=np.empty(0)
 auau_pddf=np.empty(0)
 bincenters=np.empty(0)
-lines= open("pddf_AlAu_ih13_bins_0.05.dat",'r').readlines()
+lines= open("test/pddf_AlAu_ih13_bins_0.05.dat",'r').readlines()
 for l in lines:
     if l.startswith("#"):
         continue
