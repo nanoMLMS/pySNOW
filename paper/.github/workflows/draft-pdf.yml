@@ -13,7 +13,6 @@ jobs:
       contents: write
 
     steps:
-      # Aggiornato a v5 per il pieno supporto a Node 24
       - name: Checkout
         uses: actions/checkout@v5 
 
@@ -23,7 +22,6 @@ jobs:
           journal: joss
           paper-path: paper/paper.md
 
-      # Aggiornato a v5 per evitare warning futuri
       - name: Upload artifact
         uses: actions/upload-artifact@v5
         with:
