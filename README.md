@@ -52,8 +52,7 @@ pytest
 ```
 
 ## How to cite
-To cite pySNOW you can refer to the following DOI:
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20307346.svg)](https://doi.org/10.5281/zenodo.20307346)
+To cite pySNOW you can refer to the following DOI: [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20307346.svg)](https://doi.org/10.5281/zenodo.20307346)
 
 
 
