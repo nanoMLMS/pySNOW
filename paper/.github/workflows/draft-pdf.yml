@@ -1,3 +1,4 @@
+
 name: Draft PDF
 
 on:
@@ -9,6 +10,8 @@ on:
 jobs:
   paper:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout
@@ -24,4 +27,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: paper-pdf
-          path: paper.pdf
+          path: paper/paper.pdf
