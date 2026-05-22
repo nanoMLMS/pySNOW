@@ -5,7 +5,7 @@
 </h1>
 
 
-`pySNOW` (a Python Suite for (characterising) NanO-World), is written in the [Python](https://www.python.org/) programming language with the aim of providing a user friendly integrated set of tools for the analysis of atomic configurations originating from Molecular Dynamics and other atomistic simulations. 
+`pySNOW` (a Python Suite for the NanO-World), is written in the [Python](https://www.python.org/) programming language with the aim of providing a user friendly integrated set of tools for the analysis of atomic configurations originating from Molecular Dynamics and other atomistic simulations. 
 
 It is developed following a list of principles - namely ease of use, ease of modification, independence (from many complex packages), and integrability (with other simulation and analysis codes). 
 
@@ -53,12 +53,7 @@ pytest
 
 ## How to cite
 To cite pySNOW you can refer to the following DOI:
-......
-
-or the link to the github page:
-https://github.com/nanoMLMS/pySNOW
-
-
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20307346.svg)](https://doi.org/10.5281/zenodo.20307346)
 
 
 
