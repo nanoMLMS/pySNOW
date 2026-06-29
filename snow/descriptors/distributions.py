@@ -9,6 +9,7 @@ from snow.misc.rototranslation import align_axis_to_z
 def pddf_calculator(coords, bin_width: float, use_lattice_units: bool, lattice : float = None):
     """
     Computes the pair distance distribution function for a given set of coordinates of atoms. 
+    Please note that this function will count each pair once e.g. will consider (i,j) but not (j,i)
 
     If use_lattice_units=True, bin_width should be provided in lattice units (alat) and the pddf 
     is returned in lattice units.
@@ -75,8 +76,9 @@ def pddf_calculator_by_elements(
 ):
     """
     Computes the chemical element-wise pair distance distribution function (PDDF) for a given set of coordinates.
+    Please note that this function will count each pair once e.g. will consider (i,j) but not (j,i)
 
-    This function only considers distances between atoms of specified chemical elements (A-A, A-B, or A-B).
+    This function only considers distances between atoms of specified chemical elements (A-A, A-B, or B-B).
     It can be decided whether to use lattice units or not. Histogram counting is used for efficiency.
 
     Parameters
