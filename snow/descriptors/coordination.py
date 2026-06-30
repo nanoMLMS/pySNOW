@@ -428,3 +428,62 @@ def four_hollow_gcn(coords: np.ndarray,
         return np.asarray(sites), fours, fh_gcn
     else:
         return fours, fh_gcn
+
+
+def get_surface_atoms(el, coords, cutoff, style, threshold=None, **kwargs):
+    """
+    Get the atoms on the surface in the system.
+    
+    This selection can be done according to different metrics. Currently implemented:
+    are styles that check if the coordination number or generalized coordination number
+    are over a given threshold (style=='cn' and style=='agcn', respectively).
+    
+    Parameters
+    ----------
+    el: list
+        a list of chemical symbols of the atoms in the system
+    coords: ndarray
+        xyz cooridnates of the atoms in the system
+    cutoff: float
+        cutoff distance to define adjacent atoms in the system
+    style: str
+        choose the method to define surface atom. Currently implemented are 'cn' (coordination number)
+        and 'agcn' (atop generalized coordination number). In both cases, the coordination value is 
+        compared with a threshold (see the `threshold` argument), and if it is lower than the threshold
+        value, the atom is considered as a surface atom.
+    threshold: float, optional
+        a threshold to compare coordination numbers of the atoms and distinguish surface vs bulk ones. 
+        Atoms are considered to be in the surface is the coordination/agcn is < threshold.
+        Defaults are 11 for `style==cn` and 8.5 for `style==agcn`.
+    **kwargs:
+        other arguments you might want to pass to the coordination number/agcn function
+
+    Returns
+    -------
+    el_surf: list
+        chemical symbols of selected surface atoms
+    coords_surf: ndarray
+        coordinates of selected surface atoms
+    
+    """
+
+    implemented_styles = ("cn", "agcn")
+    if style not in implemented_styles:
+        raise NotImplementedError(f"style {style} not implemented: only possible styles are {implemented_styles}")
+    
+    if threshold is None:
+        default_thresholds = {'cn': 11, 'agcn': 8.5}
+        threshold = default_thresholds[style]
+    
+    if style=='cn':
+        surf_descriptor_func = coordination_number
+    elif style=='agcn':
+        surf_descriptor_func = agcn_calculator
+    
+    descs = surf_descriptor_func(el, coords, cutoff, **kwargs)
+    surf_idxs = np.where(descs<threshold)[0]
+
+    el_surf = [e for i, e in enumerate(el) if i in surf_idxs]
+    coords_surf = coords[surf_idxs]
+
+    return el_surf, coords_surf
