@@ -524,7 +524,7 @@ def check_overlap(el, coords, radii):
     dists = squareform(pdist(coords))
     np.fill_diagonal(dists, np.inf)
 
-    atom_radii = radii[el] 
+    atom_radii = np.array([radii[e] for e in el])
     radii_mat = atom_radii[:, None] + atom_radii[None, :]  # sum of radii pairs
 
     overlaps = dists < radii_mat

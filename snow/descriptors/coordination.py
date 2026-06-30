@@ -480,7 +480,7 @@ def get_surface_atoms(el, coords, cutoff, style, threshold=None, **kwargs):
     elif style=='agcn':
         surf_descriptor_func = agcn_calculator
     
-    descs = surf_descriptor_func(el, coords, cutoff, **kwargs)
+    descs = surf_descriptor_func(coords, cutoff, **kwargs)
     surf_idxs = np.where(descs<threshold)[0]
 
     el_surf = [e for i, e in enumerate(el) if i in surf_idxs]
