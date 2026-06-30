@@ -2,10 +2,11 @@ import numpy as np
 from scipy.sparse import coo_matrix
 from scipy.spatial import cKDTree
 from scipy.spatial.distance import pdist, squareform
+from scipy.sparse.csgraph import connected_components
 
 rescale = (1 + np.sqrt(2)) / 2
 
-
+# distance matrix in various styles
 
 def distance_matrix(coords):
     """
@@ -158,6 +159,8 @@ def distance_matrix_pbc(positions, cell):
     dmat = np.linalg.norm(dr, axis=-1)
 
     return dmat
+
+# nearest neaighbours in various styles
 
 def nn_pbc(coords, box, cut_off):
     """
@@ -347,6 +350,8 @@ def pair_list(
 
     return list(pairs)
 
+# misc
+
 def kl_div(func1: np.array, func2: np.array) -> float:
     """
     Calculate the Kullback-Leibler divergence between two functions.
@@ -461,6 +466,70 @@ def second_neighbours(
 
     return snn_list
 
+def count_clusters(coords, cutoff, return_clusters=False):
+    """
+    Count the number of clusters in the system
+
+    Each cluster is defined as the group of atoms at a distance<cutoff. Atoms at
+    a distance>cutoff are considered to be part of two separate clusters.
+
+    Parameters
+    ----------
+    coords: ndarray
+        xyz coordinates of the atoms in the system
+    cutoff: float
+        a distance to define connected atoms and separated clusters
+    return_clusters: bool, optional
+        if True, a list of ndarrays containing the coordinates of the found clusters is returned.
+
+    Returns
+    -------
+    nclusts: int
+        number of clusters found
+    clusters : list[np.ndarray]
+        only returned if `return_clusters==True`. List of coordinates of the atoms in each cluster.
+        Each element has shape (n_atoms_in_cluster, 3).
+    """
+
+    adjacency = adjacency_matrix(coords, cutoff)
+
+    nclusts, labels = connected_components(adjacency)
+
+    if return_clusters:
+
+        clusters = [
+            coords[labels == i]
+            for i in range(nclusts)
+        ]
+
+        return nclusts, clusters
+    
+    else:
+
+        return nclusts
+
+def check_overlap(el, coords, radii):
+    """
+    Check if any two atoms are overlapping (|p[i1]-p[i2]| < radius[i1]+radius[i2])
+
+    Parameters
+    ----------
+    el: list
+        chemical symbols of atoms in the system
+    coords: ndarray
+        xyz coordinates of the atoms in the system
+    radii: dict
+        a dictionary with the chemical_symbol : atomic_radius correspondence
+    """
+    dists = squareform(pdist(coords))
+    np.fill_diagonal(dists, np.inf)
+
+    atom_radii = radii[el] 
+    radii_mat = atom_radii[:, None] + atom_radii[None, :]  # sum of radii pairs
+
+    overlaps = dists < radii_mat
+    return np.any(overlaps)
+
 def get_coords_by_element(el, coords, chosen_element):
     """
     Returns the coordinates (and the chemical element array, for consistency) filtered for a selected chemical specie.
@@ -522,8 +591,6 @@ def get_coords_by_element(el, coords, chosen_element):
         raise ValueError('Unknown format for coords array.')    
 
     return return_elements, selected_coords
-
-
 
 def _check_structure(coords: np.ndarray, elements: list | None = None, *, require_elements: bool = False):
     """sanity-checks that a structure (list of coordinates) is provided in the right format
