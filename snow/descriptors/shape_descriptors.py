@@ -148,7 +148,7 @@ def gyr_desc_from_tensor(gyration_tensor):
         asphericity
     c : float
         acylindricity
-    k : float
+    k2 : float
         relative shape anisotropy
     """
 
@@ -161,9 +161,9 @@ def gyr_desc_from_tensor(gyration_tensor):
 
     b = l3 - (l1 + l2)/2.   #asphericity
     c = l2 - l1             #acilindricity
-    k = 3.*(l1*l1 + l2*l2 + l3*l3)/2./((l1 + l2 + l3)**2.) -0.5   #relative shape anisotropy
+    k2 = 3.*(l1*l1 + l2*l2 + l3*l3)/2./((l1 + l2 + l3)**2.) -0.5   #relative shape anisotropy
 
-    return b, c, k
+    return b, c, k2
 
 
 def gyr_desc(positions):
@@ -183,7 +183,7 @@ def gyr_desc(positions):
         asphericity
     c : float
         acylindricity
-    k : float
+    k2 : float
         relative shape anisotropy
     """
 
