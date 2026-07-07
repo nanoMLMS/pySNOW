@@ -1,5 +1,8 @@
 import numpy as np
+from scipy.spatial.transform import Rotation
+
 from snow.descriptors.shape_descriptors import center_of_mass as com, geometric_com as gcom
+from snow.misc.constants import mass
 
 def ax_from_two_points(coord_pt_1, coord_pt_2):
     """
@@ -171,3 +174,35 @@ def align_z_to_axis(coords: np.ndarray, axis: np.ndarray) -> np.ndarray:
     rotation_axis = rotation_axis / np.linalg.norm(rotation_axis)
 
     return rotate_around_ax(coords, rotation_axis, angle)
+
+def eckart_frame(el, coords, ref_coords):
+    """
+    Applies Eckart conditions to the provided frame, removing translations and 
+    minimizing rigid rotations with respect to a reference frame.
+
+    Parameters
+    ----------
+    el : list[str]
+        list of chemical symbols of atoms in the system
+    coords : ndarray
+        xyz coordinates of atoms in the system for the current frame
+    ref_coords : ndarray
+        xyz coordinates of atoms in the system for the reference frame (assuming the elements list remains consistent)
+
+    Returns
+    -------
+    new_coords : ndarray
+        xyz coordinates of the provided frame with applied eckart conditions.
+
+    """
+    
+    #subtract com
+    coords = coords - com(el, coords)
+    ref_coords = ref_coords - com(el, ref_coords)
+
+    masses = np.array([mass[e] for e in el])
+    
+    #find the best rotation that matches the two frames
+    R, _ = Rotation.align_vectors(ref_coords, coords, weights=masses)
+    new_coords = R.apply(coords)
+    return new_coords
