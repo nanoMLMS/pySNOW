@@ -432,7 +432,7 @@ def cut_layers(
         return layer_number, layer_ntot
 
 
-def cilindrical_distribution(el, coords, ax, bin_width, com=True, center=None):
+def cylindrical_distribution(el, coords, ax, bin_width, com=True, center=None):
     """
     Compute the distribution of atomic positions in the system in a cylindrical-wise fashion.
 
