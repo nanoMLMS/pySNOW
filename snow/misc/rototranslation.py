@@ -122,7 +122,7 @@ def align_axis_to_z(coords: np.ndarray, axis: np.ndarray) -> np.ndarray:
         return rotate_around_ax(coords, [1., 0., 0.], np.pi)
 
     axis = np.asarray(axis, dtype = float)
-    axis /= np.linalg.norm(axis) 
+    axis = axis / np.linalg.norm(axis) 
     rotation_axis = np.cross(axis, np.array([0, 0, 1]))
     
     #angle of rotation

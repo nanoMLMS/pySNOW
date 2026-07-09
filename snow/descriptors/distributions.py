@@ -349,6 +349,8 @@ def cut_layers(
         chemical symbols of the atoms provided - Shape (n_atoms,)
     coords_frame : np.ndarray
         coordinates of the atoms provided - Shape (n_atoms, 3)
+    layer_height : float
+        width for the layers (bins) of the distributions
     cutting_ax : str or np.ndarray
         either 'x', 'y', 'z', or a (3, ) np.ndarray such as (1,1,0)
     species_A : str (optional)
@@ -429,3 +431,65 @@ def cut_layers(
     else:
         return layer_number, layer_ntot
 
+
+def cilindrical_distribution(el, coords, ax, bin_width, com=True, center=None):
+    """
+    Compute the distribution of atomic positions in the system in a cylindrical-wise fashion.
+
+    A principal axis is considered (identifying the cylindrical symmetry axis, or in general,
+    the z/planar coordinate for the cylindrical system), and from there, atomic coordinates are binned
+    in 'slice-of-cake'-like bins, where the bin size is given as an angular width identifying a range 
+    of radial directions spanning from the central cylindrical axis.
+
+    Parameters
+    ----------
+    el : np.ndarray
+        chemical symbols of the atoms provided - Shape (n_atoms,)
+    coords : np.ndarray
+        coordinates of the atoms provided - Shape (n_atoms, 3)
+    ax : ndarray - shape (3,)
+        an array identifying the main axis of the cylindrical coordinates system
+    bin_width : float
+        width for the distributions bins - in *radians*. This is an angular width for bins 
+        spanning radial directions starting from the axis
+    com : bool, deafult True
+        if True, the center (origin) of the system of coordinates is in the center of mass of the system.
+        If false, you should provide the desired center with the center argument.
+    center : ndarray, shape (3,), default to None
+        the xyz positions of the center (origin) of the system, if com is set to False and thus you want to 
+        specify your own origin for the system
+
+    Returns
+    -------
+    bin_centers : array[float]
+        bin centers of the bins of the distribution - in radians
+    bin_count : array[float]
+        number of atoms in each bin.
+
+    """
+
+    if not com and center is None:
+        raise ValueError('if com is False, you should provide your own origin for the coordinates system.')
+
+    #align z axis with provided axis
+    if not np.array_equal(ax, np.array([0., 0., 1.])):
+        cc = align_axis_to_z(coords, axis=ax)
+        if not com:
+            center = align_axis_to_z(center[None, :], axis=ax)[0] #handles correctly np.ndarray shapes 
+    else:
+        cc = coords
+
+    #shift to desired origin
+    if com:
+        center = center_of_mass(el, cc)
+    
+    shifted_coords = cc - center
+
+    #transform x', y' to angles
+    angles = np.arctan2(shifted_coords[:,1], shifted_coords[:,0]) % (2*np.pi)
+    
+    n_bins = int(np.ceil(2*np.pi / bin_width))
+    bins = np.linspace(0, n_bins*bin_width, n_bins + 1)
+    angles_count, _ = np.histogram(angles, bins=bins)
+    
+    return (bins[:-1] + bin_width/2.), angles_count
