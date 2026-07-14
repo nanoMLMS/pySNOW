@@ -275,7 +275,8 @@ def gdr_notnorm_calculator(
 def com_rdf_calculator(coords : np.ndarray, 
                        bin_width : float, 
                        com : np.ndarray = None, 
-                       elements : list = None):
+                       elements : list = None,
+                       dist_max: float = None):
     """
     Compute the Radial Distribution Function: a distribution of all the distances wrt to the center
     of mass of the system. The com can be provided as an argument or computed by the function (in this case, 
@@ -292,6 +293,11 @@ def com_rdf_calculator(coords : np.ndarray,
     elements : list[str], optional
         chemical species of the atoms in the system used in the center of mass calculation. If None,
         provide the com as an argument to the function
+    dist_max : float, default to None
+        Maximum distance up to which the distribution is computed. This is useful
+        when comparing distributions from different configurations, as it fixes the
+        histogram range (i.e. the bin edges). Default to None, for which the maximum distance from the com is used
+        to define the bins limit.
 
     Returns
     -------
@@ -314,11 +320,13 @@ def com_rdf_calculator(coords : np.ndarray,
         com = center_of_mass(elements, coords)
     
     #obtain the list of distances of each atom to the com
-    com_dists = np.zeros(len(coords))
-    for i, pos in enumerate(coords):
-        com_dists[i] = np.linalg.norm(pos - com)
+    com_dists = np.linalg.norm(coords - com, axis=1)
     
-    dist_max = np.max(com_dists)
+    if dist_max is None:
+        dist_max = np.max(com_dists)
+    else:
+        if np.max(com_dists) > dist_max:
+            print(f"Warning: selected max distance for com_rdf_calculator is smaller than system's max distance from com ({np.max(com_dists)}, {dist_max})")
 
     n_bins = int(np.ceil(dist_max / bin_width))
 
@@ -335,13 +343,16 @@ def cut_layers(
     cutting_ax = 'z',
     species_A: str = None,
     species_B: str = None,
+    length_max: float = None
     
 ):
     """
     Cuts a single frame into layers and compute the distribution of atoms in the layers.
 
     Computes the distribution of atoms per layer of width `layer_height`. The axis along which (perpendicular)
-    planes are cut can be specified as either 'z' (default), 'x', 'y', or a user-defined np.ndarray
+    planes are cut can be specified as either 'z' (default), 'x', 'y', or a user-defined np.ndarray.
+    By default, the distribution goes from 0 to (coord_max-coord_min), where coord_max and coord_min are the maximum 
+    and minimum coordinate along the given direction.
 
     Parameters
     ----------
@@ -357,11 +368,16 @@ def cut_layers(
         chemical specie 1 to filter the coords and get a chemical specie-wise count of atoms per layer
     species_B : str (optional)
         chemical specie 2 to filter the coords and get a chemical specie-wise count of atoms per layer
+    length_max : float, default to None
+        Maximum distance up to which the distribution is computed. This is useful
+        when comparing distributions from different configurations, as it fixes the
+        histogram range (i.e. the bin edges). Default to None, for which the maximum distance 
+        between atoms along the given axis is computed.
         
     Returns
     -------
-    layer_number : np.ndarray
-        Layer indices, shape (n_layers,).
+    layer_center : np.ndarray
+        Layer coordinates (bin centers), shape (n_layers,).
     layer_ntot : np.ndarray
         Total atom count per layer, shape (n_layers,).
     layer_na : np.ndarray
@@ -372,16 +388,21 @@ def cut_layers(
         Only returned if species_B is not None.
     """
 
-    if cutting_ax == 'x':
-        cutting_ax = np.asarray([1.,0.,0.])
-    elif cutting_ax == 'y':
-        cutting_ax = np.asarray([0.,1.,0.])
-    elif cutting_ax == 'z':
-        cutting_ax = np.asarray([0.,0.,1.])
+    #get splicing axis
+    if isinstance(cutting_ax, str):
+        if cutting_ax == 'x':
+            cutting_ax = np.asarray([1.,0.,0.])
+        elif cutting_ax == 'y':
+            cutting_ax = np.asarray([0.,1.,0.])
+        elif cutting_ax == 'z':
+            cutting_ax = np.asarray([0.,0.,1.])
+    else:
+        cutting_ax = np.asarray(cutting_ax, dtype=float)
 
     elements = np.array(elements, dtype=str)  # dtype+np.ndarray conversion
     elements = np.char.strip(elements)        # remove whitespaces
-            
+    
+
     #align selected axis to z
     if not np.array_equal(cutting_ax, np.array([0., 0., 1.])):
         cc = align_axis_to_z(coords_frame, axis=cutting_ax)
@@ -392,11 +413,23 @@ def cut_layers(
     
     min_z = z.min()
     max_z = z.max()
-    
-    n_layers = int((max_z - min_z) / layer_height) + 1
 
-    layer_number = np.zeros(n_layers, dtype=int) #or layer bin center?
-    layer_ntot   = np.zeros(n_layers, dtype=int)
+    #shift local copy of coordinates to (0, zmax) for better manipulation
+    z = z - min_z
+    
+    #range across which the histogram is computed
+    if length_max is not None:
+        length_range = length_max
+        if length_range < max_z - min_z:
+            print(f'Warning: selected length_range is smaller than length of the system across given axis ({length_range}, {max_z-min_z})')
+    else:
+        length_range = max_z - min_z
+
+    n_layers = int(np.ceil(length_range / layer_height))
+
+    #layer_number  = np.zeros(n_layers, dtype=int)
+    layer_ntot    = np.zeros(n_layers, dtype=int)
+    layer_centers = np.zeros(n_layers, dtype=float)
     if species_A is not None:
         layer_na     = np.zeros(n_layers, dtype=int)
     if species_B is not None:
@@ -404,8 +437,10 @@ def cut_layers(
 
     for i in range(n_layers):
     
-        z_min_bin = min_z + i * layer_height
-        z_max_bin = min_z + (i + 1) * layer_height
+        #bin edges
+        z_min_bin = i * layer_height
+        z_max_bin = (i + 1) * layer_height
+        layer_centers[i] = (z_min_bin + z_max_bin)/2.
 
         mask = (z >= z_min_bin) & (z < z_max_bin)
         
@@ -415,7 +450,7 @@ def cut_layers(
         if species_B is not None:
             n_B = np.count_nonzero(mask & (elements == species_B))
         
-        layer_number[i] = i
+        #layer_number[i] = i
         layer_ntot[i]   = tot
         if species_A is not None:
             layer_na[i]     = n_A
@@ -423,13 +458,13 @@ def cut_layers(
             layer_nb[i]     = n_B
 
     if species_A is not None and species_B is not None:
-        return layer_number, layer_ntot, layer_na, layer_nb
+        return layer_centers, layer_ntot, layer_na, layer_nb
     elif species_A is not None:
-        return layer_number, layer_ntot, layer_na
+        return layer_centers, layer_ntot, layer_na
     elif species_B is not None:
-        return layer_number, layer_ntot, layer_nb
+        return layer_centers, layer_ntot, layer_nb
     else:
-        return layer_number, layer_ntot
+        return layer_centers, layer_ntot
 
 
 def cylindrical_distribution(el, coords, ax, bin_width, com=True, center=None):
@@ -439,7 +474,8 @@ def cylindrical_distribution(el, coords, ax, bin_width, com=True, center=None):
     A principal axis is considered (identifying the cylindrical symmetry axis, or in general,
     the z/planar coordinate for the cylindrical system), and from there, atomic coordinates are binned
     in 'slice-of-cake'-like bins, where the bin size is given as an angular width identifying a range 
-    of radial directions spanning from the central cylindrical axis.
+    of radial directions spanning from the central cylindrical axis. By default, binning is computed across
+    the entire (2*pi) angular domain.
 
     Parameters
     ----------
@@ -454,7 +490,7 @@ def cylindrical_distribution(el, coords, ax, bin_width, com=True, center=None):
         spanning radial directions starting from the axis
     com : bool, deafult True
         if True, the center (origin) of the system of coordinates is in the center of mass of the system.
-        If false, you should provide the desired center with the center argument.
+        If False, you should provide the desired center with the center argument.
     center : ndarray, shape (3,), default to None
         the xyz positions of the center (origin) of the system, if com is set to False and thus you want to 
         specify your own origin for the system
@@ -470,6 +506,7 @@ def cylindrical_distribution(el, coords, ax, bin_width, com=True, center=None):
 
     if not com and center is None:
         raise ValueError('if com is False, you should provide your own origin for the coordinates system.')
+    
 
     #align z axis with provided axis
     if not np.array_equal(ax, np.array([0., 0., 1.])):
