@@ -351,8 +351,8 @@ def cut_layers(
 
     Computes the distribution of atoms per layer of width `layer_height`. The axis along which (perpendicular)
     planes are cut can be specified as either 'z' (default), 'x', 'y', or a user-defined np.ndarray.
-    By default, the distribution goes from 0 to (coord_max-coord_min), where coord_max and coord_min are the maximum 
-    and minimum coordinate along the given direction.
+    the distribution goes from the minimum coordinate along the given axis to either the maximum coordinate
+    along that direction or length_max, if provided by the user
 
     Parameters
     ----------
@@ -414,8 +414,8 @@ def cut_layers(
     min_z = z.min()
     max_z = z.max()
 
-    #shift local copy of coordinates to (0, zmax) for better manipulation
-    z = z - min_z
+    # #shift local copy of coordinates to (0, zmax) for better manipulation
+    # z = z - min_z
     
     #range across which the histogram is computed
     if length_max is not None:
@@ -438,11 +438,11 @@ def cut_layers(
     for i in range(n_layers):
     
         #bin edges
-        z_min_bin = i * layer_height
-        z_max_bin = (i + 1) * layer_height
+        z_min_bin = i * layer_height + min_z
+        z_max_bin = (i + 1) * layer_height + min_z
         layer_centers[i] = (z_min_bin + z_max_bin)/2.
 
-        mask = (z >= z_min_bin) & (z < z_max_bin)
+        mask = (z >= z_min_bin) & (z < z_max_bin) if i < n_layers - 1 else (z >= z_min_bin) & (z <= z_max_bin) #dealing with last atom on last bin case
         
         tot = np.count_nonzero(mask)
         if species_A is not None:
@@ -467,7 +467,7 @@ def cut_layers(
         return layer_centers, layer_ntot
 
 
-def cylindrical_distribution(el, coords, ax, bin_width, com=True, center=None):
+def cylindrical_distribution(el, coords, bin_width, ax, com=True, center=None):
     """
     Compute the distribution of atomic positions in the system in a cylindrical-wise fashion.
 
