@@ -3,6 +3,8 @@ from os import write
 
 import numpy as np
 
+from collections import Counter
+
 try:
     from tqdm import tqdm
 except ImportError:
@@ -386,6 +388,41 @@ def cnap_peratom(
         cna_atom[i] = match_pattern(sigs, counts)
 
     return cna_atom
+
+def count_unique_cnaps(per_atom_signatures):
+        """
+        Count the number of unique cnaps in the system. 
+
+        This can be an informative tool on the order/disorder of the system
+
+        Parameters
+        ----------
+        per_atom_signatures: list of tuple[np.ndarray, np.ndarray]
+            For each atom, a tuple (unique_signatures, counts) representing the unique CNA signatures from all pairs involving that atom and their respective counts,
+            as computed by cna.cna_peratom
+
+        Returns
+        -------
+        patterns:
+            found patterns, sorted by frequency
+        counts:
+            count of atoms which show the patterns above
+
+        """
+        pattern_counter = Counter()
+
+        # Expand signatures by their counts, sort to have permutation invariance
+        for sigs, counts in per_atom_signatures:
+            expanded = []
+            for sig, cnt in zip(sigs, counts):
+                expanded.extend([tuple(sig)] * cnt)  # explicitly write the list of N signatures
+            pattern = tuple(sorted(expanded))  # sort
+            pattern_counter[pattern] += 1
+
+        # patterns sorted by frequency, most common first
+        patterns, counts = zip(*pattern_counter.most_common())
+
+        return patterns, counts
 
 def write_cna(
     frame,
