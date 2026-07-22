@@ -530,3 +530,205 @@ def cylindrical_distribution(el, coords, bin_width, ax, com=True, center=None):
     angles_count, _ = np.histogram(angles, bins=bins)
     
     return (bins[:-1] + bin_width/2.), angles_count
+
+def solid_angle_distribution(el, coords, bin_width_theta, bin_width_phi, com=True, center=None):
+    """
+    Compute the distribution of atomic positions in the system in a spherical-wise fashion.
+
+    The z-axis is used as the polar axis of the spherical coordinate system. Atomic coordinates
+    are binned over solid angle bins defined by the polar angle theta (0 to pi) and the azimuthal
+    angle phi (0 to 2*pi). Each bin covers a range of solid angles identified by
+    (bin_width_theta, bin_width_phi).
+
+    Parameters
+    ----------
+    el : np.ndarray
+        chemical symbols of the atoms provided - Shape (n_atoms,)
+    coords : np.ndarray
+        coordinates of the atoms provided - Shape (n_atoms, 3)
+    bin_width_theta : float
+        width for the bins along the polar angle theta - in *radians*. The polar angle ranges
+        from 0 (north pole) to pi (south pole).
+    bin_width_phi : float
+        width for the bins along the azimuthal angle phi - in *radians*. The azimuthal angle ranges
+        from 0 to 2*pi.
+    com : bool, default True
+        if True, the center (origin) of the system of coordinates is the center of mass of the system.
+        If False, you should provide the desired center with the center argument.
+    center : ndarray, shape (3,), default to None
+        the xyz positions of the center (origin) of the system, if com is set to False and thus you want to
+        specify your own origin for the system
+
+    Returns
+    -------
+    bin_centers : np.ndarray
+        array of shape (n_bins_theta, n_bins_phi, 2) containing the (theta, phi) coordinates
+        of each bin center - theta in radians, phi in radians
+    counts : np.ndarray
+        array of shape (n_bins_theta, n_bins_phi) containing the number of atoms in each bin
+
+    Raises
+    ------
+    ValueError
+        If com is False and no center is provided.
+    """
+
+    if not com and center is None:
+        raise ValueError('if com is False, you should provide your own origin for the coordinates system.')
+
+    # shift to desired origin
+    if com:
+        center = center_of_mass(el, coords)
+
+    shifted_coords = coords - center
+
+    # transform to spherical angles
+    r = np.linalg.norm(shifted_coords, axis=1)
+    # avoid division by zero for atoms exactly at the origin
+    r_safe = np.where(r > 0, r, 1.0)
+
+    # polar angle theta: arccos(z/r), ranges [0, pi]
+    theta = np.arccos(np.clip(shifted_coords[:, 2] / r_safe, -1.0, 1.0))
+    # azimuthal angle phi: arctan2(y, x), ranges [0, 2*pi]
+    phi = np.arctan2(shifted_coords[:, 1], shifted_coords[:, 0]) % (2 * np.pi)
+
+    # remove atoms exactly at the origin (they have undefined angles)
+    valid = r > 0
+    theta = theta[valid]
+    phi = phi[valid]
+
+    n_bins_theta = int(np.ceil(np.pi / bin_width_theta))
+    n_bins_phi = int(np.ceil(2 * np.pi / bin_width_phi))
+
+    # build 2D histogram
+    theta_edges = np.linspace(0, n_bins_theta * bin_width_theta, n_bins_theta + 1)
+    phi_edges = np.linspace(0, n_bins_phi * bin_width_phi, n_bins_phi + 1)
+
+    counts, _, _ = np.histogram2d(theta, phi, bins=[theta_edges, phi_edges])
+
+    # compute bin centers
+    theta_centers = theta_edges[:-1] + bin_width_theta / 2.0
+    phi_centers = phi_edges[:-1] + bin_width_phi / 2.0
+    bin_centers = np.stack(np.meshgrid(theta_centers, phi_centers, indexing='ij'), axis=-1)
+
+    return bin_centers, counts
+
+def columns_distribution(coords, bin_width_x, bin_width_y, use_lattice_units, lattice=None, ax='z', max_x=None, max_y=None):
+    """
+    Compute distribution of atomic positions in a per-column fashion (counts the number of atoms in
+    each (x, x+dx) x (y, y+dy) rectangular bin).
+
+    The z-axis is used as the column axis by default. The x and y axes define the plane across which
+    atoms are binned into columns. If a different column axis is specified via `ax`, the coordinates
+    are first rotated to align that axis to z before binning.
+
+    If use_lattice_units=True, bin_width_x and bin_width_y should be provided in lattice units (alat)
+    and the distribution is returned in lattice units.
+    If use_lattice_units=False, the bin widths should be provided in the same units as coords.
+
+    Parameters
+    ----------
+    coords : np.ndarray
+        coordinates of the atoms provided - Shape (n_atoms, 3)
+    bin_width_x : float
+        width of the bins along the x axis. It should be provided in lattice units if
+        use_lattice_units==True, and in the same units as coords if use_lattice_units==False.
+    bin_width_y : float
+        width of the bins along the y axis. It should be provided in lattice units if
+        use_lattice_units==True, and in the same units as coords if use_lattice_units==False.
+    use_lattice_units : bool
+        If True, the distribution is computed and returned in units of the lattice constant (passed
+        as the 'lattice' argument) and the bin widths should be given in units of the lattice constant.
+        If False, the distribution is returned in the units of coords, and the bin widths should be
+        given in the same units as coords.
+    lattice : float, optional
+        Specify a value for the lattice parameter of your structure in the same units as coords.
+        Only needed if use_lattice_units is True
+    ax : str or np.ndarray, default 'z'
+        the column axis. Either 'x', 'y', 'z', or a (3,) np.ndarray such as (1,1,0).
+    max_x : float, default to None
+        Maximum extent of the distribution along the x axis. This is useful
+        when comparing distributions from different configurations, as it fixes the
+        histogram range (i.e. the bin edges). Default to None, for which the maximum
+        x coordinate of the system is used.
+    max_y : float, default to None
+        Maximum extent of the distribution along the y axis. This is useful
+        when comparing distributions from different configurations, as it fixes the
+        histogram range (i.e. the bin edges). Default to None, for which the maximum
+        y coordinate of the system is used.
+
+    Returns
+    -------
+    bin_centers : np.ndarray
+        array of shape (n_bins_x, n_bins_y, 2) containing the (x, y) coordinates
+        of each bin center
+    counts : np.ndarray
+        array of shape (n_bins_x, n_bins_y) containing the number of atoms in each bin
+
+    Raises
+    ------
+    ValueError
+        If use_lattice_units is True and no lattice constant is provided.
+    """
+
+    if use_lattice_units:
+        if lattice is None:
+            raise ValueError('If use_lattice_units==True, you should provide a value for the lattice constant to use')
+        coords = coords / lattice
+        if max_x is not None:
+            max_x = max_x / lattice
+        if max_y is not None:
+            max_y = max_y / lattice
+
+    # resolve ax string to array
+    if isinstance(ax, str):
+        if ax == 'x':
+            ax = np.asarray([1., 0., 0.])
+        elif ax == 'y':
+            ax = np.asarray([0., 1., 0.])
+        elif ax == 'z':
+            ax = np.asarray([0., 0., 1.])
+    else:
+        ax = np.asarray(ax, dtype=float)
+
+    # align selected axis to z
+    if not np.array_equal(ax, np.array([0., 0., 1.])):
+        cc = align_axis_to_z(coords, axis=ax)
+    else:
+        cc = coords
+
+    x = cc[:, 0]
+    y = cc[:, 1]
+
+    min_x = x.min()
+    min_y = y.min()
+
+    # x range
+    if max_x is not None:
+        range_x = max_x
+        if range_x < x.max() - min_x:
+            print(f'Warning: selected max_x is smaller than the system extent along x ({range_x}, {x.max() - min_x})')
+    else:
+        range_x = x.max() - min_x
+
+    # y range
+    if max_y is not None:
+        range_y = max_y
+        if range_y < y.max() - min_y:
+            print(f'Warning: selected max_y is smaller than the system extent along y ({range_y}, {y.max() - min_y})')
+    else:
+        range_y = y.max() - min_y
+
+    n_bins_x = int(np.ceil(range_x / bin_width_x))
+    n_bins_y = int(np.ceil(range_y / bin_width_y))
+
+    x_edges = np.linspace(min_x, min_x + range_x, n_bins_x + 1)
+    y_edges = np.linspace(min_y, min_y + range_y, n_bins_y + 1)
+
+    counts, _, _ = np.histogram2d(x, y, bins=[x_edges, y_edges])
+
+    x_centers = x_edges[:-1] + bin_width_x / 2.0
+    y_centers = y_edges[:-1] + bin_width_y / 2.0
+    bin_centers = np.stack(np.meshgrid(x_centers, y_centers, indexing='ij'), axis=-1)
+
+    return bin_centers, counts
