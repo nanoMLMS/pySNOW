@@ -531,14 +531,19 @@ def cylindrical_distribution(el, coords, bin_width, ax, com=True, center=None):
     
     return (bins[:-1] + bin_width/2.), angles_count
 
-def solid_angle_distribution(el, coords, bin_width_theta, bin_width_phi, com=True, center=None):
+def solid_angle_distribution(el, coords, bin_width_phi, bin_width_theta=None, bin_count_theta_uniform=None, com=True, center=None):
     """
     Compute the distribution of atomic positions in the system in a spherical-wise fashion.
 
     The z-axis is used as the polar axis of the spherical coordinate system. Atomic coordinates
     are binned over solid angle bins defined by the polar angle theta (0 to pi) and the azimuthal
     angle phi (0 to 2*pi). Each bin covers a range of solid angles identified by
-    (bin_width_theta, bin_width_phi).
+    (bin_width_theta, bin_width_phi). 
+
+    It should be noted that with uniformly distributed bin edges the 2D bins area is not uniform (dA=dphi dtheta sin theta).
+    You might want to have bins with uniform area (that is, that have longer theta ranges towards the poles). If this is the 
+    case, use `bin_count_theta_uniform` to specify the number of bins for a uniform-area bin distribution. Otherwise, use `bin_width_theta`
+    for uniformly distributed bin edges along theta as well. One and only one of the two arguments should be specified.
 
     Parameters
     ----------
@@ -546,12 +551,16 @@ def solid_angle_distribution(el, coords, bin_width_theta, bin_width_phi, com=Tru
         chemical symbols of the atoms provided - Shape (n_atoms,)
     coords : np.ndarray
         coordinates of the atoms provided - Shape (n_atoms, 3)
-    bin_width_theta : float
-        width for the bins along the polar angle theta - in *radians*. The polar angle ranges
-        from 0 (north pole) to pi (south pole).
     bin_width_phi : float
         width for the bins along the azimuthal angle phi - in *radians*. The azimuthal angle ranges
-        from 0 to 2*pi.
+        from 0 to 2*pi. Default to None, either bin_width_phi 
+    bin_width_theta : float, default None
+        width for the bins along the polar angle theta - in *radians*. The polar angle ranges
+        from 0 (north pole) to pi (south pole). With this setting, the angles are divided in 
+        uniformly spaced bins, but bins do not have uniform areas. Specify either this or `bin_count_theta_uniform`.
+    bin_count_theta_uniform: int, default None
+        Count of bins along the polar angle theta. With this setting, the angles are divided in non-uniform bins
+        to have uniform-area bins in the final histogram.
     com : bool, default True
         if True, the center (origin) of the system of coordinates is the center of mass of the system.
         If False, you should provide the desired center with the center argument.
@@ -572,6 +581,12 @@ def solid_angle_distribution(el, coords, bin_width_theta, bin_width_phi, com=Tru
     ValueError
         If com is False and no center is provided.
     """
+
+    if bin_width_theta is None and bin_count_theta_uniform is None:
+        raise ValueError('Either bin_width_theta or bin_count_uniform should be provided')
+
+    if bin_width_theta is not None and bin_count_theta_uniform is not None:
+        raise ValueError('Please provide either bin_width_theta or bin_count_uniform, not both of them at the same time.')
 
     if not com and center is None:
         raise ValueError('if com is False, you should provide your own origin for the coordinates system.')
@@ -597,17 +612,24 @@ def solid_angle_distribution(el, coords, bin_width_theta, bin_width_phi, com=Tru
     theta = theta[valid]
     phi = phi[valid]
 
-    n_bins_theta = int(np.ceil(np.pi / bin_width_theta))
-    n_bins_phi = int(np.ceil(2 * np.pi / bin_width_phi))
+    #deal with theta uniform or non-uniform bins.
+    if bin_width_theta is not None:
+        n_bins_theta  = int(np.ceil(np.pi / bin_width_theta))
+        theta_edges   = np.linspace(0, n_bins_theta * bin_width_theta, n_bins_theta + 1)
+        theta_centers = theta_edges[:-1] + bin_width_theta / 2.0
+    elif bin_count_theta_uniform is not None:
+        n_bins_theta  = bin_count_theta_uniform
+        mu_edges      = np.linspace(-1, 1, n_bins_theta + 1)
+        theta_edges   = np.arccos(mu_edges)[::-1]
+        mu_centers    = 0.5 * (mu_edges[:-1] + mu_edges[1:])
+        theta_centers = np.arccos(mu_centers)[::-1]
 
-    # build 2D histogram
-    theta_edges = np.linspace(0, n_bins_theta * bin_width_theta, n_bins_theta + 1)
+    n_bins_phi = int(np.ceil(2 * np.pi / bin_width_phi))
     phi_edges = np.linspace(0, n_bins_phi * bin_width_phi, n_bins_phi + 1)
 
     counts, _, _ = np.histogram2d(theta, phi, bins=[theta_edges, phi_edges])
 
     # compute bin centers
-    theta_centers = theta_edges[:-1] + bin_width_theta / 2.0
     phi_centers = phi_edges[:-1] + bin_width_phi / 2.0
     bin_centers = np.stack(np.meshgrid(theta_centers, phi_centers, indexing='ij'), axis=-1)
 
