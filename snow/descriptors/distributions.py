@@ -2,7 +2,7 @@ import numpy as np
 from scipy.spatial import ConvexHull, cKDTree
 
 from snow.descriptors.utils import distance_matrix, _check_structure
-from snow.descriptors.shape_descriptors import center_of_mass
+from snow.descriptors.shape_descriptors import center_of_mass, gyr_tensor
 from snow.misc.rototranslation import align_axis_to_z
 
     
@@ -754,3 +754,25 @@ def columns_distribution(coords, bin_width_x, bin_width_y, use_lattice_units, la
     bin_centers = np.stack(np.meshgrid(x_centers, y_centers, indexing='ij'), axis=-1)
 
     return bin_centers, counts
+
+
+#two helper functions to conveniently compute relevant axes for particular distributions.
+def get_cigar_axis(coords):
+    """
+    Compute the eigenvector corresponding to the largest eigenvalue of the gyration tensor. 
+    This identifies the 'long' direction in a cigar-shaped dsitrbution of atoms.
+    
+    """
+    gt = gyr_tensor(coords)
+    eigenval, eigenvec = np.linalg.eigh(gt)  # ascending order
+    return eigenvec[:, np.argmax(eigenval)]  # largest eigenvalue -> long axis
+
+def get_pancake_axis(coords):
+    """
+    Compute the eigenvector corresponding to the smallest eigenvalue of the gyration tensor. 
+    This identifies the perpendicular-to-plane direction in a pancake-shaped dsitrbution of atoms.
+    
+    """
+    gt = gyr_tensor(coords)
+    eigenval, eigenvec = np.linalg.eigh(gt)  # ascending order, real, orthonormal
+    return eigenvec[:, np.argmin(eigenval)]  # smallest eigenvalue -> perpendicular to the pancake plane
