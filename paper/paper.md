@@ -62,7 +62,7 @@ Apart from morphological characterisation, it also enables catalytic investigati
 
 The motivation for developing the `pySNOW` package is the need for a unified and comprehensive toolkit for these analyses.  Thanks to its modular, functional and simple structure, it should be easily adopted by broad sections of both the computational and experimental materials science communities.
 
-[FB: secondo me qui è da espandere con una frase, gli spettri SAXS e anche le chemical analysis che si interfacciano a EDX non sono standard.]: #
+
 
 
 Apart from morphological characterisation, it also enables catalytic investigation. `pySNOW` allows mapping the diversity of surface sites and adding one or more asorbed structures to them, providing input for further electronic structure calculations. Furthermore, it offers, within the CHE model [@Calle-Vallejo2014], [@Rossi2020], a microkinetic model for estimating specific current and mass activities during the oxygen reduction reaction (ORR) on Pt nanoparticles.
@@ -81,7 +81,7 @@ The motivation for developing the `pySNOW` package is the need for a unified and
 
 Several tools exist to analyse atomistic simulation results and MD trajectories. Here, we provide a quick overview of the main packages the authors are familiar with, along with their differences from pySNOW. MDTraj [@MDtraj] enables fast calculations of root-mean-square displacement (RMSD) and the extraction of common order parameters. Together with MDAnalysis [@MDAnalysis_gowers2016] [@MDAnalysis_Agrawal2011], these packages are more oriented towards biomolecular systems. `pySCAL` [@pySCAL] is a Python module for the calculation of descriptors of local atomic environments, e.g. Steinhardt’s parameters, and with the possibility of adaptive cutoffs.
 Freud [@freud:2020] is a capable and efficient Python/C++ tool that enables the computation of a wide range of quantities, including correlation functions and diffraction patterns.
-ASE [@ase-paper]: is a general library capable of building and modifying structures and directly performing calculations. Along with these tools, it provides several post-processing tools, e.g. to obtain derived quantities such as phonon curves and vibration spectra, diffusion coefficients, or fitting equations of state.
+ASE [@ase-paper] is a general library capable of building and modifying structures and directly performing calculations. Along with these tools, it provides several post-processing tools, e.g. to obtain derived quantities such as phonon curves and vibration spectra, diffusion coefficients, or fitting equations of state.
 
 While other packages provide characterisation tools, `pySNOW` covers a broad and extensive range of quantities. Being tailored for nanoparticles and bimetallic nanoalloys, it pays close attention to element-wise chemical analysis and also provides relevant experimentally accessible observables.
 
@@ -96,9 +96,9 @@ While other packages provide characterization tools, `pySNOW` covers a broad and
 
 We adopted a functional approach to implementing the software, avoiding the use of classes. This choice has been made to provide greater flexibility and easier access for users with a wide variety of programming skills.  We used a uniform style for function definitions and documented all relevant functions with complete docstrings to make them as user-friendly as possible.
 
-![pySNOW workflow](workflow.png)
+![pySNOW workflow](workflow.png){#fig:workflow}
 
-The code provides four main subpackages, as schematized in figure \ref, including tools for reading/writing, analysing, and modifying atomistic configurations. These are:
+The code provides four main subpackages, as schematized in figure @fig:workflow, including tools for reading/writing, analysing, and modifying atomistic configurations. These are:
 
 * descriptors: the main pySNOW subpackage. It includes modules to compute several different descriptors. A comprehensive but non-exhaustive list includes: descriptors relevant to coordination (coordination numbers (CNs) and (strained) generalized CNs), common neighbour analysis (CNA) and CNA patterns, chemical element-wise atomic distributions (Pair Distance Distribution Function - PDDF, center of mass radial distribution function (RDF), pair radial density function, layer-by-layer density), nanoparticles’ general shape descriptors (including inertia tensor- and gyration tensor-based descriptors), chemical bond-based local atomic environment analysis, and Steinhardt parameters. It also includes a module to compute small-angle X-ray scattering (SAXS) spectra from both atomic coordinates and precomputed PDDFs.
 * io: the input/output subpackage. It includes modules for reading from and writing to file. Currently supported formats are .xyz, .lammps-data, and .lammps-dump. It supports both trajectory and single-frame files.
@@ -145,7 +145,7 @@ FB contributed to conceptualization, supervision, and financial support.
 SZ, GB, and GN equally contributed to conceptualization, development, and documentation.
 DA contributed to the SAXS part.
 LFB contributed to GCN and molecule addition.
-All authors conitrbuted to test the code, the tutorials, and contribute to the manuscript.
+All authors contributed to test the code, the tutorials, and contributed to the manuscript.
 
 # Acknowledgements
 SZ, DA, GN, LFB acknowledge the Università degli Studi di Milano and the PhD programme at the Physics department. Furthermore, SZ thanks the financial support from ISC-SrL (D.M. 117/2023 PNRR).
