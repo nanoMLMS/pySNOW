@@ -404,7 +404,7 @@ def count_unique_cnaps(per_atom_signatures):
         Returns
         -------
         patterns:
-            found patterns, sorted by frequency
+            found patterns, sorted by frequency. Here returned esplicitly and unpacked (e.g. ( ( (5,5,5), (5,5,5), (5,5,5), ...), (), ...)
         counts:
             count of atoms which show the patterns above
 
@@ -422,7 +422,7 @@ def count_unique_cnaps(per_atom_signatures):
         # patterns sorted by frequency, most common first
         patterns, counts = zip(*pattern_counter.most_common())
 
-        return patterns, counts
+        return patterns, np.array(counts)
 
 def count_pattern_occurrences(per_atom_signatures, pattern):
     """
