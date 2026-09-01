@@ -424,6 +424,39 @@ def count_unique_cnaps(per_atom_signatures):
 
         return patterns, counts
 
+def count_pattern_occurrences(per_atom_signatures, pattern):
+    """
+    Count the number of atoms whose complete CNA pattern matches `pattern`.
+
+    Parameters
+    ----------
+    per_atom_signatures : list of tuple[np.ndarray, np.ndarray]
+        For each atom, a tuple (unique_signatures, counts) representing the
+        unique CNA signatures and their respective counts.
+
+    pattern : tuple[np.ndarray, np.ndarray]
+        The pattern to search for, e.g.
+        (np.array([[5., 5., 5.]]), np.array([12]))
+
+    Returns
+    -------
+    count : int
+        Number of atoms showing exactly the specified pattern.
+    """
+    target_signatures, target_counts = pattern
+
+    count = 0
+
+    for signatures, counts in per_atom_signatures:
+        if (
+            np.array_equal(signatures, target_signatures)
+            and np.array_equal(counts, target_counts)
+        ):
+            count += 1
+
+    return count
+
+
 def write_cna(
     frame,
     len_pair,
