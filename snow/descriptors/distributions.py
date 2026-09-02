@@ -6,7 +6,7 @@ from snow.descriptors.shape_descriptors import center_of_mass, gyr_tensor
 from snow.misc.rototranslation import align_axis_to_z
 
     
-def pddf_calculator(coords, bin_width: float, use_lattice_units: bool, lattice : float = None):
+def pddf_calculator(coords, bin_width: float, use_lattice_units: bool, lattice : float = None, max_distance : float = None):
     """
     Computes the pair distance distribution function for a given set of coordinates of atoms. 
     Please note that this function will count each pair once e.g. will consider (i,j) but not (j,i)
@@ -30,6 +30,9 @@ def pddf_calculator(coords, bin_width: float, use_lattice_units: bool, lattice :
     lattice : float, optional
         Specify a value for the lattice parameter of your structure in the same units as coords.
         Only needed if use_lattice_units is True
+    max_distance : float, optional
+        max distance to be considered, if e.g. need to compare distributions and want to keep a fixed support.
+        by default, it computes the max distance in system.
 
     Returns
     -------
@@ -52,7 +55,8 @@ def pddf_calculator(coords, bin_width: float, use_lattice_units: bool, lattice :
     n_atoms = np.shape(coords)[0]
     
     dist_mat = distance_matrix(coords=coords)
-    dist_max = np.max(dist_mat)
+    if dist_max is None:
+        dist_max = np.max(dist_mat)
 
     triu_indeces = np.triu_indices(n_atoms, k=1)
     distances = dist_mat[triu_indeces]
