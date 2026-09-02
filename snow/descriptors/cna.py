@@ -428,6 +428,8 @@ def count_pattern_occurrences(per_atom_signatures, pattern):
     """
     Count atoms whose complete CNA pattern matches `pattern`,
     independently of the ordering of signatures.
+
+    Give patterns in shape ( (signatures), (counts)   )
     """
     target_signatures, target_counts = pattern
 
