@@ -55,13 +55,13 @@ def pddf_calculator(coords, bin_width: float, use_lattice_units: bool, lattice :
     n_atoms = np.shape(coords)[0]
     
     dist_mat = distance_matrix(coords=coords)
-    if dist_max is None:
-        dist_max = np.max(dist_mat)
+    if max_distance is None:
+        max_distance = np.max(dist_mat)
 
     triu_indeces = np.triu_indices(n_atoms, k=1)
     distances = dist_mat[triu_indeces]
 
-    n_bins = int(np.ceil(dist_max / bin_width))
+    n_bins = int(np.ceil(max_distance / bin_width))
 
     bins = np.linspace(0, n_bins*bin_width, n_bins + 1)
     dist_count, _ = np.histogram(distances, bins=bins)
