@@ -456,6 +456,80 @@ def count_pattern_occurrences(per_atom_signatures, pattern):
 
     return count
 
+import numpy as np
+
+
+def unpack_cnap(signatures, counts, extend_up_to=None):
+    """Change a CNAP from (signatures, counts) to an explicit list of signatures.
+
+    Parameters
+    ----------
+    signatures : iterable
+        Signatures, e.g. [(5, 5, 5), (4, 2, 2)].
+    counts : iterable
+        Multiplicity of each signature.
+    extend_up_to : int, optional
+        If provided, append (0, 0, 0) signatures until the list
+        contains this many signatures.
+
+    Returns
+    -------
+    np.ndarray
+        Array of explicit signatures with shape (N, 3).
+    """
+
+    unpacked_signatures = []
+
+    for sig, count in zip(signatures, counts):
+        unpacked_signatures.extend([tuple(sig)] * int(count))
+
+    if extend_up_to is not None:
+        while len(unpacked_signatures) < extend_up_to:
+            unpacked_signatures.append((0, 0, 0))
+
+    return np.array(unpacked_signatures)
+
+
+def pack_cnap(signatures_list, pop_zeros=True):
+    """Change a CNAP from an explicit list of signatures to (signatures, counts).
+
+    Parameters
+    ----------
+    signatures_list : iterable
+        Explicit list/array of signatures, e.g.
+        [(5, 5, 5), (5, 5, 5), (4, 2, 2)].
+    pop_zeros : bool, default=True
+        If True, remove (0, 0, 0) signatures before packing.
+
+    Returns
+    -------
+    signatures : np.ndarray
+        Array of unique signatures with shape (N, 3).
+    counts : np.ndarray
+        Number of occurrences of each signature.
+    """
+
+    counter = {}
+
+    for sig in signatures_list:
+        sig = tuple(sig)
+
+        if pop_zeros and sig == (0, 0, 0):
+            continue
+
+        if sig in counter:
+            counter[sig] += 1
+        else:
+            counter[sig] = 1
+
+    signatures = np.array(list(counter.keys()))
+    counts = np.array(list(counter.values()))
+
+    return signatures, counts
+    #check return types
+
+
+
 
 def write_cna(
     frame,
