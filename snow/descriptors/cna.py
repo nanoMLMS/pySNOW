@@ -452,7 +452,7 @@ def count_pattern_occurrences(per_atom_signatures, pattern):
 
     return count
 
-def unpack_cnap(signatures, counts, extend_up_to=None):
+def unpack_cnap(signatures, counts, extend_up_to=None, flatten=False):
     """Change a CNAP from (signatures, counts) to an explicit list of signatures.
 
     Parameters
@@ -464,11 +464,13 @@ def unpack_cnap(signatures, counts, extend_up_to=None):
     extend_up_to : int, optional
         If provided, append (0, 0, 0) signatures until the list
         contains this many signatures.
+    flatten : bool, default False
+        If True, return a 1D flattened array instead of an (N, 3) array.
 
     Returns
     -------
     np.ndarray
-        Array of explicit signatures with shape (N, 3).
+        Array of explicit signatures with shape (N, 3) or 1D if flatten is True.
     """
 
     unpacked_signatures = []
@@ -480,7 +482,10 @@ def unpack_cnap(signatures, counts, extend_up_to=None):
         while len(unpacked_signatures) < extend_up_to:
             unpacked_signatures.append((0, 0, 0))
 
-    return np.array(unpacked_signatures)
+    result = np.array(unpacked_signatures)
+    if flatten:
+        return result.flatten()
+    return result
 
 
 def pack_cnap(signatures_list, pop_zeros=True):
@@ -491,6 +496,7 @@ def pack_cnap(signatures_list, pop_zeros=True):
     signatures_list : iterable
         Explicit list/array of signatures, e.g.
         [(5, 5, 5), (5, 5, 5), (4, 2, 2)].
+        A 1D flattened array like [5, 5, 5, 4, 2, 2] is also accepted.
     pop_zeros : bool, default=True
         If True, remove (0, 0, 0) signatures before packing.
 
@@ -502,9 +508,13 @@ def pack_cnap(signatures_list, pop_zeros=True):
         Number of occurrences of each signature.
     """
 
+    arr = np.asarray(signatures_list)
+    if arr.ndim == 1:
+        arr = arr.reshape(-1, 3)
+
     counter = {}
 
-    for sig in signatures_list:
+    for sig in arr:
         sig = tuple(sig)
 
         if pop_zeros and sig == (0, 0, 0):
