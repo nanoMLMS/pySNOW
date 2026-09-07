@@ -429,7 +429,7 @@ def count_pattern_occurrences(per_atom_signatures, pattern):
     Count atoms whose complete CNA pattern matches `pattern`,
     independently of the ordering of signatures.
 
-    Give patterns in shape ( (signatures), (counts)   )
+    Give patterns in shape ( (signatures), (counts) ) (in 'packed' style)
     """
     target_signatures, target_counts = pattern
 
@@ -451,6 +451,22 @@ def count_pattern_occurrences(per_atom_signatures, pattern):
             count += 1
 
     return count
+
+
+def signatures_similarity(signatures_1, signatures_2):
+    """compute the intersection and union of the sets
+    of cna signatures of two structures. The structures' similarity
+    can be compared intersection(cna_a,cna_b)/union(cna_a,cna_b) 
+    as in G. Weal et al. https://doi.org/10.1021/acs.jcim.0c01128"""
+
+    counter_1 = Counter(map(tuple, signatures_1))
+    counter_2 = Counter(map(tuple, signatures_2))
+
+    intersection = sum((counter_1 & counter_2).values())
+    total = sum(counter_1.values()) + sum(counter_2.values())
+    union = total - intersection  # U(a,b) = a+b-intersection(a,b)
+
+    return intersection, union
 
 def unpack_cnap(signatures, counts, extend_up_to=None, flatten=False):
     """Change a CNAP from (signatures, counts) to an explicit list of signatures.
