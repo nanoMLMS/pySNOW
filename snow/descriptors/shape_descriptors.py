@@ -7,6 +7,7 @@
 # https://doi.org/10.1002/adts.201900013
 
 import numpy as np
+
 from snow.misc.constants import mass
 
 def eccentricity(coords, round_step=None):
@@ -305,6 +306,42 @@ def gyr_rad(positions, masses=None):
     centered = positions - np.average(positions, axis=0, weights=masses)
 
     return np.sqrt( np.average( np.sum(centered**2, axis=1), weights=masses ) )
+
+
+def branch_factor(coords, npoints=20):
+    """
+    Fit the cumulative number of atoms N(r) within radius r from the centre of
+    geometry to a power law  N(r) ~ r^D and return the exponent D.
+    This is the fractal dimension that labels how dendritic/branched a
+    configuration is.
+
+    Parameters
+    ----------
+    coords : ndarray
+        Nx3 array of the coordinates of the atoms in the system.
+    npoints : int, optional, default 20
+        number of radial sample points used for the log-log fit.
+        Specify either this or bin_width.
+
+    Returns
+    -------
+    D : float
+        branch factor (mass-radius).
+    """
+    com_distances = np.linalg.norm(coords - geometric_com(coords), axis=1)
+    max_dist = np.max(com_distances)
+
+    rs = np.linspace(0.0, max_dist, npoints)
+    N_r = np.array([np.sum(com_distances <= r) for r in rs], dtype=float)
+
+    mask = (rs > 0) & (N_r > 0)
+
+    log_rs = np.log(rs[mask])
+    log_N = np.log(N_r[mask])
+
+    D, _ = np.polyfit(log_rs, log_N, 1)
+
+    return D
 
 
 
