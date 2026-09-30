@@ -468,7 +468,7 @@ def get_surface_atoms(el, coords, cutoff, style, threshold=None, **kwargs):
     """
 
     implemented_styles = ("cn", "agcn")
-    default_thresholds = {'cn': 10, 'agcn': 8.5}
+    default_thresholds = {'cn': 10, 'agcn': 8.6}
 
     if style == "cn":
         threshold = threshold if threshold is not None else default_thresholds["cn"]
