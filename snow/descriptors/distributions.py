@@ -118,10 +118,10 @@ def pddf_calculator_by_elements(
 
     #some sanity checks
     if use_lattice_units:
-        coords = coords / lattice
-
         if lattice is None:
             raise ValueError('If use_lattice_units==True, you should provide a value for the lattice constant to use')
+
+        coords = coords / lattice
 
     if elements[0] == elements[1]:
         #Specialized distance matrix method
@@ -753,8 +753,8 @@ def columns_distribution(coords, bin_width_x, bin_width_y, use_lattice_units, la
 
     counts, _, _ = np.histogram2d(x, y, bins=[x_edges, y_edges])
 
-    x_centers = x_edges[:-1] + bin_width_x / 2.0
-    y_centers = y_edges[:-1] + bin_width_y / 2.0
+    x_centers = 0.5 * (x_edges[:-1] + x_edges[1:])
+    y_centers = 0.5 * (y_edges[:-1] + y_edges[1:])
     bin_centers = np.stack(np.meshgrid(x_centers, y_centers, indexing='ij'), axis=-1)
 
     return bin_centers, counts

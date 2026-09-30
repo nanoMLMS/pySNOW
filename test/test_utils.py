@@ -47,7 +47,7 @@ def test_single_atom():
 
 ### Testing adjacency #####
 
-def test_two_atoms():
+def test_adjacency_two_atoms():
     coords = np.array([[0, 0, 0], [2, 0, 0]])
     adj_1 = adjacency_matrix(coords, cutoff=2)
     assert adj_1[1,0] == 1

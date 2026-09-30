@@ -1,6 +1,7 @@
 from typing import Tuple
 import numpy as np
 import os
+from snow.descriptors.utils import check_box
 
 def read_xyz_movie(file_path: str, extra_cols_indexes: list = None) -> Tuple[list, list]:
     """
@@ -143,7 +144,9 @@ def write_xyz(filename, elements, coords, additional_data=None, box=None, mode='
     additional_data : list or np.ndarray, optional
         Additional per-atom data, such as coordination numbers.
     box : np.ndarray, optional
-        a simulation box to be written to file
+        Simulation box to be written to file. Accepted styles are (3,) or (3,1) (box
+        lengths Lx, Ly, Lz), (3,2) (lower and upper bounds per axis), or (3,3) (cell
+        vectors as rows). The box is always written as three lattice vectors.
     mode : str
         mode for writing ('a'->append,  'w'->(over)write)
     """
@@ -172,22 +175,11 @@ def write_xyz(filename, elements, coords, additional_data=None, box=None, mode='
 
         #write general info line
         if box is not None:
+            box = check_box(box)
             xyz_file.write('Lattice="')
-            #suppose box is shape=(3,3)
-            if box.shape == (3,3):
-                for i in range(3):
-                    for j in range(3):
-                        xyz_file.write(f'{box[i,j]} ')
-            elif box.shape == (3,1):
-                xyz_file.write(f'{box[0,0]} 0.0 0.0 ')
-                xyz_file.write(f'0.0 {box[1,0]} 0.0 ')
-                xyz_file.write(f'0.0 0.0 {box[2,0]}')
-            elif box.shape == (3,2):
-                xyz_file.write(f'{box[0,0]} {box[0,1]} 0.0 ')
-                xyz_file.write(f'{box[1,0]} {box[1,1]} 0.0 ')
-                xyz_file.write(f'{box[2,0]} {box[2,1]} 0.0')  
-            else:
-                raise Exception('only implemented style for boxes are np.ndarrays with shape (3,3) or (3,2) or (3,1).')       
+            for i in range(3):
+                for j in range(3):
+                    xyz_file.write(f'{box[i,j]} ')
             xyz_file.write('" - ')
         xyz_file.write("Generated XYZ file with optional properties\n")
         

@@ -19,7 +19,7 @@ def coordination_number(coords, cut_off, neigh_list=False, pbc=False, box=None):
     pbc : bool, default False
         Whether to apply periodic boundary conditions.
     box : np.ndarray, optional
-        Simulation box size (either [Lx, Ly, Lz] or [[xmin, xmax], [ymin, ymax], [zmin, zmax]] or 3 cell vectors (shape (3,3) - slower)).
+        Simulation box size (either [Lx, Ly, Lz] or [[xmin, xmax], [ymin, ymax], [zmin, zmax]] or 3 cell vectors (shape (3,3) - slower if not orthorombic)).
 
     Returns
     -------
@@ -436,7 +436,7 @@ def get_surface_atoms(el, coords, cutoff, style, threshold=None, **kwargs):
     
     This selection can be done according to different metrics. Currently implemented:
     are styles that check if the coordination number or generalized coordination number
-    are over a given threshold (style=='cn' and style=='agcn', respectively).
+    are below a given threshold (style=='cn' and style=='agcn', respectively).
     
     Parameters
     ----------
@@ -454,7 +454,7 @@ def get_surface_atoms(el, coords, cutoff, style, threshold=None, **kwargs):
     threshold: float, optional
         a threshold to compare coordination numbers of the atoms and distinguish surface vs bulk ones. 
         Atoms are considered to be in the surface is the coordination/agcn is < threshold.
-        Defaults are 11 for `style==cn` and 8.5 for `style==agcn`.
+        Defaults are 10 for `style==cn` and 8.5 for `style==agcn`.
     **kwargs:
         other arguments you might want to pass to the coordination number/agcn function
 
@@ -468,19 +468,22 @@ def get_surface_atoms(el, coords, cutoff, style, threshold=None, **kwargs):
     """
 
     implemented_styles = ("cn", "agcn")
-    if style not in implemented_styles:
-        raise NotImplementedError(f"style {style} not implemented: only possible styles are {implemented_styles}")
-    
-    if threshold is None:
-        default_thresholds = {'cn': 11, 'agcn': 8.5}
-        threshold = default_thresholds[style]
-    
-    if style=='cn':
-        surf_descriptor_func = coordination_number
-    elif style=='agcn':
-        surf_descriptor_func = agcn_calculator
-    
-    descs = surf_descriptor_func(coords, cutoff, **kwargs)
+    default_thresholds = {'cn': 10, 'agcn': 8.5}
+
+    if style == "cn":
+        threshold = threshold if threshold is not None else default_thresholds["cn"]
+        descs = coordination_number(coords, cutoff, **kwargs)
+    elif style == "agcn":
+        threshold = threshold if threshold is not None else default_thresholds["agcn"]
+        if "thr_cn" in kwargs:
+            raise ValueError(
+                "style='agcn' does not accept the 'thr_cn' argument here: "
+                "the surface selection is governed by the `threshold` argument."
+            )
+        _, descs = agcn_calculator(coords, cutoff, **kwargs)
+    else:
+        raise ValueError(f"style {style} not implemented: only possible styles are {implemented_styles}")
+
     surf_idxs = np.where(descs<threshold)[0]
 
     el_surf = [e for i, e in enumerate(el) if i in surf_idxs]

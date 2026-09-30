@@ -139,7 +139,7 @@ def distance_matrix_pbc(positions, cell):
     """
 
     pos = np.asarray(positions)
-    cell = np.asarray(cell)
+    cell = check_box(cell)
 
     inv_cell = np.linalg.inv(cell)
 
@@ -161,6 +161,48 @@ def distance_matrix_pbc(positions, cell):
     return dmat
 
 # nearest neaighbours in various styles
+
+def check_box(box):
+    """
+    Normalizes a simulation-box specification to a (3,3) matrix whose rows are the lattice
+    vectors, in the same units as the atomic coordinates.
+
+    Accepted styles:
+        (3,)  : orthorhombic box lengths (Lx, Ly, Lz)
+        (3,1) : orthorhombic box lengths as a column vector
+        (3,2) : lower and upper bounds per axis,
+                i.e. [[xmin, xmax], [ymin, ymax], [zmin, zmax]]
+        (3,3) : three lattice vectors (rows)
+
+    Equivalent python lists (of 3 numbers or of 3 vectors) are also accepted.
+
+    Parameters
+    ----------
+    box : np.ndarray or list
+        Simulation box specification.
+
+    Returns
+    -------
+    box : np.ndarray
+        (3,3) matrix of lattice vectors (rows).
+
+    Raises
+    ------
+    ValueError
+        If the box cannot be interpreted.
+    """
+    box = np.asarray(box, dtype=float)
+    if box.shape == (3, 3):
+        return box
+    elif box.shape == (3, 2):
+        return np.diag(box[:, 1] - box[:, 0])
+    elif box.shape in ((3,), (3, 1)):
+        return np.diag(box.ravel())
+    else:
+        raise ValueError(
+            "Box must be provided as a (3,), (3,1), (3,2), or (3,3) array "
+            "(or an equivalent list), got shape {}".format(box.shape)
+        )
 
 def nn_pbc(coords, box, cut_off):
     """
@@ -184,6 +226,7 @@ def nn_pbc(coords, box, cut_off):
         The i-th sublist contains the indices of neighboring atoms for the i-th atom.
     """
 
+    box = check_box(box)
     dmat   = distance_matrix_pbc(coords, box)
     ad_mat = dmat < cut_off
     np.fill_diagonal(ad_mat, False)
@@ -214,7 +257,8 @@ def nearest_neighbours(
     pbc : bool, optional
         Whether to apply periodic boundary conditions (default: False).
     box : ndarray, optional
-        Simulation box size in the form (3,) for orthorhombic boxes or (3,2) for lower and upper bounds or (3,3) if you pass box vectors (slower).
+        Simulation box size in the form (3,) for orthorhombic boxes, (3,1) for a column of box lengths,
+        (3,2) for lower and upper bounds, or (3,3) if you pass box vectors (slower if not orthorombic). Only needed if pbc=True
 
     Returns
     -------
@@ -226,19 +270,14 @@ def nearest_neighbours(
         if box is None:
             raise ValueError("Box must be provided if PBC is enabled.")
 
-        # Ensure box is correctly formatted
-        if box.shape == (3, 2):  # Lower and upper bounds provided
-            box_size = box[:, 1] - box[:, 0]
-        elif box.shape == (3,):  # Direct box lengths
-            box_size = box
-        elif box.shape == (3,3):
-            #resort to slower but more robust function
-            return nn_pbc(coords, box, cut_off)
+        box = check_box(box)
+        box_size = np.diag(box)
+        if np.allclose(box, np.diag(box_size)):
+            # Orthorhombic cell - use the standard kd-tree
+            neigh_tree = cKDTree(coords, boxsize=box_size)
         else:
-            raise ValueError("Box must be of shape (3,) or (3,2) or (3,3)")
-
-        # Create KD-tree with periodic boundaries
-        neigh_tree = cKDTree(coords, boxsize=box_size)
+            # General (triclinic) cell - resort to slower but more robust function
+            return nn_pbc(coords, box, cut_off)
     else:
         # Standard KD-tree without PBC
         neigh_tree = cKDTree(coords)
@@ -302,7 +341,8 @@ def pair_list(
     pbc : bool, default False
         Whether to apply periodic boundary conditions.
     box : np.ndarray, optional
-        Simulation box size (either [Lx, Ly, Lz] or [[xmin, xmax], [ymin, ymax], [zmin, zmax]] or 3 cell vectors (shape (3,3) - slower)). Has to provided if pbc=True
+        Simulation box size. Accepted styles are (3,), (3,1), (3,2) (lower and upper
+        bounds) or (3,3) (cell vectors - slower). Has to be provided if pbc=True
 
     Returns
     -------
@@ -314,19 +354,15 @@ def pair_list(
         if box is None:
             raise ValueError("Box must be provided if PBC is enabled.")
 
-        # Ensure box is correctly formatted
-        if box.shape == (3, 2):  # Lower and upper bounds provided
-            box_size = box[:, 1] - box[:, 0]
-        elif box.shape == (3,):  # Direct box lengths
-            box_size = box
-        elif box.shape == (3,3):
+        box = check_box(box)
+        box_size = np.diag(box)
+        if np.allclose(box, np.diag(box_size)):
+            # Orthorhombic cell - use the standard kd-tree
+            neigh_tree = cKDTree(coords, boxsize=box_size)
+        else:
+            # General (triclinic) cell - resort to slower but more robust function
             neighbours_list = nn_pbc(coords, box, cut_off)
             return pairs_from_neighbor_list(neighbours_list)
-        else:
-            raise ValueError("Box must be of shape (3,) or (3,2) or (3,3)")
-
-        # Create KD-tree with periodic boundaries
-        neigh_tree = cKDTree(coords, boxsize=box_size)
     else:
         # Standard KD-tree without PBC
         neigh_tree = cKDTree(coords)
@@ -375,7 +411,7 @@ def kl_div(func1: np.array, func2: np.array) -> float:
     return kldiv
 
 
-def apply_pbc(coords, box_size):
+def apply_pbc(coords, box):
     """
     Apply periodic boundary conditions to atom coordinates.
 
@@ -385,26 +421,35 @@ def apply_pbc(coords, box_size):
     ----------
     coords : np.ndarray
         Atom coordinates array, shape (n_atoms, 3).
-    box_size : np.ndarray
-        Box size array (3,) or (3,2) depending on box format.
+    box : np.ndarray
+        Simulation box. Accepted styles are (3,) or (3,1) (box lengths) or (3,2)
+        (lower/upper bounds) or (3,3) (cell vectors). Only orthorhombic boxes are supported.
 
     Returns
     -------
     coords : np.ndarray
         Coordinates after applying PBC.
+
+    Raises
+    ------
+    ValueError
+        If the box is not orthorhombic.
     """
-    if box_size.shape == (3, 2):  # Lower and upper bounds provided
-        lower_bounds = box_size[:, 0]
-        upper_bounds = box_size[:, 1]
-        # Apply modulo to map the coordinates back into the box
+    box = np.asarray(box, dtype=float)
+    if box.shape == (3, 2):
+        # Lower and upper bounds provided: keep the box origin
+        lower_bounds = box[:, 0]
+        upper_bounds = box[:, 1]
         coords = (
             np.mod(coords - lower_bounds, upper_bounds - lower_bounds)
             + lower_bounds
         )
-    elif box_size.shape == (3,):  # Direct box lengths
-        coords = np.mod(coords, box_size)
     else:
-        raise ValueError("Box size must be of shape (3,) or (3,2)")
+        box = check_box(box)
+        box_size = np.diag(box)
+        if not np.allclose(box, np.diag(box_size)):
+            raise ValueError("apply_pbc only supports orthorhombic boxes.")
+        coords = np.mod(coords, box_size)
 
     return coords
 
@@ -436,7 +481,7 @@ def second_neighbours(
         coords: np.ndarray, cutoff: float, pbc: bool = False, box = None
 ) -> list:
     """Generates a list of lists of atomic indices for each atom corresponding to atoms that are neighbours of first neighbours
-    excluding those which are already first neighbours.
+    excluding those which are already first neighbours (and the atom itself).
 
     Parameters
     ----------
@@ -448,7 +493,8 @@ def second_neighbours(
     Returns
     -------
     snn_list : list[list]
-        List of lists containing indeces of second neighbours for each atom
+        List of lists containing indices of second neighbours for each atom.
+        Second neighbours exclude first neighbours and the atom itself.
     """
     neigh = nearest_neighbours(
         coords=coords, cut_off=cutoff, pbc=pbc, box=box
@@ -461,7 +507,7 @@ def second_neighbours(
             int_ij = np.intersect1d(neigh[i], neigh[j], assume_unique=True)
             snn_ij = np.setdiff1d(neigh[j], int_ij, assume_unique=True).tolist()
             temp_snn.extend(snn_ij)
-        temp_snn = list(dict.fromkeys(temp_snn))
+        temp_snn = [k for k in dict.fromkeys(temp_snn) if k != i]
         snn_list.append(temp_snn)
 
     return snn_list
@@ -622,7 +668,8 @@ def pbc_distance(p1, p2, box):
     p2 : np.ndarray
         Position of the second point.
     box : np.ndarray
-        Cell vectors as a (3,3) array (rows are vectors a, b, c) or (3,) array (xmax, ymax, zmax).
+        Simulation box. Accepted styles are (3,), (3,1), (3,2) (lower and upper bounds
+        per axis) or (3,3) (cell vectors as rows).
 
     Returns
     -------
@@ -630,11 +677,7 @@ def pbc_distance(p1, p2, box):
         Minimum image distance between p1 and p2.
     """
 
-    if type(box) == list and len(box)==3 or type(box)==np.ndarray and (box.shape==(3,) or box.shape==(3,1)):
-        box = np.asarray([[box[0],0.,0.], [0., box[1], 0.], [0., 0., box[2]] ])
-    elif box.shape !=(3,3):
-        raise Exception('Please provide the box as either a (3,3) or (3,) array or list.')
-
+    box = check_box(box)
 
     diff    = p1-p2
     inv_box = np.linalg.inv(box)
