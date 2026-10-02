@@ -1,6 +1,16 @@
 import numpy as np
-from scipy.special import sph_harm
 from snow.descriptors.utils import nearest_neighbours
+
+try:
+    # scipy >= 1.15
+    from scipy.special import sph_harm_y as _sph_harm_y
+except ImportError:
+    # scipy < 1.15: sph_harm(m, n, theta_azimuthal, phi_polar)
+    from scipy.special import sph_harm as _legacy_sph_harm
+
+    def _sph_harm_y(n, m, theta, phi):
+        return _legacy_sph_harm(m, n, phi, theta)
+
 try:
     from tqdm import tqdm
 except ImportError:
@@ -55,12 +65,12 @@ def peratom_steinhardt(coords: np.ndarray, l: list[int], cut_off: float, pbc : b
                     continue  # Avoid division by zero
                 
                 # Compute spherical angles
-                theta = np.arccos(d_ij[2] / magnitude)  # Polar angle
+                theta = np.arccos(np.clip(d_ij[2] / magnitude, -1.0, 1.0))  # Polar angle
                 phi = np.arctan2(d_ij[1], d_ij[0])      # Azimuthal angle
 
                 # Accumulate spherical harmonics for all m
                 for m in range(-q, q + 1):
-                    q_lm[m + q] += sph_harm(m, q, phi, theta)
+                    q_lm[m + q] += _sph_harm_y(q, m, theta, phi)
 
             # Normalize q_lm and compute Q_l
             n_neigh = len(neighbors)
