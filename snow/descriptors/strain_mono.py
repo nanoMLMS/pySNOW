@@ -1,5 +1,6 @@
 from scipy.spatial import cKDTree
 import numpy as np
+from snow.descriptors.utils import nearest_neighbours
 
 def strain_mono(coords: np.ndarray, dist_0: float, cut_off: float, neigh_list: list = None, coordination: np.ndarray = None):
     """
@@ -24,14 +25,14 @@ def strain_mono(coords: np.ndarray, dist_0: float, cut_off: float, neigh_list: l
         Array of strain values for all atoms.
     """
     n_atoms = coords.shape[0]
-    
+
     # Generate neighbor list if not provided
     if neigh_list is None:
-        tree = cKDTree(coords)
-        neigh_list = [tree.query_ball_point(coords[i], cut_off) for i in range(n_atoms)]
+        neigh_list = nearest_neighbours(coords, cut_off, pbc=None, box=None) #no pbc yet because we are using sparse_distmat
     
     # Generate coordination numbers if not provided
     if coordination is None:
+
         coordination = np.array([len(neighs) for neighs in neigh_list])
     
     # Initialize strain array
