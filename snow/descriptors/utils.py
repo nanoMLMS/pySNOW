@@ -218,7 +218,7 @@ def nn_pbc(coords, box, cut_off):
     box : ndarray
         Simulation cell matrix with shape (3, 3), where rows are lattice vectors.
     cut_off : float
-        Cutoff distance for finding neighbors (in Å).
+        Cutoff distance for finding neighbors.
 
     Returns
     -------
@@ -227,8 +227,14 @@ def nn_pbc(coords, box, cut_off):
     """
 
     box = check_box(box)
-    dmat   = distance_matrix_pbc(coords, box)
-    ad_mat = dmat < cut_off
+    dmat = distance_matrix_pbc(coords, box)
+
+    if cut_off is None:
+        ad_mat = dmat <= _adaptive_cutoffs_from_dmat(dmat)[:, None]
+    else:
+        # <= to match the boundary convention of cKDTree.query_ball_point, used
+        # on the non-periodic and orthorhombic paths
+        ad_mat = dmat <= cut_off
     np.fill_diagonal(ad_mat, False)
 
     # Convert adjacency matrix to list of neighbor lists
@@ -253,7 +259,7 @@ def nearest_neighbours(
     coords : ndarray
         XYZ coordinates of atoms, shape (n_atoms, 3).
     cut_off : float, optional
-        Cutoff distance for finding neighbors (in Å). If None, an adaptive cutoff is used.
+        Cutoff distance for finding neighbors. If None, an adaptive cutoff is used.
     pbc : bool, optional
         Whether to apply periodic boundary conditions (default: False).
     box : ndarray, optional
@@ -282,14 +288,11 @@ def nearest_neighbours(
         # Standard KD-tree without PBC
         neigh_tree = cKDTree(coords)
 
-    r_cut = np.full(len(coords), cut_off if cut_off is not None else 0.0)
+    r_cut = np.full(len(coords), cut_off if cut_off is not None else 0.0, dtype=float)
 
     if cut_off is None:
         # Compute an adaptive cutoff
-        for i, atom in enumerate(coords):
-            d, _ = neigh_tree.query(atom, k=12)  # 12 nearest neighbors
-            d_avg = np.mean(d)
-            r_cut[i] = rescale * d_avg  # Adaptive cutoff
+        r_cut = _adaptive_cutoffs(neigh_tree, coords)
 
     # Find neighbors within cutoff
     neigh = []
@@ -337,7 +340,7 @@ def pair_list(
     coords : np.ndarray
         Array with the XYZ coordinates of the atoms, shape (n_atoms, 3).
     cut_off : float, optional
-        Cutoff distance for finding pairs in angstroms. If None, an adaptive cutoff is used per atom.
+        Cutoff distance for finding pairs. If None, an adaptive cutoff is used per atom.
     pbc : bool, default False
         Whether to apply periodic boundary conditions.
     box : np.ndarray, optional
@@ -368,13 +371,10 @@ def pair_list(
         neigh_tree = cKDTree(coords)
 
     # Compute an adaptive cutoff for each atom if not provided
-    r_cut = np.full(len(coords), cut_off if cut_off is not None else 0.0)
+    r_cut = np.full(len(coords), cut_off if cut_off is not None else 0.0, dtype=float)
 
     if cut_off is None:
-        for i, atom in enumerate(coords):
-            d, _ = neigh_tree.query(atom, k=12)  # 12 nearest neighbors
-            d_avg = np.mean(d)
-            r_cut[i] = rescale * d_avg  # Adaptive cutoff per atom
+        r_cut = _adaptive_cutoffs(neigh_tree, coords)  # Adaptive cutoff per atom
 
     # Find atom pairs within adaptive cutoffs
     pairs = set()
@@ -690,6 +690,89 @@ def pbc_distance(p1, p2, box):
     # back to cartesian
     diff_mic = frac @ box
     return np.linalg.norm(diff_mic)
+
+
+def _adaptive_cutoffs(neigh_tree, coords, k=12):
+    """
+    Per-atom adaptive cutoff, computed from a KD-tree.
+
+    The cutoff for atom i is ``rescale`` times the mean distance to its ``k``
+    nearest *distinct* neighbours. The atom itself is excluded from the mean: a
+    KD-tree ``query`` returns the query point at distance 0, which would
+    otherwise bias the average low.
+
+    The number of neighbours used is clipped to the number of available atoms,
+    so that systems with fewer than ``k`` atoms do not end up with infinite
+    distances (and hence infinite cutoffs).
+
+    Parameters
+    ----------
+    neigh_tree : cKDTree
+        Tree built on ``coords``.
+    coords : ndarray
+        XYZ coordinates of atoms, shape (n_atoms, 3).
+    k : int, default 12
+        Number of nearest neighbours averaged over.
+
+    Returns
+    -------
+    r_cut : ndarray
+        Per-atom cutoff, shape (n_atoms,).
+    """
+
+    n_atoms = len(coords)
+
+    if n_atoms < 2:
+        # nothing to average over: no neighbours at all
+        return np.zeros(n_atoms, dtype=float)
+
+    k = min(k, n_atoms - 1)
+
+    r_cut = np.empty(n_atoms, dtype=float)
+    for i, atom in enumerate(coords):
+        d, _ = neigh_tree.query(atom, k=k + 1)  # +1 to account for the atom itself
+        d = np.asarray(d).ravel()[1:]            # drop the 0.0 self-distance
+        r_cut[i] = rescale * np.mean(d) if d.size else 0.0
+
+    return r_cut
+
+
+def _adaptive_cutoffs_from_dmat(dmat, k=12):
+    """
+    Per-atom adaptive cutoff, computed from a full distance matrix.
+
+    Distance-matrix counterpart of `_adaptive_cutoffs`, used on the periodic
+    boundary conditions paths where no KD-tree is available. The self-distance
+    (the 0.0 diagonal) is excluded from the mean.
+
+    Parameters
+    ----------
+    dmat : ndarray
+        Square distance matrix, shape (n_atoms, n_atoms).
+    k : int, default 12
+        Number of nearest neighbours averaged over.
+
+    Returns
+    -------
+    r_cut : ndarray
+        Per-atom cutoff, shape (n_atoms,).
+    """
+
+    n_atoms = dmat.shape[0]
+
+    if n_atoms < 2:
+        return np.zeros(n_atoms, dtype=float)
+
+    k = min(k, n_atoms - 1)
+
+    r_cut = np.empty(n_atoms, dtype=float)
+    for i in range(n_atoms):
+        d = np.sort(dmat[i])[1 : k + 1]  # drop the self-distance, keep k nearest
+        r_cut[i] = rescale * np.mean(d) if d.size else 0.0
+
+    return r_cut
+
+
 
 def progress_bar(current, total, length=50):
     """
