@@ -171,9 +171,11 @@ def bridge_gcn(coords: np.ndarray,
     #b_gcn = np.zeros(len(pairs))
     b_gcn=[]
     sites=[]
+    pairs_return = []
     for i, p in enumerate(pairs):
         if not (coord_numb[p[0]] < thr_cn and coord_numb[p[1]] < thr_cn):
             continue
+        pairs_return.append(p) #if not skipped in the line above
         neigh_1 = neigh_list[p[0]]
         neigh_2 = neigh_list[p[1]]
         neigh_unique_12 = np.unique(np.concatenate((neigh_1, neigh_2)))
@@ -203,9 +205,9 @@ def bridge_gcn(coords: np.ndarray,
             pos_2 = coords[p[1]]
             sites.append((pos_1 + pos_2) / 2)
     if phantom:
-        return np.asarray(sites), pairs, b_gcn
+        return np.asarray(sites), pairs_return, b_gcn
     else:
-        return pairs, b_gcn
+        return pairs_return, b_gcn
 
 def three_hollow_gcn(coords: np.ndarray, 
                      cut_off: float, 
