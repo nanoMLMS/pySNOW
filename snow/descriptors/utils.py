@@ -638,7 +638,7 @@ def get_coords_by_element(el, coords, chosen_element):
 
     return return_elements, selected_coords
 
-def _check_structure(coords: np.ndarray, elements: list | None = None, *, require_elements: bool = False):
+def _check_structure(coords: np.ndarray, elements: list = None, *, require_elements: bool = False):
     """sanity-checks that a structure (list of coordinates) is provided in the right format
 
     Parameters
