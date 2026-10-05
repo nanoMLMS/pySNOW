@@ -206,3 +206,198 @@ def eckart_frame(el, coords, ref_coords):
     R, _ = Rotation.align_vectors(ref_coords, coords, weights=masses)
     new_coords = R.apply(coords)
     return new_coords
+
+
+def rotation_matrix_x(angle_rad):
+    """
+    Create a rotation matrix around the X axis.
+
+    Parameters
+    ----------
+    angle_rad : float
+        Rotation angle in radians.
+
+    Returns
+    -------
+    np.ndarray
+        3x3 rotation matrix.
+    """
+    cos_theta = np.cos(angle_rad)
+    sin_theta = np.sin(angle_rad)
+
+    return np.array(
+        [[1, 0, 0], [0, cos_theta, -sin_theta], [0, sin_theta, cos_theta]]
+    )
+
+
+def rotation_matrix_y(angle_rad):
+    """
+    Create a rotation matrix around the Y axis.
+
+    Parameters
+    ----------
+    angle_rad : float
+        Rotation angle in radians.
+
+    Returns
+    -------
+    np.ndarray
+        3x3 rotation matrix.
+    """
+    cos_theta = np.cos(angle_rad)
+    sin_theta = np.sin(angle_rad)
+
+    return np.array(
+        [[cos_theta, 0, sin_theta], [0, 1, 0], [-sin_theta, 0, cos_theta]]
+    )
+
+
+def rotation_matrix_z(angle_rad):
+    """
+    Create a rotation matrix around the Z axis.
+
+    Parameters
+    ----------
+    angle_rad : float
+        Rotation angle in radians.
+
+    Returns
+    -------
+    np.ndarray
+        3x3 rotation matrix.
+    """
+    cos_theta = np.cos(angle_rad)
+    sin_theta = np.sin(angle_rad)
+
+    return np.array(
+        [[cos_theta, -sin_theta, 0], [sin_theta, cos_theta, 0], [0, 0, 1]]
+    )
+
+
+def create_rotation_matrix(rx, ry, rz):
+    """
+    Create a combined rotation matrix from rotations around X, Y, and Z axes.
+
+    The rotations are applied in the order: X, Y, Z (so the combined matrix
+    is R = Rz * Ry * Rx, meaning Rx is applied first, then Ry, then Rz).
+
+    Parameters
+    ----------
+    rx : float
+        Rotation angle around X axis in radians.
+    ry : float
+        Rotation angle around Y axis in radians.
+    rz : float
+        Rotation angle around Z axis in radians.
+
+    Returns
+    -------
+    np.ndarray
+        3x3 combined rotation matrix.
+    """
+    Rx = rotation_matrix_x(rx)
+    Ry = rotation_matrix_y(ry)
+    Rz = rotation_matrix_z(rz)
+    R = np.dot(Rz, np.dot(Ry, Rx))
+    return R
+
+
+def create_transformation_matrix(dx, dy, dz, rx, ry, rz):
+    """
+    Create a 4x4 homogeneous transformation matrix combining rotation and translation.
+
+    Parameters
+    ----------
+    dx : float
+        Translation along X axis.
+    dy : float
+        Translation along Y axis.
+    dz : float
+        Translation along Z axis.
+    rx : float
+        Rotation angle around X axis in radians.
+    ry : float
+        Rotation angle around Y axis in radians.
+    rz : float
+        Rotation angle around Z axis in radians.
+
+    Returns
+    -------
+    np.ndarray
+        4x4 homogeneous transformation matrix.
+    """
+    R = create_rotation_matrix(rx, ry, rz)
+    T = np.eye(4)
+    T[:3, :3] = R
+    T[:3, 3] = [dx, dy, dz]
+    return T
+
+
+def apply_transformation(points, transformation_matrix):
+    """
+    Apply a transformation matrix to a set of 3D points.
+
+    Parameters
+    ----------
+    points : np.ndarray
+        Array of shape (n, 3) containing n 3D points.
+    transformation_matrix : np.ndarray
+        4x4 homogeneous transformation matrix.
+
+    Returns
+    -------
+    np.ndarray
+        Transformed points of shape (n, 3).
+    """
+    n_points = len(points)
+    homogeneous_points = np.ones((n_points, 4))
+    homogeneous_points[:, :3] = points
+    transformed_points = np.dot(homogeneous_points, transformation_matrix.T)
+    return transformed_points[:, :3]
+
+
+def transform_points(points, dx=0, dy=0, dz=0, rx=0, ry=0, rz=0):
+    """
+    Transform points using translation and rotation parameters.
+
+    Parameters
+    ----------
+    points : np.ndarray
+        Array of shape (n, 3) containing n 3D points.
+    dx : float, default 0
+        Translation along X axis.
+    dy : float, default 0
+        Translation along Y axis.
+    dz : float, default 0
+        Translation along Z axis.
+    rx : float, default 0
+        Rotation angle around X axis in radians.
+    ry : float, default 0
+        Rotation angle around Y axis in radians.
+    rz : float, default 0
+        Rotation angle around Z axis in radians.
+
+    Returns
+    -------
+    np.ndarray
+        Transformed points of shape (n, 3).
+    """
+    T = create_transformation_matrix(dx, dy, dz, rx, ry, rz)
+    return apply_transformation(points, T)
+
+
+def degrees_to_radians(degrees):
+    """
+    Convert angles from degrees to radians.
+
+    Parameters
+    ----------
+    degrees : float or array-like
+        Angle(s) in degrees.
+
+    Returns
+    -------
+    float or np.ndarray
+        Angle(s) in radians.
+    """
+    return np.radians(degrees)
