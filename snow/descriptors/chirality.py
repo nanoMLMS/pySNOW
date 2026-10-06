@@ -1,8 +1,6 @@
-# Hausdorff Chirality Measure (HCM) implementation
-#
-# Implementation of the Hausdorff Chirality Measure as described in
-# the original HCM codebase. This module provides functional API
-# (no classes) following pySNOW conventions.
+# a module for chirality measures.
+# as of now, the Hausdorff chirality measure (hcm) is implemented
+# Thanks to dr. Giacomo Becatti for the implementation 
 
 import numpy as np
 import datetime
@@ -51,7 +49,7 @@ def calculate_hausdorff_distance(set_a, set_b):
     return max(forward_hausdorff, backward_hausdorff)
 
 
-def hausdorff_chirality(coords, method="bfgs", n_points=2, pop_size=None,
+def hausdorff_chirality(coords, method="bfgs", n_points=4, pop_size=None,
                         tol=None, verbose=False, **kwargs):
     """
     Compute the Hausdorff chirality measure (HCM) for a set of atomic coordinates.
@@ -66,7 +64,7 @@ def hausdorff_chirality(coords, method="bfgs", n_points=2, pop_size=None,
         Array of shape (n_atoms, 3) containing atomic coordinates.
     method : str, default "bfgs"
         Optimization method: "bfgs", "differential", or "mixed".
-    n_points : int, default 10
+    n_points : int, default 4
         Number of points per axis for grid sampling in bfgs method
         (total n_points^3 initial configurations).
     pop_size : int, optional
@@ -136,7 +134,7 @@ def hausdorff_chirality(coords, method="bfgs", n_points=2, pop_size=None,
     # Minimize the objective function
     if method_lower == "bfgs":
         initial_points = []
-        n_pts = int(n_points) if n_points is not None else 10
+        n_pts = int(n_points)
         for rx in np.linspace(0, 2 * np.pi, n_pts):
             for ry in np.linspace(0, 2 * np.pi, n_pts):
                 for rz in np.linspace(0, 2 * np.pi, n_pts):
