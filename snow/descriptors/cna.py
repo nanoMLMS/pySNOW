@@ -290,31 +290,30 @@ def cna_peratom(
             cna_atom.append((np.array([]), np.array([])))
     return cna_atom
 
-
-def cnap_peratom(
-    coords: np.ndarray,
-    cut_off: float,
-    pbc: bool = False,
-    box: np.ndarray = None,
-    display_progress: bool = False) -> np.ndarray:
+#former cnap_peratom function
+def match_known_patterns(coords: np.ndarray, cut_off: float, ref_patterns: dict=None, pbc: bool=False, box: np.ndarray = None) -> np.ndarray:
     """
     Computes the per-atom CNA patterns and assigns an integer structure ID.
 
     Tries to match the cna per atom patterns to known patterns in a database for atomic 
-    environment characterization (see README.md for ID-structure mapping).
+    environment characterization. The reference patterns can be user-defined, by default the function
+    will use the list of 62 cna patterns identified in Roncaglia & Ferrando, JCIM, 2023.
+    0 identifies unrecognized patterns, other numbers identify the specific patterns int he dict, in the same order
+    as they are in the dict.
 
     Parameters
     ----------
     coords : np.ndarray
         (N, 3) array with atomic coordinates
     cut_off : float
-        Cutoff radius for neighbor determination. If None, an adaptive cutoff is used
+        Cutoff radius for neighbor determination.
+    ref_patterns: dict, default to None
+        dictionary of reference patterns to match the patterns from `coords` to. If None (defualt),
+        it uses the list of cna patterns identified in Roncaglia & Ferrando, JCIM, 2023, defined below in this module.
     pbc : bool, default False
         Whether to use or not periodic boundary conditions
     box : np.ndarray, default None
         Simulation box. Only needed if you enable PBC
-    display_progress: bool, default False
-        Wheter to display a progress bar - needs the tqdm optional dependency library.
 
     Returns
     -------
@@ -322,72 +321,44 @@ def cnap_peratom(
         Array of (integers) structure IDs per atom
     """
 
-    # Compute CNA info
-    cna = cna_peratom(coords, cut_off, pbc=pbc, box=box)
-    n_atoms = len(coords)
-    cna_atom = np.zeros(n_atoms, dtype=int)
+    if ref_patterns is None:
+        ref_patterns = extended_patterns
 
-    # --- Define pattern rules as a lookup table ---
-    # Each rule is a tuple (required signatures, required counts) -> assigned ID
-    PATTERNS = [
-        # n_sigs == 1
-        ((([5, 5, 5],), (12,)), 5),
-        (([[4, 2, 1]], (12,)), 4),
-        # n_sigs == 2
-        (([[4, 2, 2], [5, 5, 5]], (10, 2)), 3),
-        (([[4, 2, 1], [3, 1, 1]], (3, 6)), 15),
-        (([[2, 1, 1], [4, 2, 1]], (4, 1)), 11),
-        (([[2, 1, 1], [4, 2, 1]], (4, 4)), 12),
-        (([[3, 2, 2], [5, 5, 5]], (5, 1)), 14),
-        (([[4, 2, 1], [4, 2, 2]], (6, 6)), 16),
-        # n_sigs == 3
-        (([[1, 0, 0], [2, 1, 1], [4, 2, 2]], (2, 2, 2)), 6),
-        (([[2, 0, 0], [3, 1, 1], [4, 2, 1]], (2, 4, 1)), 8),
-        (([[2, 1, 1], [3, 1, 1], [4, 2, 1]], (3, 2, 2)), 10),
-        (([[3, 1, 1], [3, 2, 2], [4, 2, 2]], (4, 2, 2)), 13),
-        (([[2, 1, 1], [3, 1, 1], [4, 2, 1]], (1, 4, 5)), 17),
-        # n_sigs == 4
-        (([[1, 0, 0], [2, 1, 1], [3, 2, 2], [4, 2, 2]], (1, 2, 1, 1)), 1),
-        (([[2, 0, 0], [2, 1, 1], [3, 1, 1], [4, 2, 1]], (1, 2, 2, 1)), 2),
-        (([[3, 0, 0], [3, 1, 1], [4, 2, 1], [4, 2, 2]], (2, 4, 2, 2)), 9),
-        (([[4, 2, 1], [4, 2, 2], [4, 3, 3], [5, 4, 4]], (4, 4, 2, 2)), 18),
-        # n_sigs == 5
-        (
-            (
-                [[2, 0, 0], [3, 0, 0], [3, 1, 1], [3, 2, 2], [4, 2, 2]],
-                (2, 1, 2, 1, 1),
-            ),
-            7,
-        ),
-    ]
+    cnaps = cna_peratom(coords, cut_off, pbc=pbc, box=box)
+    matched = np.zeros(len(cnaps), dtype=int)
 
     def match_pattern(sigs, counts):
         """Try to match CNA signatures/counts to a known structure pattern."""
-        for (req_sigs, req_counts), struct_id in PATTERNS:
+        sig_dict = {
+            tuple(sig): cnt
+            for sig, cnt in zip(sigs, counts)
+        }
+
+        for i, (req_sigs, req_counts) in enumerate(ref_patterns.values()):
+
             if len(req_sigs) != len(sigs):
                 continue
-            # Convert both to sets of tuples for order-insensitive comparison
-            sig_dict = {tuple(sig): cnt for sig, cnt in zip(sigs, counts)}
-            if all(
-                tuple(rs) in sig_dict and sig_dict[tuple(rs)] == rc
-                for rs, rc in zip(req_sigs, req_counts)
-            ):
-                return struct_id
-        return 0  # default (unidentified)
 
-    # --- Process atoms ---
-    iterator = tqdm(range(n_atoms), desc="Processing CNA patterns") if display_progress \
-            else range(n_atoms)
-    for i in iterator:
-        sigs = np.array(cna[i][0])
-        counts = np.array(cna[i][1]).flatten()
+            if all(
+                tuple(req_sig) in sig_dict
+                and sig_dict[tuple(req_sig)] == req_count
+                for req_sig, req_count in zip(req_sigs, req_counts)
+            ):
+                return i + 1
+
+        return 0
+
+    for i, (sigs, counts) in enumerate(cnaps):
+
+        sigs = np.asarray(sigs)
+        counts = np.asarray(counts).flatten()
 
         if len(sigs) == 0:
             continue
 
-        cna_atom[i] = match_pattern(sigs, counts)
+        matched[i] = match_pattern(sigs, counts)
 
-    return cna_atom
+    return matched
 
 def count_unique_cnaps(per_atom_signatures):
         """
@@ -479,6 +450,10 @@ def signatures_similarity(signatures_1, signatures_2):
 
     return intersection, union
 
+#two styles are curtrently implemented to deal with cnaps:
+# 1 - 'packed' - ((sig_1, sig_2, ...), (occ_1, occ_2, ...)) - easier to human-write
+# 2 - 'unpacked' - (sig_1, sig_2, sig_3, ...) - easier to deal with in functions
+
 def unpack_cnap(signatures, counts, extend_up_to=None, flatten=False):
     """Change a CNAP from (signatures, counts) to an explicit list of signatures.
 
@@ -559,8 +534,6 @@ def pack_cnap(signatures_list, pop_zeros=True):
     #check return types
 
 
-
-
 def write_cna(
     frame,
     len_pair,
@@ -624,7 +597,7 @@ def write_cna(
 
 
 #patterns from Roncaglia, Ferrando 2023 JCIM
-extendend_patterns = {
+extended_patterns = {
     'inner_bcc': ( ((4,4,4),(6,6,6)), (6,8) ),
     'disclination_polyIh': (  ((4,3,3), (5,5,5), (6,6,6)), (6,6,2) ),
     'bcc_subsurface_100': ( ((4,4,4), (5,4,4), (6,6,6)), (5,4,4) ),
@@ -672,7 +645,7 @@ extendend_patterns = {
     'edge_111-111_row_110_fcc_&_0001_10m11_hcp': (  ((2,0,0), (3,1,1), (4,2,1)), (2,4,1) ),
     'edge_111-100_fcc_&_0001_10m11_hcp': (((2,1,1), (3,1,1), (4,2,1)), (3,2,2)) ,
     'edge_10m11_10m11_hcp': (  ((2,0,0), (2,1,1), (3,1,1), (3,2,2), (4,2,1), (4,2,2)), (1,2,1,1,1,1) ),
-    # 'edge_10m11_10m11_hcp': (  ((2,0,0), (2,1,1), (3,1,1), (3,2,2), (4,2,1), (4,2,2)), (1,2,1,1,1,1) ),
+    # 'edge_10m11_10m11_hcp': (  ((2,0,0), (2,1,1), (3,1,1), (3,2,2), (4,2,1), (4,2,2)), (1,2,1,1,1,1) ), #duplicated in the original table
     'missing_5-fold_vertex_surrounding_atoms_1': (  ((2,0,0), (3,0,0), (3,1,1), (3,2,2), (4,2,2)), (2,1,2,1,1) ),
     'missing_5-fold_vertex_surrounding_atoms_2': (  ((2,0,0), (2,1,1), (4,2,2), (4,3,3)), (2,2,2,1) ),
     'vertex_111-111_reentrance_dh': (  ((2,0,0), (3,0,0), (3,1,1), (3,2,2), (4,2,2)), (2,1,2,1,1) ),
@@ -690,4 +663,122 @@ extendend_patterns = {
     'vertex_111-111_fcc_3-fold': (  ((2,1,1),), (3,) ),
 }
 
-#original Sapphire patterns (R. Jones Faraday discussions 2023)
+#original Sapphire patterns (R. Jones et al. Faraday discussions 2023)
+og_patterns =  {
+    'vertex_111-100_twin_dh': (  ((1,0,0), (2,1,1), (3,2,2), (4,2,2)), (1,2,1,1) ),                 #1 - vertex between two (111) and one (100) facets
+    'vertex_111-100_fcc_&_001-10m11_hcp': (  ((2,0,0), (2,1,1), (3,1,1), (4,2,1)), (1,2,2,1) ),     #2 - edge between (100) and distroted (111)
+    'inner_5-axis': (  ((4,2,2),(5,5,5)), (10,2) ),                   #3 - fivefold symmetry axis
+    'inner_fcc': ( ((4,2,1),), (12,)),                                #4 - fcc bulk
+    'inner_central_Ih': (  ((5,5,5),), (12,) ),                       #5 - intersection of six fivefold axes
+    'edge_100-100_twin': (  ((1,0,0), (2,1,1), (4,2,2)), (2,2,2) ),   #6 - edge between (100) facets
+    'vertex_111-111_reentrance_dh': (  ((2,0,0), (3,0,0), (3,1,1), (3,2,2), (4,2,2)), (2,1,2,1,1) ), #7 - Vertex on twinning planes shared by (111) facets
+    'edge_111-111_row_110_fcc_&_0001_10m11_hcp': (  ((2,0,0), (3,1,1), (4,2,1)), (2,4,1) ),          #8 - edge between (111) re-enetrances and (111) facets
+    'reentrance_middle_dh': (  ((3,0,0), (3,1,1), (4,2,1), (4,2,2)), (2,4,2,2) ),                    #9 - Re-entrance delimited by (111) facets
+    'edge_111-100_fcc_&_0001_10m11_hcp': (((2,1,1), (3,1,1), (4,2,1)), (3,2,2)) ,                    #10 - edge between (100) and (111) facets
+    'vertex_100_111': ( ((2,1,1), (4,2,1)), (4,1) ),                  #11 - vertex between (100) and (111) facets - missing in Roncaglia
+    'terrace_100_fcc': (  ((2,1,1), (4,2,1)), (4,4) ),                #12 - 100 facet                          
+    'edge_111-111_twin': (  ((3,1,1), (3,2,2), (4,2,2)), (4,2,2) ),   #13 - fivefold symmetry axis with no center
+    'vertex_111-111_5-fold_Ih_dh': (  ((3,2,2), (5,5,5)), (5,1) ),    #14 - fivefold vertex
+    'terrace_111_fcc_&_0001_hcp': (  ((3,1,1), (4,2,1)), (6,3) ),     #15 - (111) facet
+    'inner_hcp': ( ((4,2,1), (4,2,2)), (6,6) ),                       #16 - twinning plane
+
+}
+
+
+# def cnap_peratom(
+#     coords: np.ndarray,
+#     cut_off: float,
+#     pbc: bool = False,
+#     box: np.ndarray = None,
+#     display_progress: bool = False) -> np.ndarray:
+#     """
+#     Computes the per-atom CNA patterns and assigns an integer structure ID.
+
+#     Tries to match the cna per atom patterns to known patterns in a database for atomic 
+#     environment characterization (see README.md for ID-structure mapping).
+
+#     Parameters
+#     ----------
+#     coords : np.ndarray
+#         (N, 3) array with atomic coordinates
+#     cut_off : float
+#         Cutoff radius for neighbor determination. If None, an adaptive cutoff is used
+#     pbc : bool, default False
+#         Whether to use or not periodic boundary conditions
+#     box : np.ndarray, default None
+#         Simulation box. Only needed if you enable PBC
+#     display_progress: bool, default False
+#         Wheter to display a progress bar - needs the tqdm optional dependency library.
+
+#     Returns
+#     -------
+#     pattenrs_ids : np.ndarray
+#         Array of (integers) structure IDs per atom
+#     """
+
+#     # Compute CNA info
+#     cna = cna_peratom(coords, cut_off, pbc=pbc, box=box)
+#     n_atoms = len(coords)
+#     cna_atom = np.zeros(n_atoms, dtype=int)
+
+#     # --- Define pattern rules as a lookup table ---
+#     # Each rule is a tuple (required signatures, required counts) -> assigned ID
+#     PATTERNS = [
+#         # n_sigs == 1
+#         ((([5, 5, 5],), (12,)), 5),
+#         (([[4, 2, 1]], (12,)), 4),
+#         # n_sigs == 2
+#         (([[4, 2, 2], [5, 5, 5]], (10, 2)), 3),
+#         (([[4, 2, 1], [3, 1, 1]], (3, 6)), 15),
+#         (([[2, 1, 1], [4, 2, 1]], (4, 1)), 11),
+#         (([[2, 1, 1], [4, 2, 1]], (4, 4)), 12),
+#         (([[3, 2, 2], [5, 5, 5]], (5, 1)), 14),
+#         (([[4, 2, 1], [4, 2, 2]], (6, 6)), 16),
+#         # n_sigs == 3
+#         (([[1, 0, 0], [2, 1, 1], [4, 2, 2]], (2, 2, 2)), 6),
+#         (([[2, 0, 0], [3, 1, 1], [4, 2, 1]], (2, 4, 1)), 8),
+#         (([[2, 1, 1], [3, 1, 1], [4, 2, 1]], (3, 2, 2)), 10),
+#         (([[3, 1, 1], [3, 2, 2], [4, 2, 2]], (4, 2, 2)), 13),
+#         (([[2, 1, 1], [3, 1, 1], [4, 2, 1]], (1, 4, 5)), 17),
+#         # n_sigs == 4
+#         (([[1, 0, 0], [2, 1, 1], [3, 2, 2], [4, 2, 2]], (1, 2, 1, 1)), 1),
+#         (([[2, 0, 0], [2, 1, 1], [3, 1, 1], [4, 2, 1]], (1, 2, 2, 1)), 2),
+#         (([[3, 0, 0], [3, 1, 1], [4, 2, 1], [4, 2, 2]], (2, 4, 2, 2)), 9),
+#         (([[4, 2, 1], [4, 2, 2], [4, 3, 3], [5, 4, 4]], (4, 4, 2, 2)), 18),
+#         # n_sigs == 5
+#         (
+#             (
+#                 [[2, 0, 0], [3, 0, 0], [3, 1, 1], [3, 2, 2], [4, 2, 2]],
+#                 (2, 1, 2, 1, 1),
+#             ),
+#             7,
+#         ),
+#     ]
+
+#     def match_pattern(sigs, counts):
+#         """Try to match CNA signatures/counts to a known structure pattern."""
+#         for (req_sigs, req_counts), struct_id in PATTERNS:
+#             if len(req_sigs) != len(sigs):
+#                 continue
+#             # Convert both to sets of tuples for order-insensitive comparison
+#             sig_dict = {tuple(sig): cnt for sig, cnt in zip(sigs, counts)}
+#             if all(
+#                 tuple(rs) in sig_dict and sig_dict[tuple(rs)] == rc
+#                 for rs, rc in zip(req_sigs, req_counts)
+#             ):
+#                 return struct_id
+#         return 0  # default (unidentified)
+
+#     # --- Process atoms ---
+#     iterator = tqdm(range(n_atoms), desc="Processing CNA patterns") if display_progress \
+#             else range(n_atoms)
+#     for i in iterator:
+#         sigs = np.array(cna[i][0])
+#         counts = np.array(cna[i][1]).flatten()
+
+#         if len(sigs) == 0:
+#             continue
+
+#         cna_atom[i] = match_pattern(sigs, counts)
+
+#     return cna_atom
