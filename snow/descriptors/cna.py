@@ -424,12 +424,23 @@ def count_unique_cnaps(per_atom_signatures):
 
         return patterns, np.array(counts)
 
-def count_pattern_occurrences(per_atom_signatures, pattern):
+def find_pattern_occurrences(per_atom_signatures, pattern):
     """
-    Count atoms whose complete CNA pattern matches `pattern`,
+    find atoms (ids) whose complete CNA pattern matches `pattern`,
     independently of the ordering of signatures.
 
     Give patterns in shape ( (signatures), (counts) ) (in 'packed' style)
+
+    Parameters
+    ----------
+    per_atom_signatures: Tuple
+        cna patterns for atoms in the system, in packed style ((signatures), (counts))
+    pattern: Tuple
+        cna pattern to look for 
+    Returns
+    -------
+    ids: list[int]
+        indexes of atoms which have a pattern matching to the one provided
     """
     target_signatures, target_counts = pattern
 
@@ -438,9 +449,9 @@ def count_pattern_occurrences(per_atom_signatures, pattern):
         for sig, count in zip(target_signatures, target_counts)
     )
 
-    count = 0
+    where = []
 
-    for signatures, counts in per_atom_signatures:
+    for id, (signatures, counts) in enumerate(per_atom_signatures):
 
         current = sorted(
             (tuple(sig), int(cou))
@@ -448,9 +459,9 @@ def count_pattern_occurrences(per_atom_signatures, pattern):
         )
 
         if current == target:
-            count += 1
+            where.append(id)
 
-    return count
+    return where
 
 
 def signatures_similarity(signatures_1, signatures_2):
