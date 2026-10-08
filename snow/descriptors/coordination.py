@@ -315,6 +315,7 @@ def three_hollow_gcn(coords: np.ndarray,
 def four_hollow_gcn(coords: np.ndarray, 
                     cut_off: float, 
                     thr_cn: int, 
+                    extended_cutoff: float = None,
                     phantom: bool=True,
                     dbulk: float = None,
                     cn_max: float = 26.0, 
@@ -333,6 +334,8 @@ def four_hollow_gcn(coords: np.ndarray,
     thr_cn : int
         a threshold coordination number value. Only atoms with coordination < thr_cn are considered for the GCN calculation
         (e.g. only surface atoms are considered)
+    extended_cutoff: float, default 1.3*cutoff (if None)
+        cutoff to find second neighbours. Default to 1.3*cutoff, which is ok for FCC materials
     phantom : bool, default True
         If True, also returns the coordinates of the midpoints between fourplets ('phantom' atoms indicating the 4-hollow sites)
     dbulk: float, optional
@@ -371,7 +374,9 @@ def four_hollow_gcn(coords: np.ndarray,
     # neighbor list and coordination number not compatible!
     neigh_list, coord_numb = coordination_number(coords=coords, cut_off=cut_off, 
                                                  neigh_list=True, pbc=pbc, box=box)
-    snb, _ = coordination_number(coords=coords, cut_off=cut_off * 1.3, neigh_list=True, pbc=pbc, box=box)
+    if extended_cutoff is None:
+        extended_cutoff = 1.3*cut_off #ok for fcc systems
+    snb = nearest_neighbours(coords=coords, cut_off=extended_cutoff, pbc=pbc, box=box)
     current = 0
     for j in range(len(pairs)):
         for k in range(j):
@@ -388,7 +393,7 @@ def four_hollow_gcn(coords: np.ndarray,
             check = len(set(indices))
             if check != 4:
                 continue  # got a shared atom
-            # check if pairs are common atmostsecond neighbors
+            # check if pairs are common atmost second neighbors
             common_nb_j = np.intersect1d(snb[indices[0]], snb[indices[1]], assume_unique=True)
             if (indices[2] in common_nb_j) and (indices[3] in common_nb_j):
                 new_fours = sorted(indices)
