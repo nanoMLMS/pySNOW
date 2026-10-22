@@ -437,7 +437,7 @@ def four_hollow_gcn(coords: np.ndarray,
         return fours, fh_gcn
 
 
-def get_surface_atoms(el, coords, cutoff, style, threshold=None, **kwargs):
+def get_surface_atoms(el, coords, cutoff, style, threshold=None, return_ids=False, **kwargs):
     """
     Get the atoms on the surface in the system.
     
@@ -471,7 +471,8 @@ def get_surface_atoms(el, coords, cutoff, style, threshold=None, **kwargs):
         chemical symbols of selected surface atoms
     coords_surf: ndarray
         coordinates of selected surface atoms
-    
+    ids_surf: ndarray
+        ids of the surface atoms. Only returned if `return_ids==True`.
     """
 
     implemented_styles = ("cn", "agcn")
@@ -496,4 +497,7 @@ def get_surface_atoms(el, coords, cutoff, style, threshold=None, **kwargs):
     el_surf = [e for i, e in enumerate(el) if i in surf_idxs]
     coords_surf = coords[surf_idxs]
 
-    return el_surf, coords_surf
+    if return_ids:
+        return el_surf, coords_surf, return_ids
+    else:
+        return el_surf, coords_surf
