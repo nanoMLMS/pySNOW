@@ -498,6 +498,6 @@ def get_surface_atoms(el, coords, cutoff, style, threshold=None, return_ids=Fals
     coords_surf = coords[surf_idxs]
 
     if return_ids:
-        return el_surf, coords_surf, return_ids
+        return el_surf, coords_surf, surf_idxs
     else:
         return el_surf, coords_surf
