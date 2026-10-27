@@ -209,7 +209,7 @@ def bridge_gcn(coords: np.ndarray,
     else:
         return pairs_return, b_gcn
 
-#TODO: separate find_triplets and find_fourplets, check return types to uniform to multidimensional np.arrays also for triplets and fourplets
+#TODO: separate find_triplets and find_fourplets, check return types to uniform to multidimensional np.arrays also for triplets and fourplets + check collinearity
 def three_hollow_gcn(coords: np.ndarray, 
                      cut_off: float, 
                      thr_cn: int, 
