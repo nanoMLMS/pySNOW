@@ -117,7 +117,7 @@ Finally, along with the main modules, `pySNOW` also provides several unit tests 
 
 
 # Research Application (impact statement)
-`pySNOW` is applicable to morphological analysis  during the coalescence of nanoalloys [@Zinzani_Baletto:2026]; catalysis mapping [@Leti2025]; and catalytic performance [@Zinzani_Rossi:2025].
+`pySNOW` is applicable to the morphological analysis of growth processes and coalescence of nanoparticles [Nardi_Zinzani_NPGrowth:2026] and nanoalloys [@Zinzani_Baletto:2026]; catalysis mapping [@Leti2025]; and catalytic performance [@Zinzani_Baletto_Rossi:2026].
 
 `pySNOW` is taught at the Physics Department, Universita' degli Studi di Milano in a Master course, and it was used during undergraduate projects.
 
